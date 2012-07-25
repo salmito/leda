@@ -38,7 +38,7 @@ THE SOFTWARE.
 #include "queue.h"
 #include "instance.h"
 
-#define __VERSION "0.2.0-beta2"
+#define __VERSION "0.2.0-beta3"
 
 #define LEDA_NAME          "leda.kernel"
 #define LEDA_ENV           "leda kernel environment"

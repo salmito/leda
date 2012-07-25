@@ -65,17 +65,3 @@ uninstall:
 	rm -f $(LUA_INSTALL_PATH)/leda.lua
 	rm -rf $(LUA_INSTALL_PATH)/leda
 	rm -rf $(LIB_INSTALL_PATH)/leda
-
-tar tgz:
-ifeq "$(VERSION)" ""
-	echo "Usage: make tar VERSION=x.x"; false
-else
-	$(MAKE) ultraclean
-	-rm -rf $(MODULE)-$(VERSION)
-	mkdir $(MODULE)-$(VERSION)
-	tar c * --exclude="*.tar.gz" --exclude="$(MODULE)-*" | (cd $(MODULE)-$(VERSION) && tar x)
-	tar czvf $(MODULE)-$(VERSION).tar.gz $(MODULE)-$(VERSION)
-	rm -rf $(MODULE)-$(VERSION)
-	md5sum $(MODULE)-$(VERSION).tar.gz > $(MODULE)-$(VERSION).md5
-endif
-

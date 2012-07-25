@@ -3,7 +3,7 @@ require "leda"
 local graph,connector,stage=leda.graph,leda.connector,leda.stage
 
 local s1=stage{name="s1",
-   handler=[[
+   handler=
    function () 
       test(100,10)
       test(1000,10)
@@ -27,8 +27,8 @@ local s1=stage{name="s1",
     --  test(10000000,1000)         
 
    end
-   ]],
-   init=[[
+   ,
+   init=
       function () 
          require "socket" 
          function test(N,M)
@@ -40,19 +40,18 @@ local s1=stage{name="s1",
             end
          end
       end 
-   ]]
+   
 }
 
 local s2=stage{
    name="s2",
-   handler=[[
+   handler=
       function(i,init,N,M)
          if i==N then
             print(3,"Thread_based",N,M,socket.gettime()-init)
          end
-      end
-   ]],
-   init=[[function () require "socket" end ]]
+      end,
+   init=function () require "socket" end 
 }
 
 s1.output={s2.input}
