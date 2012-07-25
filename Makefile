@@ -46,6 +46,12 @@ install5.2: 5.2
 uninstall5.2: 
 	make uninstall LUA_INSTALL_PATH=$(LUA_INSTALL_PATH_5_2) LIB_INSTALL_PATH=$(LIB_INSTALL_PATH_5_2)
 
+install5.1: 5.1
+	make install
+
+uninstall5.1: 
+	make uninstall
+
 install: all
 	install $(SRC_DIR)/../leda.lua $(LUA_INSTALL_PATH)
 	mkdir -p $(LUA_INSTALL_PATH)/leda
