@@ -7,7 +7,7 @@ OBJ=  kernel.o \
       graph.o \
       instance.o \
 		queue.o \
-		atomic.o \
+		mutex.o \
       thread.o \
       extra/threading.o \
       #extra/tools.c \

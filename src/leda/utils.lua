@@ -1,5 +1,12 @@
-utils={}
+require "leda"
 
+-----------------------------------------------------------------------------
+-- Defining globals for easy access to the leda main API functions
+-----------------------------------------------------------------------------
+stage,connector,graph=leda.stage,leda.connector,leda.graph
+
+leda.utils={}
+local utils=leda.utils
 -----------------------------------------------------------------------------
 -- Switch stage selects an specific output and send pushed 'data'
 -- param:   'n':     output key to push other arguments
@@ -7,14 +14,13 @@ utils={}
 -----------------------------------------------------------------------------
 utils.switch={
    handler=
-   [[--function (n,...)
-      local out=leda.get_output(n)
+   [[local args={...}
+      local out=leda.get_output(args[1])
       if out then 
-         out:send(...) 
-      else
+         out:send(select(2,...)) 
+       else
          error(string.format("Output '%s' does not exist",tostring(n)))
-      end
-   --end]]
+      end]]
 }
 
 -----------------------------------------------------------------------------
@@ -23,28 +29,36 @@ utils.switch={
 -----------------------------------------------------------------------------
 utils.broadcast={
    handler=
-   [[--function (...)
-      local out=leda.get_output()
-      for _,connector in pairs(out) do
+   [[for _,connector in pairs(leda.output) do
            connector:send(...)
-      end
-   --end]]
+      end]]
 }
 
 -----------------------------------------------------------------------------
--- Copy stage sends N copies of each event it receives
+-- Copy stage sends N copies of each event it receives to its output
 -- param:   'n':     number of copies to push
 -- param:   '...':   data to be copyied and sent
 -----------------------------------------------------------------------------
 utils.copy={
    handler=
-   [[--function (n,...)
-      for i=1,n do
-         leda.get_output(1):send(...)
-      end
-   --end]],
+   [[local args={...} for i=1,args[1] do
+         leda.output[1]:send(select(2,...))
+      end]],
    bind=function(self) 
-      assert(#self.output>1,"Copy must have an output at [1]") 
+      assert(self.output[1],"Copy must have an output at [1]") 
+   end
+}
+
+-----------------------------------------------------------------------------
+-- Loop indefinitely sending the input event to its output
+-- param:   'i':     period of loop
+-- param:   '...':   data to be sent at
+-----------------------------------------------------------------------------
+utils.loop={
+   handler=
+   [[local args={...} while true do leda.output[1]:send(select(2,...)) leda.sleep(args[1]) end]],
+   bind=function(self) 
+      assert(self.output[1],"Copy must have an output at [1]") 
    end
 }
 

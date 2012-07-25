@@ -32,6 +32,8 @@ THE SOFTWARE.
 #include "graph.h"
 #include "thread.h"
 
+graph main_graph;
+
 /* get a connector representation from the 'id' defined on graph 'g' */
 connector graph_get_connector(graph g,connector_id id) {
    if(!g) return NULL;
@@ -151,6 +153,14 @@ graph build_graph_representation(lua_State *L, int index) {
       lua_rawgeti(L,-1,i); //push stages[i]
       s->unique_id=(void *)lua_topointer(L,-1);
 
+      lua_getfield (L, -1, "serial"); //check if the serial field is present
+      if(lua_isnil(L,-1)) {
+         s->serial=FALSE;
+      } else {
+         s->serial=TRUE;
+      }
+      lua_pop(L,1);
+      
       lua_getfield (L, -1, "name"); //push the name field of stage
       str=lua_tolstring(L, -1, &len); //verify if its a string
       char * name=malloc(len+1);
@@ -318,7 +328,7 @@ void graph_dump(graph g) {
    _DEBUG("==== Dumping graph: '%s' ====\n",g->name);
    _DEBUG("\t==== Stages (%d) ====\n",(int)g->n_s);
    for(i=0;i<g->n_s;i++) {
-      _DEBUG("\tStage: id='%d' unique_id='%p' name='%s'\n",i,g->s[i]->unique_id,g->s[i]->name);
+      _DEBUG("\tStage: id='%d' unique_id='%p' name='%s' serial='%d'\n",i,g->s[i]->unique_id,g->s[i]->name,g->s[i]->serial);
      _DEBUG("\t\tHandler function: %s\n",g->s[i]->handler);
      _DEBUG("\t\tInit function: %s\n",g->s[i]->init);
       for(j=0;j<g->s[i]->n_out;j++) {
@@ -334,7 +344,7 @@ void graph_dump(graph g) {
    _DEBUG("\t==== Connectors (%d) ====\n",(int)g->n_c);
    for(i=0;i<g->n_c;i++) {
       _DEBUG("\tConnector: id='%d' unique_id='%p' name='%s' prods='%d' cons='%d'\n",i,g->c[i]->unique_id,g->c[i]->name,(int)g->c[i]->n_p,(int)g->c[i]->n_c);
-      _DEBUG("\t\tSend function: %s\n",g->c[i]->send);
+//      _DEBUG("\t\tSend function: %s\n",g->c[i]->send);
       _DEBUG("\t\tProducers: ");
       for(j=0;j<g->c[i]->n_p;j++) {
          _DEBUG("%d (%s) ",(int)g->c[i]->p[j],g->s[g->c[i]->p[j]]->name);

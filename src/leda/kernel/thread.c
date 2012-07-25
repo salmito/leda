@@ -36,19 +36,37 @@ THE SOFTWARE.
 
 queue ready_queue;
 
+MUTEX_T debug_lock;
+
 /* Thread subsystem internal functions */
 void emmit_self_and_pass_the_thread(instance caller);
+void emmit_and_continue(instance caller);
 void emmit_self(instance i);
+void emmit_pending_thread(stage_id id, instance caller);
 
 /* Returns the current size of the ready queue */
 size_t thread_ready_queue_size() {
-   size_t size=queue_size(ready_queue);
-   return (size>0?size:0);
+   return queue_size(ready_queue);
+}
+
+/* Returns the current size of the ready queue */
+bool_t thread_ready_queue_isempty() {
+   return queue_isempty(ready_queue);
 }
 
 /* Push instance to the ready queue */
-bool_t thread_try_push_instance(instance i) {
-   return TRY_PUSH(ready_queue,i);
+void thread_try_push_instance(instance i) {
+   bool_t ret=TRY_PUSH(ready_queue,i);
+   if(!ret) {
+       /*TODO   The ready queue is FULL, now what to do?
+       *
+       *       One option is to return an error code to the caller.
+       *
+       *       Another option is to do pipeline backpressure 
+       *       (block the sender stage until someone frees a
+       *       slot on the ready queue).
+       */
+   } 
 }
 
 /* Initialize thread subsystem */
@@ -121,33 +139,57 @@ void copy_values (lua_State *dst, lua_State *src, int i, int top) {
   }
 }
 
-/* Thread main coroutine exit status*/
-enum return_status{
-   ENDED=0,EMMIT_SELF=1,YIELDED=2
-};
+char const * get_return_status_name(int status) {
+   switch(status) {
+      case ENDED:
+         return "ENDED";
+      case EMMIT_SELF_AND_PASS_THREAD:
+         return "EMMIT_SELF_AND_PASS_THREAD";
+      case EMMIT_AND_CONTINUE:
+         return "EMMIT_AND_CONTINUE";
+      case EMMIT_PENDING_THREAD:
+         return "EMMIT_PENDING_THREAD";
+      case YIELDED:
+      default:
+         return "YIELDED";
+   }
+   return "UNKNOWN";
+}
 
 /* Call an instance loaded with 'args' values at the top of its stack */
 void thread_call(instance i,int args) {
-   _DEBUG("CALLING STAGE id=%d top=%d\n",(int)i->stage,lua_gettop(i->L));
-   dump_stack(i->L);
+   _DEBUG("Thread: CALLING STAGE id=%d top=%d args=%d ready_queue_size=%d\n",
+         (int)i->stage,lua_gettop(i->L),(int)i->args,(int)thread_ready_queue_size());
+   //dump_stack(i->L);
    lua_call(i->L,args,LUA_MULTRET);
-   int status=lua_tointeger(i->L,1);
-   lua_remove(i->L,1);
+   int status=0;
+   if(lua_isnumber(i->L, 1)) status=lua_tointeger(i->L,1);
+   _DEBUG("Thread: Stage %d returned status code '%s'\n",(int)i->stage,get_return_status_name(status));
    switch(status) {
       case ENDED: //stage finished, do nothing
          _DEBUG("thread: Stage finished top=%d agrs=%d stage=%d\n",lua_gettop(i->L),args,(int)i->stage);
          lua_settop(i->L,0); //empty the instance's stack
          instance_release(i); //release the instance
          break;
-      case EMMIT_SELF: //stage called emmit_call_self
-         _DEBUG("Thread: Stage emmited itself id=%d top=%d\n",(int)i->stage,lua_gettop(i->L));
+      case EMMIT_SELF_AND_PASS_THREAD: //stage called emmit_call_self
+          lua_remove(i->L,1); //pop the status from the stack
          emmit_self_and_pass_the_thread(i);
+         break;
+      case EMMIT_AND_CONTINUE: //stage called emmit_call_self
+          lua_remove(i->L,1); //pop the status from the stack
+          emmit_and_continue(i);
+         break;         
+      case EMMIT_PENDING_THREAD:
+          lua_remove(i->L,1); //pop the status from the stack
+          { 
+            stage_id id=lua_tointeger(i->L,1);
+            emmit_pending_thread(id,i);
+          }
          break;
       case YIELDED: 
       default:  
          //handler coroutine yielded, put it again in the ready queue
          //It will be resumed with the value 'true' as return value
-         _DEBUG("Thread: Stage yielded itself id=%d top=%d\n",(int)i->stage,lua_gettop(i->L));
          emmit_self(i);
    }
  
@@ -156,8 +198,8 @@ void thread_call(instance i,int args) {
 
 /* Put the current executing instance in the tailf of the ready queue */
 void emmit_self(instance i) {
+   _DEBUG("Thread: Stage '%d' yielded itself top=%d\n",(int)i->stage,lua_gettop(i->L));
    int const top=lua_gettop(i->L);
-   
    //Get the  main coroutine of the instance's handler
    lua_getglobal(i->L, "handler");
    //Put it on the bottom of the instance's stack
@@ -166,16 +208,11 @@ void emmit_self(instance i) {
    i->args=top;
    
    //Push it to the ready queue
-   if(!thread_try_push_instance(i)) {
-      /*TODO   The ready queue is FULL, now what to do?
-       *
-       *       One option is to return an error code to the caller.
-       *
-       *       Another option is to do pipeline backpressure 
-       *       (block the sender stage until someone frees a
-       *       slot on the ready queue).
-       */
-   }
+   thread_try_push_instance(i);
+}
+
+void emmit_pending_thread(stage_id id, instance caller) {
+   instance_try_push_pending_queue(id, caller);
 }
 
 /* Caller thread has yielded with code EMMIT_SELF, therefore
@@ -189,12 +226,17 @@ void emmit_self(instance i) {
  *             the aquired instance 
  */
 void emmit_self_and_pass_the_thread(instance caller) {
-   dump_stack(caller->L);
+//   dump_stack(caller->L);
    stage_id id=lua_tointeger(caller->L,1);
    int const args=lua_gettop(caller->L);
-
+   _DEBUG("Thread: Stage '%d' emmited itself and called stage '%d' top=%d\n",
+      (int)caller->stage,(int)id,lua_gettop(caller->L));
    //Get instance of the stage 'id' (callee)
    instance callee=instance_aquire(id);
+    if(main_graph->s[id]->serial && callee == NULL) {
+      instance_try_push_pending_queue(id, caller);
+      return;
+   }
    //Get the  main coroutine of the callee's handler
    lua_getglobal(callee->L, "handler");
    //push arguments from caller to callee instance
@@ -229,6 +271,17 @@ int call(lua_State * L) {
    
    //Get instance of the stage 'id'
    instance i=instance_aquire(id);
+   if(main_graph->s[id]->serial && i == NULL) {
+/*   	lua_getfield( L, LUA_REGISTRYINDEX, "__SELF" );
+      instance caller=lua_touserdata(ret->L,-1);
+      lua_pop(L,1);
+      instance_try_push_pending_queue(id, caller);*/
+      lua_pushinteger(L,EMMIT_PENDING_THREAD);
+      lua_insert(L,1);
+      //Yield current instance handler with 
+      //code EMMIT_AND_CONTINUE (+ args)
+      return lua_yield(L,args);
+   }
    //Get the  main coroutine of the instance's handler
    lua_getglobal(i->L, "handler");
    //push arguments to instance
@@ -243,11 +296,10 @@ int call(lua_State * L) {
 }
 
 /* Aquire and put another instance on the ready queue 
- * and yield itself to go to the ready queue.
+ * and continue caller execution.
  * 
- * Note: This will yield two events for the ready queue
- * one with the new instance and one with the continuaiton
- * of the current instance.
+ * Note: This will yield one event for the ready queue
+ * with the new instance.
  *
  * Arguments:  int stage_id
  *                The internal id of the stage to be called
@@ -255,26 +307,51 @@ int call(lua_State * L) {
  *             Note: any other argument is poped and copyied to 
  *             the aquired instance 
  */
+void emmit_and_continue(instance caller) {
+//   dump_stack(caller->L);
+   stage_id id=lua_tointeger(caller->L,1);
+   int const args=lua_gettop(caller->L);
+   
+   _DEBUG("Thread: Stage '%d' emmited an event to stage '%d' and continued top=%d\n",
+      (int)caller->stage,(int)id,lua_gettop(caller->L));
+
+   //Get instance of the stage 'id' (callee)
+   instance callee=instance_aquire(id);
+   if(main_graph->s[id]->serial && callee == NULL) {
+      instance_try_push_pending_queue(id, caller);
+      return;
+   }
+      
+   //Get the  main coroutine of the callee's handler
+   lua_getglobal(callee->L, "handler");
+   //push arguments from caller to callee instance
+   copy_values(callee->L, caller->L, 2, args);
+   callee->args=args-1;
+   //Put the callee instance on the ready queue
+   thread_try_push_instance(callee);
+
+   lua_settop(caller->L,0);
+   //Get the  main coroutine of the caller's handler
+   lua_getglobal(caller->L, "handler");
+//   lua_insert(L,1);
+   //push the resume value (TRUE) to the caller instance
+   lua_pushboolean(caller->L,TRUE);
+   //results
+   caller->args=1;
+   //Pass the thread to the callee (call directly its instance)
+   thread_call(caller,1);
+}
+
 int emmit(lua_State * L) {
-   stage_id id=lua_tointeger(L,1);
+   //Push status code EMMIT_AND_CONTINUE to the bottom of the stack   
+   lua_pushinteger(L,EMMIT_AND_CONTINUE);
+   lua_insert(L,1);
+   //Get the number of yielded values (arguments to pass 
+   //to the next stage)
    int args=lua_gettop(L);
-   
-   //Get instance of the stage 'id'
-   instance i=instance_aquire(id);
-   //Get the  main coroutine of the instance's handler
-   lua_getglobal(i->L, "handler");
-   //push arguments to the target instance
-   copy_values(i->L, L, 2, args);
-
-   i->args=args-1;
-   //Put the target instance on the ready queue
-   thread_try_push_instance(i);
-   
-   lua_settop(L,0);
-   lua_pushinteger(L,YIELDED);
-
-   //TODO Let the controller take the decision of yielding the current thread
-   return lua_yield(L,1);
+   //Yield current instance handler with 
+   //code EMMIT_AND_CONTINUE (+ args)
+   return lua_yield(L,args);
 }
 
 /* Yield itself, and tell to the caller thread to pass direcly to the 
@@ -291,13 +368,14 @@ int emmit(lua_State * L) {
  *             the aquired instance 
  */
 int emmit_self_call(lua_State * L) {
-   //Push status code EMMIT_SELF to the bottom of the stack
-   lua_pushinteger(L,EMMIT_SELF);
+   //Push status code EMMIT_SELF_AND_PASS_THREAD to the bottom of the stack
+   lua_pushinteger(L,EMMIT_SELF_AND_PASS_THREAD);
    lua_insert(L,1);
    //Get the number of yielded values (arguments to pass 
    //to the next stage)
    int args=lua_gettop(L);
-   //Yield current instance handler with code EMMIT_SELF (+ args)
+   //Yield current instance handler with 
+   //code EMMIT_SELF_AND_PASS_THREAD (+ args)
    return lua_yield(L,args);
 }
 
@@ -317,15 +395,15 @@ static THREAD_RETURN_T THREAD_CALLCONV thread_main(void *t_val) {
 
 /*Get a thread descriptor from the lua stack*/
 thread thread_get (lua_State *L, int i) {
-  thread t = *(thread_ptr)luaL_checkudata (L, i, THREAD_METATABLE);
+  thread t = luaL_checkudata (L, i, THREAD_METATABLE);
   luaL_argcheck (L, t != NULL, i, "not a Thread or killed already killed");
   return t;
 }
 
 /*tostring method*/
 int thread_tostring (lua_State *L) {
-  thread_ptr id = luaL_checkudata (L, 1, THREAD_METATABLE);
-  lua_pushfstring (L, "Thread (%p)", id);
+  thread t = luaL_checkudata (L, 1, THREAD_METATABLE);
+  lua_pushfstring (L, "Thread (%p)", t);
   return 1;
 }
 
@@ -338,10 +416,9 @@ int thread_new (lua_State *L) {
    //Set its status to PENDING
    t->status=PENDING;
    //Put a reference to the pointer of the thread descriptor
-   //on the stack
-   thread_ptr ptr=lua_newuserdata( L, sizeof(thread_ptr));
-   //Set the address of the reference pointer
-   *ptr=t;
+   //on the stack as a light userdata
+   lua_pushlightuserdata( L, t);
+
 
    //set thread metatable for the userdata
    luaL_getmetatable (L, THREAD_METATABLE);
@@ -365,8 +442,6 @@ int thread_kill (lua_State *L) {
    thread t=thread_get(L,1);
    THREAD_KILL(&t->thread);
    free(t);
-   thread_ptr ptr=luaL_checkudata (L, 1, THREAD_METATABLE);
-   *ptr=NULL;
    return 0;
 }
 

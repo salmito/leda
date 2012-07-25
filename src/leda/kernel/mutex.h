@@ -23,25 +23,19 @@ THE SOFTWARE.
 
 ===============================================================================
 */
-#ifndef _INSTANCE_H_
-#define _INSTANCE_H_
+#ifndef _MUTEX_H_
+#define _MUTEX_H_
 
-#include "extra/threading.h"
-#include "graph.h"
+#include <lua.h>
+#include <lauxlib.h>
+#include <lualib.h>
 
-/* lua state structure */
-typedef struct instance_data {
-   lua_State * L;
-   stage_id stage;
-   //true if the stage is serial (i.e. only one instance is allowed)
-   bool_t serial; 
-   size_t args;
-} * instance;
+#define MUTEX_METATABLE   "leda mutex"
 
-void instance_init(size_t limit);
-instance instance_aquire(stage_id s);
-void instance_release(instance i);
-void instance_end(); //warning: thread unsafe
-void instance_try_push_pending_queue(stage_id serial_stage, instance i);
+int mutex_new (lua_State *L);
+int mutex_destroy (lua_State *L);
+int mutex_lock (lua_State *L);
+int mutex_unlock (lua_State *L);
+int mutex_createmetatable (lua_State *L);
 
-#endif //_INSTANCE_H_
+#endif //_MUTEX_H_

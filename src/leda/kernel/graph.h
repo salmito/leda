@@ -54,6 +54,7 @@ typedef struct stage_data {
    size_t n_out;
    connector_id input;
    void * unique_id;
+   bool_t serial;
 } * stage;
 
 
@@ -77,6 +78,8 @@ typedef struct graph_data {
    size_t n_c;
    char const * name;
 } * graph;
+
+extern graph main_graph;
 
 stage_id get_stage_id_from_ptr(graph g, void * id);
 connector_id get_connector_id_from_ptr(graph g, void * id);

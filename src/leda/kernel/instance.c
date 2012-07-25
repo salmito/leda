@@ -32,15 +32,19 @@ THE SOFTWARE.
 #include "instance.h"
 #include "thread.h"
 #include "queue.h"
+#include "mutex.h"
+
+int leda_sleep(lua_State * L);
 
 /*
 * Recycle queue vector, initialized in the instace_init() function
 * It holds one instance queue for each different stage on the graph.
 */
-queue * recycle_queue;
+queue * recycle_queues;
+queue * pending_queues;
 
 /* Graph read-only gobal representation of the running graph */
-graph g=NULL;
+//g=NULL;
 
 /* Lua code for the instance states (baked in).
  * Contanins a byte array for automatic
@@ -85,6 +89,9 @@ void instance_destroy(instance i) {
    free(i);
 }
 
+#define STAGE(i) main_graph->s[i]
+#define CONNECTOR(i) main_graph->c[i]
+
 /* Initialize instance subsystem
  * Params:     'g_par'  read-only graph representation 
  *
@@ -93,18 +100,34 @@ void instance_destroy(instance i) {
  *                      0     no instances will be stored
  *                      >0    sets size to 'limit'
  */
-void instance_init(graph g_par, size_t limit){
+void instance_init(size_t limit){
    int i;
-   g=g_par;
-   recycle_queue=calloc(g->n_s,sizeof(queue));
-   for(i=0;i<g->n_s;i++) {
-      recycle_queue[i]=queue_new();
-      queue_set_capacity(recycle_queue[i],limit);
+   recycle_queues=calloc(main_graph->n_s,sizeof(queue));
+   pending_queues=calloc(main_graph->n_s,sizeof(queue));
+
+   for(i=0;i<main_graph->n_s;i++) {
+      recycle_queues[i]=queue_new();
+      //if serial flag is detected, set the capacity of its recycle queue to 1
+      //and prealocate an exclusive instance for it
+      if(STAGE(i)->serial) {
+         pending_queues[i]=queue_new();
+         queue_set_capacity(pending_queues[i],limit);
+         queue_set_capacity(recycle_queues[i],1);
+         STAGE(i)->serial=FALSE;
+         instance serial=instance_aquire(i);
+         STAGE(i)->serial=TRUE;
+         serial->serial=TRUE;
+         instance_release(serial);
+      } else {
+         queue_set_capacity(recycle_queues[i],limit);
+      }
    }
 }
 
-#define STAGE(s) g->s[s]
-#define CONNECTOR(c) g->c[c]
+void instance_try_push_pending_queue(stage_id serial_stage, instance i) {
+   TRY_PUSH(pending_queues[serial_stage],i);
+}
+
 
 /* Try to aquire an instance from its correspondent recycle queue
  * if there is no instance available in the recycle queue, create a 
@@ -113,19 +136,34 @@ void instance_init(graph g_par, size_t limit){
  * Warning: can return 'NULL' in case of error
  */
 instance instance_aquire(stage_id s) {
-   if(s<0 && s>g->n_s) return NULL; //error: invalid stage
    instance ret;
+   if(s<0 && s>main_graph->n_s) return NULL; //error: invalid stage
    
-   //Try to recycle an instance from its correspondent queue
-   if(TRY_POP(recycle_queue[s],ret)) {
-      return ret; //instance recycled
+   // if serial flag is detected for stage and the recycle queue is not empty, 
+   // block on the recycle queue
+   if(STAGE(s)->serial) {
+      _DEBUG("Instance: Waiting to aquire a instance of a serial stage id='%d'\n",(int)s);
+      if(!TRY_POP(recycle_queues[s],ret)) {
+         _DEBUG("Instance: tried to aquire an serial stage but it was not available id='%d'\n",(int)s);
+         return NULL;
+      }
+      _DEBUG("Instance: Serial instance aquired stage id='%d'\n",(int)s);
+      return ret;
+   } else {
+      //Try to recycle an instance from its correspondent queue
+      if(TRY_POP(recycle_queues[s],ret))
+         return ret; //instance recycled
    }
+   
    //If not (beacuse the recycle queue was empty) create
    //a new instance and returns it
    ret=calloc(1,sizeof(struct instance_data));
    
    ret->L=new_lua_state(TRUE);
    ret->stage=s;
+   
+   lua_pushlightuserdata( ret->L, ret);
+	lua_setfield( ret->L, LUA_REGISTRYINDEX, "__SELF" );
    
    if(luaL_loadbuffer( ret->L, instance_chunk, sizeof(instance_chunk), "@instance.lua"))
 			return NULL; //"luaL_loadbuffer() failed";   // LUA_ERRMEM
@@ -187,7 +225,7 @@ instance instance_aquire(stage_id s) {
    
    /* Push the kernel C API functions to the newly created lua_State */
    lua_setglobal(ret->L,"stage");
-
+   /* C methods for passing control to instances */
    lua_pushcfunction(ret->L,call);
    lua_setglobal(ret->L,"__call");
 
@@ -197,10 +235,37 @@ instance instance_aquire(stage_id s) {
    lua_pushcfunction(ret->L,emmit_self_call);
    lua_setglobal(ret->L,"__emmit_self_call");
    
+   /* C method for new mutexes*/
+   lua_newtable(ret->L);
+   lua_pushliteral(ret->L,"new");
+   lua_pushcfunction(ret->L,mutex_new);
+   lua_rawset(ret->L,-3);
+   lua_pushliteral(ret->L,"destroy");
+   lua_pushcfunction(ret->L,mutex_destroy);
+   lua_rawset(ret->L,-3);
+   lua_pushliteral(ret->L,"lock");
+   lua_pushcfunction(ret->L,mutex_lock);
+   lua_rawset(ret->L,-3);
+   lua_pushliteral(ret->L,"unlock");
+   lua_pushcfunction(ret->L,mutex_unlock);
+   lua_rawset(ret->L,-3);
+   lua_setglobal(ret->L,"__mutex");
+
+   lua_pushnumber(ret->L,ENDED);   
+   lua_setglobal(ret->L,"__end_code");
+   
+   lua_pushcfunction(ret->L,call);
+   lua_setglobal(ret->L,"__call");
+   
+   lua_pushcfunction(ret->L,leda_sleep);
+   lua_setglobal(ret->L,"__sleep");
+
+   
+   
    /* Call the lua_chunk loaded in the luaL_loadbuffer */
    lua_call( ret->L, 0 , 0 );
   
-   _DEBUG("Instance created for stage '%s'\n",STAGE(s)->name);
+   _DEBUG("Instance created for stage '%d' name='%s'\n",(int)s,STAGE(s)->name);
 
    return ret;
 }
@@ -209,7 +274,19 @@ instance instance_aquire(stage_id s) {
  * destroy it.
  */
 void instance_release(instance i) {
-   if(!TRY_PUSH(recycle_queue[i->stage],i)) {
+   if(STAGE(i->stage)->serial) {
+      TRY_PUSH(recycle_queues[i->stage],i); 
+      _DEBUG("Instance: Serial instance released. id='%d'\n",(int)i->stage);
+      instance pending;
+      if(TRY_POP(pending_queues[i->stage],pending)) { 
+         //There are pending instances waiting for this serial stage
+         //Try to execute it again now that the serial stage has been released
+         _DEBUG("Instance: Trying to call pending instance. id='%d'\n",(int)pending->stage);
+         emmit_and_continue(pending);
+      }
+      return;
+   }
+   if(!TRY_PUSH(recycle_queues[i->stage],i)) {
       _DEBUG("Instance: Destroying instance of the stage id='%d'.\n",(int)i->stage);
       instance_destroy(i);
       return; 
@@ -224,7 +301,7 @@ void instance_release(instance i) {
  */
 void instance_end() {
    int i;
-   for(i=0;i<g->n_s;i++) { 
-         queue_free(recycle_queue[i]);
+   for(i=0;i<main_graph->n_s;i++) { 
+         queue_free(recycle_queues[i]);
    }
 }

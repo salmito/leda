@@ -12,4 +12,4 @@ end
 
 local g=graph{printer}
 
-g:run()
+g:run(leda.controller.fixed_thread_pool.get(1))

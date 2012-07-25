@@ -9,18 +9,31 @@
 leda={output={}}
 
 -----------------------------------------------------------------------------
+-- Define an easier name for the new_mutex method
+-----------------------------------------------------------------------------
+leda.mutex=__mutex
+
+-----------------------------------------------------------------------------
+-- Define an easier name for the sleep function
+-----------------------------------------------------------------------------
+leda.sleep=__sleep
+
+-----------------------------------------------------------------------------
 -- Function to get the output indexed by 'key'
 -- if 'key' is ascent, return hole output table
 -- if 'key' is not defined, return 'nil' and an error message
 -----------------------------------------------------------------------------
 function leda.get_output(key)
-   if key then
-      if leda.output[key] then 
-         return leda.output[key]
-      end
-      return nil,"Output 'key' not found";
+   --try to get the provided key
+   if key and leda.output[key] then 
+      return leda.output[key]
    end
-   return leda.output
+   --if not found use the first integer key
+   key=1
+   if leda.output[key] then 
+      return leda.output[key]
+   end
+   return nil,string.format("Output '%s' not found",key)
 end
 
 -----------------------------------------------------------------------------
@@ -66,12 +79,12 @@ end
 -----------------------------------------------------------------------------
 local function f()
    while true do
-      __handler(coroutine.yield(0)) 
+      __handler(coroutine.yield(__end_code)) 
    end 
 end
 
 handler=coroutine.wrap(f)
 local status=handler()
-assert(status==0,"Unexpected error")
+assert(status==__end_code,"Unexpected error")
 
 

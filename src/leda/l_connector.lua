@@ -66,43 +66,19 @@ end
 -----------------------------------------------------------------------------
 -- Function to throws an event for each consumer of the connector
 -----------------------------------------------------------------------------    
-emmit_func=
-[[--function(...) 
-   local arg={...}
-   consumers=arg[1]
-   arg:remove(1)
-   for _,c in pairs(consumers) do
-      __emmit(c,unpack(arg));
-   end
---end]]
+emmit_func=[[local arg={...} for _,c in pairs(arg[1]) do __emmit(c,select(2,...)) end]]
 
 -----------------------------------------------------------------------------
 -- Function to pass the thread for each consumer of the connector in order
 -- and wait for them to complete
 -----------------------------------------------------------------------------    
-call_func=
-[[--function(...) 
-   local arg={...}
-   consumers=arg[1]
-   arg:remove(1)
-   for _,c in pairs(consumers) do
-      __call(c,unpack(arg));
-   end
---end]]
+call_func=[[local arg={...} for _,c in pairs(arg[1]) do __call(c,select(2,...)) end]]
 
 -----------------------------------------------------------------------------
 -- Function that and throws an event with the continuation of the handler
 -- and pass the thread for each consumer of the connector in order
 -----------------------------------------------------------------------------    
-emmit_self_call_func=
-[[--function(...) 
-   local arg={...}
-   consumers=arg[1]
-   arg:remove(1)
-   for _,c in pairs(consumers) do
-      __emmit_self_call(c,unpack(args));
-   end
---end]]
+emmit_self_call_func=[[local arg={...} for _,c in pairs(arg[1]) do __emmit_self_call(c,select(2,...)) end]]
 
 -----------------------------------------------------------------------------
 -- Creates a new connector and returns it
