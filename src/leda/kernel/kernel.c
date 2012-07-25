@@ -38,6 +38,8 @@ THE SOFTWARE.
 #include "queue.h"
 #include "instance.h"
 
+#define __VERSION "0.2.0-beta1"
+
 #define LEDA_NAME          "leda.kernel"
 #define LEDA_ENV           "leda kernel environment"
 
@@ -176,7 +178,7 @@ static void set_leda_info (lua_State *L) {
 	lua_pushliteral (L, "Leda");
 	lua_settable (L, -3);
 	lua_pushliteral (L, "_VERSION");
-	lua_pushliteral (L, "Leda 0.2.0");
+	lua_pushliteral (L, __VERSION);
 	lua_settable (L, -3);
 	lua_pop(L,1);
 }
