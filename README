@@ -1,7 +1,5 @@
 Leda is a SEDA (Staged Event-Driven Architecture) implementation in Lua.
 
-Requires Alua library, with parallel extensions. 
-For more information and installing instructions go to https://github.com/felipepina/ALua
+Requires Intel's TBB library (apt-get install libtbb-dev)
 
 Tiago Salmito
-ALRETACAO

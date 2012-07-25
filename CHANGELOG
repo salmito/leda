@@ -1,5 +1,11 @@
 Leda Changelog
 
+0.2.0
+	- Completely rewrited, consider this the initial version
+
+0.1.4
+	- PROTOTYPE VERSION
+
 0.1.2
 	- Started changelog
 	- Named queues implemented
