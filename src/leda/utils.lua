@@ -3,10 +3,39 @@ require "leda"
 -----------------------------------------------------------------------------
 -- Defining globals for easy access to the leda main API functions
 -----------------------------------------------------------------------------
-stage,connector,graph=leda.stage,leda.connector,leda.graph
+stage,connector,graph=stage or leda.stage,connector or leda.connector,graph or leda.graph
 
 leda.utils={}
 local utils=leda.utils
+
+-----------------------------------------------------------------------------
+-- Defining auxiliary functions
+-----------------------------------------------------------------------------
+-----------------------------------------------------------------------------
+-- Insert a stage
+-- param:   's1':     
+--          's2':   
+--
+-- returns: 
+-----------------------------------------------------------------------------
+function utils.insert_before(s1,s2,key)
+   key=key or 1
+   s1.input=s2.input
+   s2.input=connector{}
+   s1:add_output(key,s2.input)
+end
+
+function utils.insert_after(s1,s2,key)
+   key=key or 1
+   s1.output[key]=connector()
+   s2.input=s1.output[key]
+end
+
+function utils.add_before(s1,s2,key)
+   s1.input=s2.input
+   s1:add_output(key,s2.input)
+end
+
 -----------------------------------------------------------------------------
 -- Switch stage selects an specific output and send pushed 'data'
 -- param:   'n':     output key to push other arguments

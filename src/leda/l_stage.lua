@@ -106,7 +106,7 @@ function new_stage(t)
    assert(type(t)=="table","Invalid parameter ('table' expected, got '%s'",type(t))
    
    if type(t[1])=="table" then
-      t.handler=t[1].handler
+      t.handler=t.handler or t[1].handler
       t.init=t.init or t[1].init
       t.input=t.input or t[1].input
       t.output=t.output or t[1].output

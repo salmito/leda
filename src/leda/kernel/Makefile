@@ -6,7 +6,7 @@ LUA=lua
 OBJ=  kernel.o \
       graph.o \
       instance.o \
-		queue.o \
+		tbb_queue.o \
 		mutex.o \
       thread.o \
       extra/threading.o \
@@ -25,7 +25,7 @@ all: $(MODULE)
 
 instance.o: instance.lo
 
-queue.o: queue.cpp $(HEADERS) Makefile
+tbb_queue.o: tbb_queue.cpp $(HEADERS) Makefile
 	g++ -c -o $@ $< $(CFLAGS)
 
 atomic.o: atomic.cpp $(HEADERS) Makefile
@@ -40,8 +40,7 @@ atomic.o: atomic.cpp $(HEADERS) Makefile
 $(MODULE): $(OBJ)
 	$(CC) -shared $^ -o $@ $(LDFLAGS)
 
-clean:
-	rm -f $(OBJ) instance.lo
+clean: ultraclean
 	
 ultraclean:
 	rm -f $(OBJ) instance.lo $(MODULE)

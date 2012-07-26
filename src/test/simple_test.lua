@@ -1,8 +1,4 @@
-require "leda"
-
 local utils=require "leda.utils"
-
-local graph,connector,stage=leda.graph,leda.connector,leda.stage
 
 printer=stage{utils.print}
 

@@ -128,7 +128,6 @@ void instance_try_push_pending_queue(stage_id serial_stage, instance i) {
    TRY_PUSH(pending_queues[serial_stage],i);
 }
 
-
 /* Try to aquire an instance from its correspondent recycle queue
  * if there is no instance available in the recycle queue, create a 
  * a new instance, initialize-it with the stage method and returns it
@@ -260,7 +259,15 @@ instance instance_aquire(stage_id s) {
    lua_pushcfunction(ret->L,leda_sleep);
    lua_setglobal(ret->L,"__sleep");
 
+   lua_pushcfunction(ret->L,leda_sleep);
+   lua_setglobal(ret->L,"__sleep");
    
+   /*lua_pushcfunction(ret->L,wrap_test);
+   lua_setglobal(ret->L,"wrap");
+   
+   lua_pushcfunction(ret->L,unwrap_test);
+   lua_setglobal(ret->L,"unwrap");*/
+
    
    /* Call the lua_chunk loaded in the luaL_loadbuffer */
    lua_call( ret->L, 0 , 0 );

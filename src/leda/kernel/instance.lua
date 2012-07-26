@@ -20,7 +20,7 @@ leda.sleep=__sleep
 
 -----------------------------------------------------------------------------
 -- Function to get the output indexed by 'key'
--- if 'key' is ascent, return hole output table
+-- if 'key' is absent, return the fist field of output table
 -- if 'key' is not defined, return 'nil' and an error message
 -----------------------------------------------------------------------------
 function leda.get_output(key)
@@ -60,9 +60,7 @@ local init,err=loadstring(stage.__init)
 if not init then 
    error(string.format("Error loading init function for stage '%s': %s",stage.__name,err))
 else
-   -----------------------------------------------------------------------------
    -- Execute init function of the stage
-   -----------------------------------------------------------------------------
    init() 
 end
 
@@ -75,15 +73,17 @@ if not __handler then
 end
 
 -----------------------------------------------------------------------------
--- Create a new environment for the stage
+-- Create the main coroutine for the stage handler
 -----------------------------------------------------------------------------
-local function f()
+local function main_coroutine()
+   local end_code=__end_code
    while true do
-      __handler(coroutine.yield(__end_code)) 
+      __handler(coroutine.yield(end_code)) 
    end 
 end
 
-handler=coroutine.wrap(f)
+handler=coroutine.wrap(main_coroutine)
+
 local status=handler()
 assert(status==__end_code,"Unexpected error")
 

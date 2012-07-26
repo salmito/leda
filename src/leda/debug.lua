@@ -7,19 +7,21 @@
 -----------------------------------------------------------------------------
 local string = string
 local io=io
+local DEBUG=DEBUG
 module("leda.debug")
 
 -----------------------------------------------------------------------------
 -- Function to get a debug handler
 -----------------------------------------------------------------------------
 function get_debug(prefix,sufix)
-   return function () end --comment this line to enable debugging
---[[   sufix=sufix or "\n"
-   return function (fmt, ...)
-      io.stderr:write(prefix)
-      io.stderr:write(string.format(fmt, ...))
-      io.stderr:write(sufix)
+   if DEBUG then
+      sufix=sufix or "\n"
+      return function (fmt, ...)
+         io.stderr:write(prefix)
+         io.stderr:write(string.format(fmt, ...))
+         io.stderr:write(sufix)
+      end
    end
-   --]]
+   return function () end
 end
 

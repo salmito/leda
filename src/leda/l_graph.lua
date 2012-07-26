@@ -55,7 +55,7 @@ end
 --
 -- If a stage is already on the graph, nothing is done
 -----------------------------------------------------------------------------
-local function add_stage(self, s)
+function index.add_stage(self, s)
    assert(is_stage(s),"Invalid parameter ('stage' expected)")
    if not is_member(self.stages,s) then
       dbg("Adding stage '%s' to graph '%s'",tostring(s),tostring(self))
@@ -75,6 +75,15 @@ local function add_connector(self,c)
       table.insert(self.connectors,c)
    end
 end
+
+function index.add(self, s)
+   assert(is_stage(s),"Invalid parameter ('stage' expected)")
+   if not is_member(self.stages,s) then
+      dbg("Adding stage '%s' to graph '%s'",tostring(s),tostring(self))
+      table.insert(self.stages,s)
+   end
+end
+
 
 -----------------------------------------------------------------------------
 -- Creates a new graph and returns it
@@ -102,7 +111,7 @@ function graph(t)
       if  k=='name' or k=='stages' or k=='connectors' then
       --if value is a stage, add it to graph
       elseif is_stage(v) then
-         add_stage(g,v)
+         g:add_stage(v)
       --every other value is ignored
       else
          dbg("Invalid field for graph '%s': field '%s' type '%s'",tostring(g),tostring(k),type(v))
