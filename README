@@ -4,7 +4,7 @@ Leda is a SEDA (Staged Event-Driven Architecture) implementation in Lua.
 ======== Compiling and Installing ========
 ==========================================
 
-Leda requires Intel's Threading Building Blocks library (TBB). 
+Leda requires the Threading Building Blocks library (TBB). 
 For more information on the tbb library: http://threadingbuildingblocks.org/
 To install TBB on a Debian like linux (Ubuntu, mint, etc):
    apt-get install libtbb-dev
