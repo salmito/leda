@@ -1,0 +1,158 @@
+<!doctype html>
+<!-- The Time Machine GitHub pages theme was designed and developed by Jon Rohan, on Feb 7, 2012. -->
+<!-- Follow him for fun. http://twitter.com/jonrohan. Tail his code on http://github.com/jonrohan -->
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+  <link rel="stylesheet" href="stylesheets/stylesheet.css" media="screen"/>
+  <link rel="stylesheet" href="stylesheets/pygment_trac.css"/>
+  <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+  <script type="text/javascript" src="javascripts/script.js"></script>
+
+  <title>Leda</title>
+  <meta name="description" content="Leda is a SEDA (Staged Event-Driven Architecture) implementation in Lua.">
+
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+
+</head>
+
+<body>
+
+  <div class="wrapper">
+    <header>
+      <h1 class="title">Leda</h1>
+    </header>
+    <div id="container">
+      <p class="tagline">Leda is a SEDA (Staged Event-Driven Architecture) implementation in Lua.</p>
+      <div id="main" role="main">
+        <div class="download-bar">
+        <div class="inner">
+          <a href="https://github.com/Salmito/leda/tarball/master" class="download-button tar"><span>Download</span></a>
+          <a href="https://github.com/Salmito/leda/zipball/master" class="download-button zip"><span>Download</span></a>
+          <a href="https://github.com/Salmito/leda" class="code">View Leda on GitHub</a>
+        </div>
+        <span class="blc"></span><span class="trc"></span>
+        </div>
+        <article class="markdown-body">
+          <h1>Leda</h1>
+
+<p>Leda is a Lua library for bulding parallel, non-linear pipelines based on the concepts of the SEDA (Staged Event-Driven Architecture).</p>
+
+<h2>Compiling and Installing</h2>
+
+<p>Leda is compatible with Lua 5.1 and 5.2.</p>
+
+<p>Leda requires the Threading Building Blocks library (TBB). </p>
+
+<p>For more information on the TBB library: <a href="http://threadingbuildingblocks.org/">http://threadingbuildingblocks.org/</a></p>
+
+<p>To install TBB on a Debian like linux (Ubuntu, mint, etc):</p>
+
+<pre><code>   apt-get install libtbb-dev
+</code></pre>
+
+<p>To build and install Leda for Lua 5.1:</p>
+
+<pre><code>   $ make
+   $ sudo make install
+</code></pre>
+
+<p>To build and install Leda for Lua 5.2:</p>
+
+<pre><code>   $ make 5.2
+   $ sudo make install5.2
+</code></pre>
+
+<p>To build and install Leda on both Lua versions:</p>
+
+<pre><code>   $ make clean
+   $ sudo make install5.1
+   $ make clean
+   $ sudo make install5.2
+</code></pre>
+
+<p>To uninstall Leda on Lua 5.1:</p>
+
+<pre><code>   $ sudo make uninstall
+</code></pre>
+
+<p>To uninstall Leda on Lua 5.2:</p>
+
+<pre><code>   $ sudo make uninstall5.2
+</code></pre>
+
+<h2>Testing installation</h2>
+
+<p>To test if the installation was successful type this command:</p>
+
+<pre><code>$ lua -l leda
+</code></pre>
+
+<p>You should get the lua prompt if leda is installed properly or the error message "module 'leda' not found"  if it cannot be loaded (check if it was installed on a  wrong location).</p>
+
+<p>That's it.</p>
+
+<h2>Reporting BUGS</h2>
+
+<p>If you find bugs, please report them on GitHub: <a href="https://github.com/Salmito/Leda/issues">https://github.com/Salmito/Leda/issues</a></p>
+
+<p>Or e-mail me: Tiago Salmito - tiago <em>[at]</em> salmito <em>[dot]</em> com</p>
+
+<h2>Copyright notice</h2>
+
+<p>Leda is published under the same MIT license as Lua 5.1.</p>
+
+<p>Copyright (C) 2012 Tiago Salmito, Noemi Rodriguez, Ana Lucia de Moura</p>
+
+<p>Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:</p>
+
+<p>The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.</p>
+
+<p>THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.</p>
+        </article>
+      </div>
+    </div>
+    <footer>
+      <div class="owner">
+      <p><a href="https://github.com/Salmito" class="avatar"><img src="https://secure.gravatar.com/avatar/b7408e48a5765feed953f4ac73c37fce?s=30&amp;d=https://a248.e.akamai.net/assets.github.com%2Fimages%2Fgravatars%2Fgravatar-140.png" width="48" height="48"/></a> <a href="https://github.com/Salmito">Salmito</a> maintains <a href="https://github.com/Salmito/leda">Leda</a></p>
+
+
+      </div>
+      <div class="creds">
+        <small>This page generated using <a href="https://pages.github.com/">GitHub Pages</a><br/>theme by <a href="http://twitter.com/jonrohan/">Jon Rohan</a></small>
+      </div>
+    </footer>
+  </div>
+  <div class="current-section">
+    <a href="#top">Scroll to top</a>
+    <a href="https://github.com/Salmito/leda/tarball/master" class="tar">tar</a><a href="https://github.com/Salmito/leda/zipball/master" class="zip">zip</a><a href="" class="code">source code</a>
+    <p class="name"></p>
+  </div>
+
+            <script type="text/javascript">
+            var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+            document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+          </script>
+          <script type="text/javascript">
+            try {
+              var pageTracker = _gat._getTracker("UA-2747196-1");
+            pageTracker._trackPageview();
+            } catch(err) {}
+          </script>
+
+</body>
+</html>
