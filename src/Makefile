@@ -1,13 +1,4 @@
-LUA_INSTALL_PATH=/usr/share/lua/5.1
-LIB_INSTALL_PATH=/usr/local/lib/lua/5.1
-
-LUA_INSTALL_PATH_5_2=/usr/share/lua/5.2
-LIB_INSTALL_PATH_5_2=/usr/local/lib/lua/5.2
-
-LUA_5_2_INC=/usr/local/include
-LUA_5_1_INC=/usr/include/lua5.1
-
-DEFAULT_LUA_INC=$(LUA_5_1_INC)
+include ../config.in
 
 SRC_DIR=leda/
 

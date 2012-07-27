@@ -1,4 +1,4 @@
-Leda is a SEDA (Staged Event-Driven Architecture) implementation in Lua.
+Leda is a Lua library for bulding parallel, non-linear pipelines based on the concepts of the SEDA (Staged Event-Driven Architecture).
 
 ==========================================
 ======== Compiling and Installing ========
@@ -39,8 +39,7 @@ To test if the installation was successful type this command:
 
 $ lua -l leda
 
-You should get the lua prompt if leda is installed or the "module 'leda'
-not found" error message if it cannot be loaded (or installed on a 
+You should get the lua prompt if leda is installed properly or the error message "module 'leda' not found"  if it cannot be loaded (check if it was installed on a 
 wrong location).
 
 That's it.
