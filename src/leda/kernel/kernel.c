@@ -67,7 +67,7 @@ int leda_run(lua_State * L) {
    instance_init(-1);
 
    //first, iterate through the connectors field
-   //to push pending sends to the each connector
+   //to push pending sends to the each connector.
    //each send pushes a correspondent instance to 
    //the ready_queue
    lua_pushstring(L,"connectors");
@@ -83,7 +83,7 @@ int leda_run(lua_State * L) {
       luaL_checktype(L,-1, LUA_TTABLE);      
       int m=lua_objlen(L,-1);
       int j;
-      for(j=1;j<=m;j++) {
+      for(j=1;j<=m;j++) { //For each connector
          lua_getglobal(L,"unpack"); //Push unpack function
          int t=lua_gettop(L);
          lua_rawgeti(L,-2,j);
