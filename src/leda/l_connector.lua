@@ -66,19 +66,34 @@ end
 -----------------------------------------------------------------------------
 -- Function to throws an event for each consumer of the connector
 -----------------------------------------------------------------------------    
-emmit_func="local arg={...} for _,c in pairs(arg[1]) do __emmit(c,select(2,...)) end"
+emmit_func=--function (...) 
+[[local arg={...} 
+for _,c in pairs(arg[1]) do
+__emmit(c,select(2,...)) 
+end 
+--end]]
 
 -----------------------------------------------------------------------------
 -- Function to pass the thread for each consumer of the connector in order
 -- and wait for them to complete
 -----------------------------------------------------------------------------    
-call_func="local arg={...} for _,c in pairs(arg[1]) do __call(c,select(2,...)) end"
+call_func=--function (...) 
+[[local arg={...} 
+for _,c in pairs(arg[1]) do
+__call(c,select(2,...)) 
+end 
+--end]]
 
 -----------------------------------------------------------------------------
 -- Function that and throws an event with the continuation of the handler
 -- and pass the thread for each consumer of the connector in order
 -----------------------------------------------------------------------------    
-emmit_self_call_func="local arg={...} for _,c in pairs(arg[1]) do __emmit_self_call(c,select(2,...)) end"
+emmit_self_call_func=--function (...) 
+[[local arg={...} 
+for _,c in pairs(arg[1]) do 
+__emmit_self_call(c,select(2,...)) 
+end
+--end]]
 
 -----------------------------------------------------------------------------
 -- Creates a new connector and returns it

@@ -14,13 +14,13 @@ local loop_hand="for i=1,"..it.." do leda.output[1]:send() end"
 local loop=stage{handler=loop_hand,name="Looper"}
 
 g:add_stage(loop)
-local last_output=connector{};
+local last_output=connector{connector{sendf=leda.e}};
 loop.output[1]=last_output
 local last_stage=loop
 
 for i=1,stages do
    local init="print('iniciou "..i.."')"
-   local h="print('executou "..i.."') leda.output[1]:send()"
+   local h="--[[print('executou "..i.."')]]-- leda.output[1]:send()"
    local ss=stage{handler=h,init=init,output={connector{sendf=leda.e}},name="s"..i}
    
    utils.insert_after(last_stage,ss)   

@@ -29,6 +29,7 @@ THE SOFTWARE.
 #include "extra/threading.h"
 #include "instance.h"
 #include "queue.h"
+#include "atomic.h"
 
 #include <lua.h>
 #include <lauxlib.h>
@@ -44,23 +45,30 @@ typedef struct thread_data {
 } * thread;
 
 /* Thread main coroutine exit status*/
-enum return_status{
-   ENDED=0xF1F21AB,EMMIT_SELF_AND_PASS_THREAD,EMMIT_AND_CONTINUE,EMMIT_PENDING_THREAD,YIELDED
+enum return_status{ 
+   ENDED=0xF1F21AB,
+   EMMIT_SELF_AND_PASS_THREAD,
+   EMMIT_AND_CONTINUE,
+   EMMIT_PENDING_THREAD,
+   YIELDED
 };
+
+extern atomic pool_size;
 
 char const * get_return_status_name(int status);
 /* lua 5.1 to 5.2 compatibility macros */
 #if LUA_VERSION_NUM > 501
    #define lua_objlen lua_rawlen
    #define luaL_reg luaL_Reg
-   #define luaL_register(L,libname,funcs) \
+   #define REGISTER_LEDA(L,libname,funcs) \
            lua_getglobal(L,"leda");  \
            lua_pushliteral(L,"kernel");  \
            lua_newtable(L); \
            luaL_setfuncs (L,funcs,0); \
            lua_rawset(L,-3); \
-           lua_newtable(L); \
-            
+           lua_newtable(L); 
+#else
+   #define REGISTER_LEDA(L,libname,funcs) luaL_register(L,libname,funcs)
 #endif
 
 /* Defining debug functions */ 

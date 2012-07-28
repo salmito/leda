@@ -23,61 +23,59 @@ THE SOFTWARE.
 
 ===============================================================================
 */
-
 #include <stdlib.h>
+#include <stdio.h>
 
-#include <lua.h>
-#include <lauxlib.h>
-#include <lualib.h>
-
-#include "mutex.h"
+#include "atomic.h"
 #include "thread.h"
 
-/*Get a thread descriptor from the lua stack*/
-MUTEX_T * mutex_get (lua_State *L, int i) {
-  if(!lua_islightuserdata(L,i)) {
-      lua_pushstring(L,"expected a lightuserdata as argument");
-      lua_error(L);
-  }
-  MUTEX_T * m = lua_touserdata (L, i);
-  luaL_argcheck (L, m != NULL, i, "mutex is null");
-  return m;
+struct atomicInt {
+   int i;
+   MUTEX_T lock;
+};
+
+atomic atomic_new(int x) {
+   atomic a;
+   a=malloc(sizeof(struct atomicInt));
+   a->i=x;
+   MUTEX_INIT(&a->lock);
+   return a;
 }
 
-/* Lock a mutex from Lua*/
-int mutex_lock (lua_State *L) {
-   MUTEX_T * m=mutex_get(L,1);
-   _DEBUG("Mutex: Locking mutex %p\n",m);
-   MUTEX_LOCK(&*m);
-   return 0;
+int atomic_value(atomic x) {
+   return x->i;
 }
 
-/* Unlock a mutex from Lua*/
-int mutex_unlock (lua_State *L) {
-   MUTEX_T * m=mutex_get(L,1);
-   _DEBUG("Mutex: Unlocking mutex %p\n",m);
-   MUTEX_UNLOCK(m);
-   return 0;
+/*do x=y and return the old value of x*/
+int atomic_fetch_and_store(atomic x, int y) {
+   MUTEX_LOCK(&x->lock);
+   int oldx=x->i;
+   x->i=y;
+   MUTEX_UNLOCK(&x->lock);
+   return oldx;
 }
 
-/* Destroy a mutex from Lua*/
-int mutex_destroy (lua_State *L) {
-   MUTEX_T * m=mutex_get(L,1);
-   MUTEX_FREE(m);
-   free(m);
-   return 0;
+/*do x+=y and return the old value of x*/
+int atomic_fetch_and_add(atomic x, int y) {
+   MUTEX_LOCK(&x->lock);
+   int oldx=x->i;
+   x->i+=y;
+   MUTEX_UNLOCK(&x->lock);
+   return oldx;
 }
 
-/* create a new mutex and returns its descriptor */
-int mutex_new (lua_State *L) {
-   //Allocate space for the mutex descriptor
-   MUTEX_T * m=malloc(sizeof(MUTEX_T));
-   MUTEX_INIT(m);
-   _DEBUG("Mutex: Created new mutex %p\n",m);
-   //Put a reference to the pointer of the mutex descriptor
-   //on the stack as a light userdata
-   lua_pushlightuserdata(L, m);
+/* if x equals z, then do x=y.
+   In either case, return old value of x. */
+int atomic_compare_and_swap(atomic x, int y, int z) {
+   MUTEX_LOCK(&x->lock);
+   int oldx=x->i;
+   if(oldx==z)
+      x->i=y;
+   MUTEX_UNLOCK(&x->lock);
+   return oldx;
+}
 
-   //Return the reference pointer of the mutex descriptor
-   return 1;
+/*deallocate atomic pointer*/
+void atomic_free(atomic a) {
+   if(a) free(a);
 }

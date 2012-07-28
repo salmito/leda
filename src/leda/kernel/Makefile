@@ -7,10 +7,10 @@ OBJ=  kernel.o \
       graph.o \
       instance.o \
 		tbb_queue.o \
+		tbb_atomic.o \
 		mutex.o \
       thread.o \
       extra/threading.o \
-      #extra/tools.c \
 
 HEADERS=*.h extra/*.h
 
@@ -28,7 +28,7 @@ instance.o: instance.lo
 tbb_queue.o: tbb_queue.cpp $(HEADERS) Makefile
 	g++ -c -o $@ $< $(CFLAGS)
 
-atomic.o: atomic.cpp $(HEADERS) Makefile
+tbb_atomic.o: tbb_atomic.cpp $(HEADERS) Makefile
 	g++ -c -o $@ $< $(CFLAGS)
 
 %.o: %.c $(HEADERS) Makefile

@@ -62,8 +62,7 @@ connector_id get_connector_id_from_ptr(graph g, void * id) {
    return -2; //connector not found
 }
 
-/* lookup the correspondent stage_id from a stage unique id
- */
+/* lookup the correspondent stage_id from a stage unique id */
 stage_id get_stage_id_from_ptr(graph g, void * id) {
    int i;
    if(!g) return -1; //Graph is null
@@ -91,7 +90,7 @@ graph build_graph_representation(lua_State *L, int index) {
    size_t len;
    
    lua_getfield (L, index, "name"); //push the name field of stage
-   str=lua_tolstring(L, -1, &len); //verify if its a string
+   str=lua_tolstring(L, -1, &len); //verify if it's a string
    char * gname=malloc(len+1);
    memcpy(gname,str,len);
    gname[len]='\0';
@@ -105,7 +104,6 @@ graph build_graph_representation(lua_State *L, int index) {
    luaL_checktype(L,-1, LUA_TTABLE);
    n=lua_objlen(L,-1); //get size of 'connectors' field
    
-
    struct connector_data ** connectors=calloc(n,sizeof(struct connector_data *));
       
    for(i=1;i<=n;i++) {
@@ -159,10 +157,10 @@ graph build_graph_representation(lua_State *L, int index) {
       } else {
          s->serial=TRUE;
       }
-      lua_pop(L,1);
+      lua_pop(L,1); //pop stages[i].serial
       
       lua_getfield (L, -1, "name"); //push the name field of stage
-      str=lua_tolstring(L, -1, &len); //verify if its a string
+      str=lua_tolstring(L, -1, &len); //verify if it's a string
       char * name=malloc(len+1);
       memcpy(name,str,len);
       name[len]='\0';
@@ -170,7 +168,7 @@ graph build_graph_representation(lua_State *L, int index) {
       lua_pop(L,1); //pop the name field
       
       lua_getfield (L, -1, "handler"); //push the handler field of stage
-      str=lua_tolstring(L, -1, &len); //verify if its a string
+      str=lua_tolstring(L, -1, &len); //verify if it's a string
       char * handler=malloc(len+1);
       memcpy(handler,str,len);
       handler[len]='\0';
@@ -196,7 +194,7 @@ graph build_graph_representation(lua_State *L, int index) {
       lua_pushnil(L);  //first key
       s->n_out=0;      
       //iterating to count the number of keys in the output of the stage
-      //it is needed to allocate memory for outputs
+      //this is needed to allocate the right ammount of memory for outputs
       while (lua_next(L, -2) != 0) {
          if(lua_type(L, -2)==LUA_TSTRING) {
             s->n_out++;
@@ -241,7 +239,7 @@ graph build_graph_representation(lua_State *L, int index) {
       lua_pop(L,1); //pop stage[i].output
    
 
-      lua_pop(L,1); //pop stages[i]      
+      lua_pop(L,1); //pop stages[i]
       stages[i-1]=s;
    }
    lua_pop(L,1); //pop the g.stages field
@@ -321,16 +319,13 @@ void graph_destroy(graph g) {
 
 /* Dump a graph representation for debug purposes*/
 void graph_dump(graph g) {
-   #ifndef DEBUG
-      return;
-   #endif
    int i,j;
    _DEBUG("==== Dumping graph: '%s' ====\n",g->name);
    _DEBUG("\t==== Stages (%d) ====\n",(int)g->n_s);
    for(i=0;i<g->n_s;i++) {
       _DEBUG("\tStage: id='%d' unique_id='%p' name='%s' serial='%d'\n",i,g->s[i]->unique_id,g->s[i]->name,g->s[i]->serial);
-     _DEBUG("\t\tHandler function: %s\n",g->s[i]->handler);
-     _DEBUG("\t\tInit function: %s\n",g->s[i]->init);
+ //    _DEBUG("\t\tHandler function: %s\n",g->s[i]->handler);
+ //    _DEBUG("\t\tInit function: %s\n",g->s[i]->init);
       for(j=0;j<g->s[i]->n_out;j++) {
          switch(g->s[i]->output[j].type) {
             case _STRING:

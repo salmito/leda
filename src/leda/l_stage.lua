@@ -111,6 +111,7 @@ function new_stage(t)
       t.input=t.input or t[1].input
       t.output=t.output or t[1].output
       t.name=t.name or t[1].name
+      t.serial=t.serial or t[1].serial
    end
   
    assert(t.handler,"Stage must have a handler field")

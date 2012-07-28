@@ -11,6 +11,7 @@ local dbg = leda.debug.get_debug("Controller: Fixed-thread: ")
 local kernel=leda.kernel
 local table=table
 local default_thread_pool_size=1
+local print=print
 
 module("leda.controller.fixed_thread_pool")
 
@@ -31,17 +32,17 @@ function get_init(n)
 end
 init=get_init(default_thread_pool_size)
 
-function wait_condition()
-   dbg("Waiting queue size to become empty: %d",kernel.ready_queue_size())
-   while kernel.ready_queue_size()>(-1*pool_size) do
-      kernel.sleep(0.1)
+function pushed(state)
+   local ps=kernel.thread_pool_size()
+   local qs=kernel.ready_queue_size()
+   print("Write happened")
+   print("Pool size", ps)
+   print("Queue size", qs)
+   if ps == -qs then
+      kernel.set_end_condition(true)
    end
-   for i=1,#th do
-      th[i]:kill()
-   end
-   dbg("Finishing")
 end
 
 function get(n)
-   return {init=get_init(n),wait_condition=wait_condition}
+   return {init=get_init(n),pushed=pushed}
 end

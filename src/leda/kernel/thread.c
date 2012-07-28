@@ -37,6 +37,7 @@ THE SOFTWARE.
 queue ready_queue;
 
 MUTEX_T debug_lock;
+atomic pool_size;
 
 /* Thread subsystem internal functions */
 void emmit_self_and_pass_the_thread(instance caller);
@@ -54,6 +55,8 @@ bool_t thread_ready_queue_isempty() {
    return queue_isempty(ready_queue);
 }
 
+extern SIGNAL_T ready_queue_used_cond;
+
 /* Push instance to the ready queue */
 void thread_try_push_instance(instance i) {
    bool_t ret=TRY_PUSH(ready_queue,i);
@@ -66,13 +69,16 @@ void thread_try_push_instance(instance i) {
        *       (block the sender stage until someone frees a
        *       slot on the ready queue).
        */
-   } 
+       return;
+   }
+   SIGNAL_ALL(&ready_queue_used_cond);
 }
 
 /* Initialize thread subsystem */
 void thread_init(size_t ready_queue_capacity) {
    ready_queue=queue_new();
    queue_set_capacity(ready_queue,ready_queue_capacity);
+   pool_size=atomic_new(0);
 }
 
 #ifdef DEBUG
@@ -386,10 +392,16 @@ static THREAD_RETURN_T THREAD_CALLCONV thread_main(void *t_val) {
    t->status=WAITING;
    while(1) {
       POP(ready_queue,i); //get continuation from the stack
+      if(i==NULL) //Thread kill request
+         break; //exit the main loop
       t->status=RUNNING; //change status to RUNNING
       thread_call(i,i->args); //call continuation
-       t->status=WAITING; //change status to WAITING
+      t->status=WAITING; //change status to WAITING
    }
+   ADD(pool_size,-1);
+   _DEBUG("Thread: Thread killed (pool_size=%d)\n",READ(pool_size));
+   t->status=DONE;
+   SIGNAL_ALL(&ready_queue_used_cond);
    return NULL;
 }
 
@@ -425,7 +437,9 @@ int thread_new (lua_State *L) {
    lua_setmetatable(L,-2);
    
    //Create a new thread and execute it with the 'thread_main' function
-   THREAD_CREATE( &t->thread, thread_main, t, 0 );    
+   THREAD_CREATE( &t->thread, thread_main, t, 0 );
+   ADD(pool_size,1);
+   _DEBUG("Thread: Thread created (pool_size=%d)\n",READ(pool_size));
    //Return the reference pointer of the thread descriptor
    return 1;
 }
@@ -439,9 +453,7 @@ int thread_status (lua_State *L) {
 
 /* Kill a thread from Lua*/
 int thread_kill (lua_State *L) {
-   thread t=thread_get(L,1);
-   THREAD_KILL(&t->thread);
-   free(t);
+   thread_try_push_instance(NULL);
    return 0;
 }
 
@@ -457,7 +469,7 @@ int thread_createmetatable (lua_State *L) {
    lua_rawset(L,-3);
    
   	lua_pushliteral(L,"kill");
-   lua_pushcfunction(L,thread_status);
+   lua_pushcfunction(L,thread_kill);
    lua_rawset(L,-3);
 
 	/* define metamethods */
