@@ -7,8 +7,8 @@
 -- Declare module and import dependencies
 -----------------------------------------------------------------------------
 local base = _G
-local tostring,type,assert,pairs,setmetatable,getmetatable =
-      tostring,type,assert,pairs,setmetatable,getmetatable
+local tostring,type,assert,pairs,setmetatable,getmetatable,print =
+      tostring,type,assert,pairs,setmetatable,getmetatable,print
 local string,table,kernel=string,table,leda.kernel
 local dbg = leda.debug.get_debug("Graph: ")
 local is_connector=leda.l_connector.is_connector
@@ -181,18 +181,18 @@ end
 -- Dump a graph
 -----------------------------------------------------------------------------
 function index.dump(g)
-   dbg('==== DUMP Stages ====')
+   print('==== DUMP Stages ====')
    for id,s in pairs(g.stages) do 
-      dbg("Stage: id='%d' name='%s' input='%s'",id,tostring(s),tostring(s.input))
-      for k,v in pairs(s.output) do dbg("Output: %s -> %s\t",tostring(k),tostring(v)) end
+      print(string.format("Stage: id='%d' name='%s' input='%s'",id,tostring(s),tostring(s.input)))
+      for k,v in pairs(s.output) do print(string.format("Output: %s -> %s\t",tostring(k),tostring(v))) end
    end
-   dbg('==== DUMP Connectors ====')
+   print('==== DUMP Connectors ====')
    for id,c in pairs(g.connectors) do 
-      dbg("Connector: id='%d' name='%s' pending='%d'",id,tostring(c),#c.pending)
-      dbg("producers:")
-      for k,v in pairs(c.producers) do dbg("\t %s -> %s",tostring(k),tostring(v)) end
-      dbg("consumers:")
-      for k,v in pairs(c.consumers) do dbg("\t %s -> %s",tostring(k),tostring(v)) end
+      print(string.format("Connector: id='%d' name='%s' pending='%d'",id,tostring(c),#c.pending))
+      print("producers:")
+      for k,v in pairs(c.producers) do print(string.format("\t %s -> %s",tostring(k),tostring(v))) end
+      print("consumers:")
+      for k,v in pairs(c.consumers) do print(string.format("\t %s -> %s",tostring(k),tostring(v))) end
    end
    dbg('========')
    

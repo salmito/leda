@@ -33,6 +33,7 @@ THE SOFTWARE.
 #include "thread.h"
 #include "queue.h"
 #include "mutex.h"
+#include "extra/leda-io.h"
 
 int leda_sleep(lua_State * L);
 
@@ -204,13 +205,37 @@ void register_mutex_api(lua_State * L) {
    lua_setglobal(L,"__mutex");
 }
 
+void register_io_api(lua_State * L) {
+   lua_newtable(L);
+   lua_pushliteral(L,"wrap");
+   lua_pushcfunction(L,leda_wrap_io);
+   lua_rawset(L,-3);
+   lua_pushliteral(L,"unwrap");
+   lua_pushcfunction(L,leda_unwrap_io);
+   lua_rawset(L,-3);
+   lua_setglobal(L,"__io");
+}
+
+void register_sock_api(lua_State * L) {
+   lua_newtable(L);
+   lua_pushliteral(L,"wrap");
+   lua_pushcfunction(L,leda_wrap_sock);
+   lua_rawset(L,-3);
+   lua_pushliteral(L,"unwrap");
+   lua_pushcfunction(L,leda_unwrap_sock);
+   lua_rawset(L,-3);
+   lua_setglobal(L,"__socket");
+}
+
+
 void register_utils_api(lua_State * L) {
    lua_pushcfunction(L,leda_sleep);
    lua_setglobal(L,"__sleep");
    
    lua_pushcfunction(L,instance_wait_for_event);
    lua_setglobal(L,"__wait_event");
-
+   register_io_api(L);
+   register_sock_api(L);
    register_mutex_api(L);
 }
 

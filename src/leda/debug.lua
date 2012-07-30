@@ -14,7 +14,7 @@ module("leda.debug")
 -- Function to get a debug handler
 -----------------------------------------------------------------------------
 function get_debug(prefix,sufix)
-   if not DEBUG then
+   if DEBUG then
       sufix=sufix or "\n"
       return function (fmt, ...)
          io.stderr:write(prefix)

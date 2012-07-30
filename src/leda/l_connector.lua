@@ -93,7 +93,7 @@ end
 function emmit_self_call_func(con,...) 
    for _,c in ipairs(con) do 
       local ret, err=__emmit_self_call(c,...)
-      if not ret then print(':(') return nil,err end
+      if not ret then return nil,err end
    end
    return true
 end

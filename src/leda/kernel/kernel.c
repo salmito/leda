@@ -38,7 +38,7 @@ THE SOFTWARE.
 #include "queue.h"
 #include "instance.h"
 
-#define __VERSION "0.2.0-beta3"
+#define __VERSION "0.2.0-beta4"
 
 #define CONNECTOR_TIMEOUT 1.0
 
@@ -289,6 +289,8 @@ int luaopen_leda_kernel (lua_State *L) {
 
  	/* Create a unique thread metatable */
    thread_createmetatable(L);
+
+//   luaopen_leda_io (L);
 
    _DEBUG("Kernel: Leda's kernel loaded successfully.\n");
  	return 1;

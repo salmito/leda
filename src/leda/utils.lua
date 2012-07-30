@@ -18,23 +18,27 @@ local utils=leda.utils
 --
 -- returns: 
 -----------------------------------------------------------------------------
-function utils.insert_before(s1,s2,key)
+function leda.insert_before(s1,s2,key)
    key=key or 1
    s1.input=s2.input
    s2.input=connector{}
    s1:add_output(key,s2.input)
 end
+utils.insert_before=leda.insert_before
 
-function utils.insert_after(s1,s2,key)
+function leda.insert_after(s1,s2,key)
    key=key or 1
    s1.output[key]=connector()
    s2.input=s1.output[key]
 end
+utils.insert_after=leda.insert_after
 
-function utils.add_before(s1,s2,key)
+function leda.add_before(s1,s2,key)
    s1.input=s2.input
    s1:add_output(key,s2.input)
 end
+
+utils.add_before=leda.add_before
 
 -----------------------------------------------------------------------------
 -- Switch stage selects an specific output and send pushed 'data'

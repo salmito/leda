@@ -33,7 +33,7 @@ end
 init=get_init(default_thread_pool_size)
 
 function event_pushed(timedout)
-   print("Write happened",timedout)
+   --print("Write happened",timedout)
    local ps=kernel.thread_pool_size()
    local qs=kernel.ready_queue_size()
 end
@@ -43,5 +43,8 @@ function get(n)
 end
 
 function finish()
+   for i=1,#th do
+      th[i]:kill()
+   end
    dbg "Controller finished"
 end

@@ -1,5 +1,11 @@
 Changelog
 
+0.2.0beta3
+   - ADDED     A controller can implement the event_pushed function to be awaked
+               when someone pushes something into a queue
+   - ADDED     Function controller 'finish'
+   - ADDED     Events and event queues for each stage of the application
+
 0.2.0beta2
    - ADDED     A new stage to the utils lib (loop)
    - ADDED     Support for serial stages (a stage that has only one instance)

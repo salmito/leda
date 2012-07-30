@@ -2,7 +2,7 @@ Leda's TODO list:
 
    - Leda's documentation
    
-   - Implement I/O stages for passing descriptors
+  OK Implement I/O stages for passing descriptors
    
    - Controller API
       - Pass the graph state to controllers

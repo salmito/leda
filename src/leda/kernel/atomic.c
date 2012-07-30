@@ -78,3 +78,9 @@ int atomic_compare_and_swap(atomic x, int y, int z) {
    MUTEX_UNLOCK(&x->lock);
    return oldx;
 }
+
+/*deallocate atomic pointer*/
+void atomic_free(atomic a) {
+   MUTEX_FREE(&a->lock);
+   free(a);
+}

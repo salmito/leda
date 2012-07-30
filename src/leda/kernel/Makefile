@@ -10,6 +10,7 @@ OBJ=  kernel.o \
       thread.o \
       event.o \
       extra/threading.o \
+      extra/leda-io.o \
 		tbb_queue.o \
 		tbb_atomic.o \
 
@@ -41,7 +42,8 @@ tbb_atomic.o: tbb_atomic.cpp $(HEADERS) Makefile
 $(MODULE): $(OBJ)
 	$(CC) -shared $^ -o $@ $(LDFLAGS)
 
-clean: ultraclean
+clean:
+	rm -f $(OBJ) instance.lo
 	
 ultraclean:
 	rm -f $(OBJ) instance.lo $(MODULE)

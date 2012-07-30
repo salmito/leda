@@ -9,9 +9,11 @@
 leda={output={}}
 
 -----------------------------------------------------------------------------
--- Define an easier name for the new_mutex method
+-- Define an easier name for the utils libraries
 -----------------------------------------------------------------------------
 leda.mutex=__mutex
+leda.io=__io
+leda.socket=__socket
 
 -----------------------------------------------------------------------------
 -- Define an easier name for the wait_event method
