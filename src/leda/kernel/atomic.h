@@ -36,6 +36,7 @@ typedef struct atomicInt * atomic;
 #define READ(x) atomic_value(x)
 #define STORE(x,y) atomic_fetch_and_store((x),(y))
 #define ADD(x,y) atomic_fetch_and_add((x),(y))
+#define SUB(x,y) atomic_fetch_and_add((x),-(y))
 #define SWAP(x,y,z) atomic_compare_and_swap((x),(y),(z))
 
 atomic atomic_new(int x);

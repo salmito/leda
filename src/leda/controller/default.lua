@@ -6,7 +6,6 @@
 -----------------------------------------------------------------------------
 -- Declare module and import dependencies
 -----------------------------------------------------------------------------
-local base = _G
 local fixed_thread_pool=require("leda.controller.fixed_thread_pool")
 
 module("leda.controller.default")
@@ -14,5 +13,7 @@ module("leda.controller.default")
 -----------------------------------------------------------------------------
 -- Controller init function
 -----------------------------------------------------------------------------
+
 init=fixed_thread_pool.init
-wait_condition=fixed_thread_pool.wait_condition
+event_pushed=fixed_thread_pool.event_pushed
+finish=fixed_thread_pool.finish

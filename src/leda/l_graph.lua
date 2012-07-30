@@ -14,6 +14,7 @@ local dbg = leda.debug.get_debug("Graph: ")
 local is_connector=leda.l_connector.is_connector
 local is_stage = leda.l_stage.is_stage
 local default_controller=require("leda.controller.default")
+local dump = string.dump
 
 module("leda.l_graph")
 
@@ -72,6 +73,10 @@ local function add_connector(self,c)
    assert(is_connector(c),string.format("Invalid parameter ('connector' expected, got '%s')",type(c)))
    if not is_member(self.connectors,c) then
       dbg("Adding connector '%s' to graph '%s'",tostring(c),tostring(self))
+         --Dump the send function
+      if type(c.sendf)=="function" then
+         c.sendf=dump(c.sendf)
+      end
       table.insert(self.connectors,c)
    end
 end

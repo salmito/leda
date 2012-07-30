@@ -11,6 +11,8 @@ local first_stage;
 
 local loop_hand="for i=1,"..it.." do leda.output[1]:send() end"
 
+print(loop_hand)
+
 local loop=stage{handler=loop_hand,name="Looper"}
 
 g:add_stage(loop)
@@ -20,7 +22,7 @@ local last_stage=loop
 
 for i=1,stages do
    local init="print('iniciou "..i.."')"
-   local h="--[[print('executou "..i.."')]]-- leda.output[1]:send()"
+   local h="print('executou "..i.."') leda.output[1]:send()"
    local ss=stage{handler=h,init=init,output={connector{sendf=leda.e}},name="s"..i}
    
    utils.insert_after(last_stage,ss)   

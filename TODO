@@ -9,13 +9,23 @@ Leda's TODO list:
    
    - Build windows binaries for leda
    
-   - Create a pending events queue for instances
+  OK Create a pending event queue for instances
       - Do not create a new instance if the recycle queue 
         is empty and every other instance is taken
    
-   - Only allow function handlers, inits and sends
+  OK Only allow function handlers, inits and sends
    
    - Optionally remove the TBB dependency by implementating a
      lockfree queue that operates the same way as the TBB concurrent_queue
      
    - Pass simple Lua tables between instances
+   
+   
+   - LOAD_STAGE 
+     loads one simple stage implementation inside another stage
+
+  OK WAIT_EVENT
+     sleep the current thread until an event for that stage is throwed
+
+   - error handling
+   - 

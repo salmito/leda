@@ -6,22 +6,15 @@
 -----------------------------------------------------------------------------
 -- Declare module and import dependencies
 -----------------------------------------------------------------------------
-local base = _G
-local dbg = leda.debug.get_debug("Controller: Sigle-thread: ")
-local kernel=leda.kernel
+local fixed_thread_pool=require("leda.controller.fixed_thread_pool")
+local singlethread=fixed_thread_pool.get(1)
+
 module("leda.controller.singlethread")
 
 -----------------------------------------------------------------------------
 -- Controller init function
 -----------------------------------------------------------------------------
-function init()
-   kernel.new_thread()
-   dbg("Controller created")
-end
 
-function wait_condition()
-   while(kernel.ready_queue_size() > 0) do
-      dbg(kernel.ready_queue_size())
-      kernel.sleep(1)
-   end
-end
+init=singlethread.init
+event_pushed=singlethread.event_pushed
+finish=singlethread.finish

@@ -28,20 +28,26 @@ THE SOFTWARE.
 
 #include "extra/threading.h"
 #include "graph.h"
+#include "event.h"
 
 /* lua state structure */
 typedef struct instance_data {
    lua_State * L;
    stage_id stage;
    //true if the stage is serial (i.e. only one instance is allowed)
-   bool_t serial; 
+   bool_t serial;
+   bool_t backpressure;
    size_t args;
+   int instance_number;
+//   long int recycled; //count the number of time this instance was recycled
 } * instance;
 
-void instance_init(size_t limit);
+void instance_init(size_t recycle_limit_t,size_t pending_limit_t);
 instance instance_aquire(stage_id s);
-void instance_release(instance i);
+int instance_release(instance i);
+bool_t instance_try_push_pending_event(instance src,stage_id dst, event e);
+void push_ready_queue(instance i);
+
 void instance_end(); //warning: thread unsafe
-void instance_try_push_pending_queue(stage_id serial_stage, instance i);
 
 #endif //_INSTANCE_H_

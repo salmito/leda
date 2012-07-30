@@ -116,17 +116,24 @@ function new_stage(t)
   
    assert(t.handler,"Stage must have a handler field")
 
+--   assert(type(t.handler)=="function","Stage handler must be a function")
+
    --Dump the event handler defined for the stage
    if type(t.handler)=="function" then
       t.handler=dump(t.handler)
    end
    
-  assert(type(t.handler)=="string","Stage 'handler' field must be a lua chunk")
+   assert(type(t.handler)=="string","Stage 'handler' field must be a lua chunk")
    
   	--container for the stage
   	local s=setmetatable(t,stage)
    
-   --if a init field was defined and is a function, dump it
+  
+--   if s.init then
+--      assert(type(s.init)=="function","Stage handler must be a function")
+--   end
+
+   --if a init field was defined, dump it 
    if s.init and type(s.init)=="function" then
       s.init=dump(s.init)
    end

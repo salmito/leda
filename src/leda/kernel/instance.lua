@@ -14,6 +14,11 @@ leda={output={}}
 leda.mutex=__mutex
 
 -----------------------------------------------------------------------------
+-- Define an easier name for the wait_event method
+-----------------------------------------------------------------------------
+leda.wait_event=__wait_event
+
+-----------------------------------------------------------------------------
 -- Define an easier name for the sleep function
 -----------------------------------------------------------------------------
 leda.sleep=__sleep
@@ -65,19 +70,24 @@ else
 end
 
 -----------------------------------------------------------------------------
--- Load handler function of the stage
+-- Load handler function of the stage with an environment of its own
 -----------------------------------------------------------------------------
-local __handler,err=loadstring(stage.__handler);
+--local function handler_str() return stage.__handler end
+local __handler,err=loadstring(stage.__handler)
 if not __handler then 
    error(string.format("Error loading handler function for stage '%s': %s",stage.__name,err))
 end
-
 -----------------------------------------------------------------------------
 -- Create the main coroutine for the stage handler
 -----------------------------------------------------------------------------
 local function main_coroutine()
    local end_code=__end_code
    while true do
+      --clean environment
+      if setfenv then 
+         local env=setmetatable({},{__index=_G})
+         setfenv(__handler,env) 
+      end
       __handler(coroutine.yield(end_code)) 
    end 
 end

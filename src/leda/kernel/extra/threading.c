@@ -394,11 +394,7 @@ bool_t THREAD_WAIT_IMPL( THREAD_T *ref, double secs)
     PT_CALL( pthread_cond_destroy(ref) );
   }
   //
-  /*
-  * Timeout is given as absolute since we may have fake wakeups during
-  * a timed out sleep. A Linda with some other key read, or just because
-  * PThread cond vars can wake up unwantedly.
-  */
+
   bool_t SIGNAL_WAIT( SIGNAL_T *ref, pthread_mutex_t *mu, time_d abs_secs ) {
     if (abs_secs<0.0) {
         PT_CALL( pthread_cond_wait( ref, mu ) );  // infinite

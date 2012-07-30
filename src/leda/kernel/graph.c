@@ -158,6 +158,15 @@ graph build_graph_representation(lua_State *L, int index) {
          s->serial=TRUE;
       }
       lua_pop(L,1); //pop stages[i].serial
+
+      lua_getfield (L, -1, "backpressure"); //check if the backpresure field is present
+      if(lua_isnil(L,-1)) {
+         s->backpressure=FALSE;
+      } else {
+         s->backpressure=TRUE;
+      }
+      lua_pop(L,1); //pop stages[i].backpressure
+
       
       lua_getfield (L, -1, "name"); //push the name field of stage
       str=lua_tolstring(L, -1, &len); //verify if it's a string
@@ -323,7 +332,7 @@ void graph_dump(graph g) {
    _DEBUG("==== Dumping graph: '%s' ====\n",g->name);
    _DEBUG("\t==== Stages (%d) ====\n",(int)g->n_s);
    for(i=0;i<g->n_s;i++) {
-      _DEBUG("\tStage: id='%d' unique_id='%p' name='%s' serial='%d'\n",i,g->s[i]->unique_id,g->s[i]->name,g->s[i]->serial);
+      _DEBUG("\tStage: id='%d' unique_id='%p' name='%s' serial='%d' backpressure='%d'\n",i,g->s[i]->unique_id,g->s[i]->name,g->s[i]->serial,g->s[i]->backpressure);
  //    _DEBUG("\t\tHandler function: %s\n",g->s[i]->handler);
  //    _DEBUG("\t\tInit function: %s\n",g->s[i]->init);
       for(j=0;j<g->s[i]->n_out;j++) {

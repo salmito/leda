@@ -29,6 +29,7 @@ THE SOFTWARE.
 #include "extra/threading.h"
 #include "instance.h"
 #include "queue.h"
+#include "graph.h"
 #include "atomic.h"
 
 #include <lua.h>
@@ -47,9 +48,7 @@ typedef struct thread_data {
 /* Thread main coroutine exit status*/
 enum return_status{ 
    ENDED=0xF1F21AB,
-   EMMIT_SELF_AND_PASS_THREAD,
-   EMMIT_AND_CONTINUE,
-   EMMIT_PENDING_THREAD,
+   EMMIT_CONTINUATION_AND_PASS_THREAD,
    YIELDED
 };
 
@@ -77,23 +76,16 @@ char const * get_return_status_name(int status);
    #define dump_stack(...)
 #else
    extern MUTEX_T debug_lock;
-   #define _DEBUG(...) MUTEX_LOCK(&debug_lock); fprintf(stdout,__VA_ARGS__); MUTEX_UNLOCK(&debug_lock);
+   #define _DEBUG(...) /*MUTEX_LOCK(&debug_lock);*/ fprintf(stdout,__VA_ARGS__); /*MUTEX_UNLOCK(&debug_lock);*/
    void dump_stack( lua_State* L );
 #endif
 
-void copy_values (lua_State *dst, lua_State *src, int i, int top);
-
-void thread_try_push_instance(instance i);
 void thread_init(size_t ready_queue_capacity);
-void emmit_and_continue(instance caller);
 
 thread thread_get (lua_State *L, int i);
 int thread_new (lua_State *L);
 int thread_createmetatable (lua_State *L);
 int thread_kill (lua_State *L);
-
-size_t thread_ready_queue_size();
-bool_t thread_ready_queue_isempty();
 
 int call(lua_State * L);
 int emmit(lua_State * L);

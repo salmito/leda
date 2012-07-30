@@ -6,11 +6,12 @@ LUA=lua
 OBJ=  kernel.o \
       graph.o \
       instance.o \
-		tbb_queue.o \
-		tbb_atomic.o \
 		mutex.o \
       thread.o \
+      event.o \
       extra/threading.o \
+		tbb_queue.o \
+		tbb_atomic.o \
 
 HEADERS=*.h extra/*.h
 

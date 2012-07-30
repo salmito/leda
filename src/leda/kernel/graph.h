@@ -31,6 +31,9 @@ THE SOFTWARE.
 
 #include "extra/threading.h"
 
+#define STAGE(i) main_graph->s[i]
+#define CONNECTOR(i) main_graph->c[i]
+
 typedef size_t stage_id;
 typedef size_t connector_id;
 
@@ -55,6 +58,7 @@ typedef struct stage_data {
    connector_id input;
    void * unique_id;
    bool_t serial;
+   bool_t backpressure;
 } * stage;
 
 

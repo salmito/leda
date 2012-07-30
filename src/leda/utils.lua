@@ -42,14 +42,15 @@ end
 --          '...':   data to be sent
 -----------------------------------------------------------------------------
 utils.switch={
-   handler=
-   [[local args={...}
+   handler=function (...)
+   local args={...}
       local out=leda.get_output(args[1])
       if out then 
          out:send(select(2,...)) 
        else
          error(string.format("Output '%s' does not exist",tostring(n)))
-      end]]
+      end
+      end
 }
 
 -----------------------------------------------------------------------------
@@ -57,10 +58,10 @@ utils.switch={
 -- param:   '...': data to be broadcasted
 -----------------------------------------------------------------------------
 utils.broadcast={
-   handler=
-   [[for _,connector in pairs(leda.output) do
+   handler=function (...)
+   for _,connector in pairs(leda.output) do
            connector:send(...)
-      end]]
+      end end
 }
 
 -----------------------------------------------------------------------------
@@ -69,10 +70,10 @@ utils.broadcast={
 -- param:   '...':   data to be copyied and sent
 -----------------------------------------------------------------------------
 utils.copy={
-   handler=
-   [[local args={...} for i=1,args[1] do
+   handler=function (...)
+      local args={...} for i=1,args[1] do
          leda.output[1]:send(select(2,...))
-      end]],
+      end end,
    bind=function(self) 
       assert(self.output[1],"Copy must have an output at [1]") 
    end
@@ -84,8 +85,13 @@ utils.copy={
 -- param:   '...':   data to be sent at
 -----------------------------------------------------------------------------
 utils.loop={
-   handler=
-   [[local args={...} while true do leda.output[1]:send(select(2,...)) leda.sleep(args[1]) end]],
+   handler= function (...) 
+      local args={...} 
+      while true do 
+         leda.output[1]:send(select(2,...)) 
+         leda.sleep(args[1]) 
+      end 
+   end,
    bind=function(self) 
       assert(self.output[1],"Copy must have an output at [1]") 
    end
@@ -97,9 +103,9 @@ utils.loop={
 -----------------------------------------------------------------------------
 utils.print={
    handler=
-   [[--function (...)
+   function (...)
       print(...)
-   --end]]
+   end
 }
 
 -----------------------------------------------------------------------------

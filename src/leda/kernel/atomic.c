@@ -43,6 +43,10 @@ atomic atomic_new(int x) {
 }
 
 int atomic_value(atomic x) {
+//   MUTEX_LOCK(&x->lock);
+   //int oldx=x->i;
+//   MUTEX_UNLOCK(&x->lock);
+//   return oldx;
    return x->i;
 }
 
@@ -73,9 +77,4 @@ int atomic_compare_and_swap(atomic x, int y, int z) {
       x->i=y;
    MUTEX_UNLOCK(&x->lock);
    return oldx;
-}
-
-/*deallocate atomic pointer*/
-void atomic_free(atomic a) {
-   if(a) free(a);
 }

@@ -40,17 +40,18 @@ THE SOFTWARE.
 
 #define __VERSION "0.2.0-beta3"
 
-#define CONNECTOR_TIMEOUT 1000000
+#define CONNECTOR_TIMEOUT 1.0
 
 #define LEDA_NAME          "leda.kernel"
 #define LEDA_ENV           "leda kernel environment"
 
 /* initialized flag, 'true' if already initialized */
 bool_t initialized=FALSE;
-bool_t end_condition=FALSE;
 
-SIGNAL_T ready_queue_used_cond;
-MUTEX_T ready_queue_used_lock;
+SIGNAL_T queue_used_cond;
+MUTEX_T queue_used_lock;
+extern queue ready_queue;
+extern queue * event_queues;
 
 /*
 * Run a graph defined by the lua declaration
@@ -67,24 +68,16 @@ int leda_run(lua_State * L) {
    graph_dump(main_graph);
    #endif
 
+
    //initiate instances for the graph
-   //recycle queue is initially unbounded
+   //queues are initially unbounded (-1 limit)
+   instance_init(-1,-1);
+
+   SIGNAL_INIT(&queue_used_cond);
+   MUTEX_INIT(&queue_used_lock);
    
-   instance_init(-1);
-
-//   int controllers=2;//lua_gettop(L);
-  //iterate through the provided controllers
-  //and call its init function
-//   for(i=2;i<=controllers;i++) {
-      //push the init function of a controller
-      luaL_checktype(L,2, LUA_TTABLE);
-      lua_pushstring(L,"init");
-      lua_rawget(L, 2);
-      luaL_checktype(L,-1, LUA_TFUNCTION);
-      //Call the init function
-      lua_call(L,0,0);
-//   }
-
+   //second parameter must be a table for controller
+   luaL_checktype(L,2, LUA_TTABLE);
 
    //first, iterate through the connectors field
    //to push pending sends to the each connector.
@@ -105,31 +98,42 @@ int leda_run(lua_State * L) {
       int j;
       for(j=1;j<=m;j++) { //For each connector
          lua_getglobal(L,"unpack"); //Push unpack function
-         int t=lua_gettop(L);
+         int begin=lua_gettop(L);
          lua_rawgeti(L,-2,j);
          lua_call(L,1,LUA_MULTRET); //Unpack the pending arguments
+         int end=lua_gettop(L);
          lua_pushliteral(L,"consumers");
          lua_rawget(L, con_index); 
          luaL_checktype(L,-1, LUA_TTABLE);      
          int o=lua_objlen(L,-1);
          int k;
+
          for(k=1;k<=o;k++) { //For each consumer of the pending connector
             lua_rawgeti(L,-1,k);
-            stage_id id=get_stage_id_from_ptr(main_graph, (void *)lua_topointer(L,-1));
+            stage_id dst_id=get_stage_id_from_ptr(main_graph, (void *)lua_topointer(L,-1));
             lua_pop(L,1);
-            _DEBUG("Kernel: Passing pending data to stage %d\n",(int)id);
-            //Aquire new instance for pending data
-            instance inst=instance_aquire(id); 
-            //Push the handler main coroutine of the instance
-            lua_getglobal(inst->L, "handler");
-            //Copy pending arguments to the aquired instance
-            copy_values (inst->L, L, t, lua_gettop(L)-1);
-            //Set the number arguments copyed
-            inst->args=lua_gettop(L)-t;
-            //Push instance to the ready queue
-            thread_try_push_instance(inst);
-            //Restore stack
-            lua_settop(L,t-1);
+            _DEBUG("Kernel: Passing pending data to stage %d\n",(int)dst_id);
+
+            instance dst=instance_aquire(dst_id);
+            
+            if(!dst) {   //error getting an instance from the 
+                        //recycle queue, try to emmit an event insted
+               event e=extract_event_from_lua_state(L, begin, end-begin+1);
+               if(!instance_try_push_pending_event(NULL,dst_id,e)) {
+                  //error, event queue is full, push FALSE to sender
+                  luaL_error(L,"Event queue for the stage '%s' is full.",
+                  main_graph->s[dst_id]->name);
+               }
+            } else {
+               //got an idle instance from recycle queue  
+               //Get the  main coroutine of the instance's handler
+               lua_getglobal(dst->L, "handler");
+               //push arguments to instance
+               copy_values_directly(dst->L, L, begin, end-begin+1);
+               dst->args=end-begin+1;
+               push_ready_queue(dst);
+            }
+            lua_settop(L,begin-1);
          }
       }
       //Pop the connector pending data table from the stack
@@ -144,33 +148,52 @@ int leda_run(lua_State * L) {
    //Pop connectors table
    lua_pop(L,1);
 
- 
-  SIGNAL_INIT(&ready_queue_used_cond);
-  MUTEX_INIT(&ready_queue_used_lock);  
-  while(1) {
-      SIGNAL_WAIT(&ready_queue_used_cond,&ready_queue_used_lock,CONNECTOR_TIMEOUT);
-
-      lua_pushstring(L,"pushed");
-      lua_rawget(L, 2);
-      luaL_checktype(L,-1, LUA_TFUNCTION);
+   //call the init function of a controller, if defined
+   lua_pushstring(L,"init");
+   lua_rawget(L, 2);
+   if(lua_type(L,-1)==LUA_TFUNCTION)
       lua_call(L,0,0);
+   else 
+      lua_pop(L,1);
 
-      if(end_condition)
-         break;
-  }
+   lua_pushstring(L,"event_pushed");
+   lua_rawget(L, 2);
+   if(lua_type(L,-1)==LUA_TFUNCTION) {
+      /*if the controller defined a push_event function, 
+      * wait for a ready_queue_used signal and call it
+      */
+      while(1) {
+         time_d timeout=SIGNAL_TIMEOUT_PREPARE(CONNECTOR_TIMEOUT);
+         bool_t timedout=SIGNAL_WAIT(&queue_used_cond,&queue_used_lock,timeout);
+
+         lua_pushvalue(L,-1);
+         lua_pushboolean(L,!timedout);
+         lua_call(L,1,0);
+
+         //comment the line below to disable end condition
+         if(READ(pool_size)==-queue_size(ready_queue)) break;
+      }
+   } else { /*if the controller did not define a push_event function, 
+             * sleep forever
+             */
+      while(1) usleep(1000000000);
+   }
+
+   lua_pop(L,1); //pop event_pushed function   
+   
+   //call the collect function of a controller, if defined
+   lua_pushstring(L,"finish");
+   lua_rawget(L, 2);
+   if(lua_type(L,-1)==LUA_TFUNCTION) 
+      lua_call(L,0,0);
+   else 
+      lua_pop(L,1);
+
   
-  SIGNAL_FREE(&ready_queue_used_cond);
-  MUTEX_FREE(&ready_queue_used_lock);
-  /* TODO: Waiting for controllers for a wait condition FIXME change this
-   */
-/*  for(i=2;i<=controllers;i++) {
-      lua_pushstring(L,"wait_condition");
-      lua_rawget(L, i);
-      luaL_checktype(L,-1, LUA_TFUNCTION);
-      lua_call(L,0,0);
-  }
-
-  */
+   SIGNAL_FREE(&queue_used_cond);
+   MUTEX_FREE(&queue_used_lock);
+  
+  
    //Finished running the graph, cleanup kernel runtime
    //Cleanup instance subsystem
    instance_end();
@@ -184,12 +207,12 @@ int leda_run(lua_State * L) {
 
 /* Kernel Lua function to get the size of the ready queue*/
 int leda_ready_queue_size(lua_State * L) {
-   lua_pushinteger(L,thread_ready_queue_size());
+   lua_pushinteger(L,queue_size(ready_queue));
    return 1;
 }
 
 int leda_ready_queue_isempty(lua_State * L) {
-   lua_pushboolean(L,thread_ready_queue_isempty());
+   lua_pushboolean(L,queue_isempty(ready_queue));
    return 1;
 }
 
@@ -197,7 +220,7 @@ int leda_ready_queue_isempty(lua_State * L) {
 /* Kernel Lua function to sleep for a time in miliseconds*/
 int leda_sleep(lua_State * L) {
    lua_Number n=lua_tonumber(L,1);
-   usleep((useconds_t)(n*1000000.0));
+   usleep((int)(n*1000000.0));
    return 0;
 }
 
@@ -214,13 +237,6 @@ int leda_get_thread_pool_size(lua_State * L) {
    lua_pushinteger(L,READ(pool_size));
    return 1;
 }
-
-/* Set the end condition by the controller */
-int leda_set_end_condition(lua_State * L) {
-   end_condition=lua_toboolean(L,1);
-   return 0;
-}
-
 
 /* Leda's kernel info  */
 static void set_leda_info (lua_State *L) {
@@ -243,11 +259,13 @@ int luaopen_leda_kernel (lua_State *L) {
   	   {"to_pointer", leda_to_pointer},
   	   {"new_thread", thread_new},
   	   {"sleep", leda_sleep},
+
   	   //functions for controllers
-  	   {"set_end_condition", leda_set_end_condition},
  	   {"ready_queue_size", leda_ready_queue_size},
- 	   {"ready_queue_isempty", leda_ready_queue_isempty},
   	   {"thread_pool_size", leda_get_thread_pool_size},
+// 	   {"event_queue_size", leda_event_queue_size},
+	   
+
 		{NULL, NULL},
 	};
 	
