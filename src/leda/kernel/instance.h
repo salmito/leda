@@ -45,6 +45,7 @@ typedef struct instance_data {
 void instance_init(size_t recycle_limit_t,size_t pending_limit_t);
 instance instance_aquire(stage_id s);
 int instance_release(instance i);
+void instance_destroy(instance i);
 bool_t instance_try_push_pending_event(instance src,stage_id dst, event e);
 void push_ready_queue(instance i);
 

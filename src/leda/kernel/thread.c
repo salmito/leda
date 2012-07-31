@@ -94,8 +94,8 @@ char const * get_return_status_name(int status) {
          return "ENDED";
       case EMMIT_CONTINUATION_AND_PASS_THREAD:
          return "EMMIT_CONTINUATION_AND_PASS_THREAD";
-//      case EMMIT_AND_CONTINUE:
-//         return "EMMIT_AND_CONTINUE";
+      case PCALL_ERROR:
+         return "PCALL_ERROR";
       case YIELDED:
       default:
          return "YIELDED";
@@ -117,7 +117,7 @@ void thread_call(instance i) {
    if(lua_pcall(i->L,i->args,LUA_MULTRET,0)) {
       const char * err=lua_tostring(i->L,-1);
       fprintf(stderr,"Error resuming instance: %s\n",err);
-      status=ENDED;
+      status=PCALL_ERROR;
    } else {   
       if(lua_isnumber(i->L, 1)) status=lua_tointeger(i->L,1);
    }
@@ -130,6 +130,10 @@ void thread_call(instance i) {
          _DEBUG("thread: Stage '%s' finished top=%d agrs=%d stage=%d\n",
          main_graph->s[i->stage]->name,lua_gettop(i->L),(int)i->args,(int)i->stage);
          instance_release(i); //release the instance
+         break;
+         
+      case PCALL_ERROR:
+         instance_destroy(i);
          break;
          
       case EMMIT_CONTINUATION_AND_PASS_THREAD: //stage called emmit_call_self
@@ -380,7 +384,8 @@ static THREAD_RETURN_T THREAD_CALLCONV thread_main(void *t_val) {
    ADD(pool_size,-1);
    _DEBUG("Thread: Thread killed (pool_size=%d)\n",READ(pool_size));
    t->status=DONE;
-   return NULL;
+
+   return 0;
 }
 
 /*Get a thread descriptor from the lua stack*/

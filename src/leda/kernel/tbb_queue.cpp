@@ -30,23 +30,21 @@ THE SOFTWARE.
 
 #include "tbb/concurrent_queue.h"
 
-using namespace tbb;
-
-extern "C" {
-
 /* Arbitrary pointer type */
 typedef void * __ptr;
 
 /* Queue internal structure (Lock Free Queue) */
 struct LFQueue {
-   concurrent_bounded_queue<__ptr> * queue;
+   tbb::concurrent_bounded_queue<__ptr> * queue;
 };
+
+extern "C" {
 
 /* Create a new queue and returns it */
 queue queue_new() {
    queue q;
    q=new LFQueue();
-   q->queue=new concurrent_bounded_queue<__ptr>();
+   q->queue=new tbb::concurrent_bounded_queue<__ptr>();
    return q;
 }
 

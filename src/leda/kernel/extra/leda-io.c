@@ -4,6 +4,10 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <lua.h>
+#include <lauxlib.h>
+#include <lualib.h>
+
 #include "leda-io.h"
 
 #define tofile(L,i)	((FILE **)luaL_checkudata(L, i, LUA_FILEHANDLE))
@@ -97,3 +101,165 @@ int leda_unwrap_io(lua_State *L) {
    *f = fdopen(fd, mode);
    return (*f != NULL);   
 }
+
+/*************** EPOOL API ***********************/
+
+#ifndef _WIN32 //windows does not have epoll
+
+#include <sys/epoll.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <errno.h>
+
+int epool_create(lua_State *L) {
+   int size=lua_tointeger(L,1);
+   int epfd = epoll_create (size);
+   if(epfd==-1) {
+      lua_pushnil(L);
+      lua_pushstring(L,strerror(errno));
+      return 2;
+   }
+   lua_pushinteger(L,epfd);
+   return 1;
+}
+
+int epool_add_read(lua_State *L) {
+   struct epoll_event event; 
+   int epfd=lua_tointeger(L,1);
+   int fd=lua_tointeger(L,2);
+   int err;
+
+   event.data.fd = fd; /* return the fd to us later */
+   event.events = EPOLLIN;
+
+   if((err = epoll_ctl (epfd, EPOLL_CTL_ADD, fd, &event))) {
+      lua_pushnil(L);
+      lua_pushstring(L,strerror(errno));
+      return 2;
+   }
+   lua_pushboolean(L,1);
+   return 1;
+}
+
+int epool_add_read_write(lua_State *L) {
+   struct epoll_event event; 
+   int epfd=lua_tointeger(L,1);
+   int fd=lua_tointeger(L,2);
+   int err;
+
+   event.data.fd = fd; /* return the fd to us later */
+   event.events = EPOLLIN|EPOLLOUT;
+
+   if((err = epoll_ctl (epfd, EPOLL_CTL_ADD, fd, &event))) {
+      lua_pushnil(L);
+      lua_pushstring(L,strerror(errno));
+      return 2;
+   }
+   lua_pushboolean(L,1);
+   return 1;
+}
+
+int epool_add_write(lua_State *L) {
+   struct epoll_event event; 
+   int epfd=lua_tointeger(L,1);
+   int fd=lua_tointeger(L,2);
+   int err;
+
+   event.data.fd = fd; /* return the fd to us later */
+   event.events = EPOLLOUT;
+
+   if((err = epoll_ctl (epfd, EPOLL_CTL_ADD, fd, &event))) {
+      lua_pushnil(L);
+      lua_pushstring(L,strerror(errno));
+      return 2;
+   }
+   lua_pushboolean(L,1);
+   return 1;
+}
+
+
+int epool_remove_descriptor(lua_State *L) {
+   struct epoll_event event;
+   int epfd=lua_tointeger(L,1);
+   int fd=lua_tointeger(L,2);
+
+   int err;
+
+   if((err = epoll_ctl (epfd, EPOLL_CTL_DEL, fd, &event))) {
+      lua_pushnil(L);
+      lua_pushstring(L,strerror(errno));
+      return 2;
+   }
+   
+   lua_pushboolean(L,1);
+   return 1;
+}
+
+#define MAX_EVENTS   64
+
+int epool_wait(lua_State* L) {
+   int epfd=lua_tointeger(L,1);
+   lua_Number to=-1;
+   if(lua_type(L,2)==LUA_TNUMBER)
+      to=lua_tonumber(L,2);
+
+   int timeout=-1;
+   if(to>0.0) {
+      timeout=(int)to*1000.0;
+   }
+      
+   struct epoll_event events[MAX_EVENTS];
+   int nr_events, i;
+
+   nr_events = epoll_wait (epfd, events, MAX_EVENTS, timeout);
+   if (nr_events < 0) { //epool error
+         lua_pushnil(L);
+         lua_pushstring(L,strerror(errno));
+         return 2;
+   }
+
+   lua_newtable(L);
+   
+   lua_newtable(L);
+   lua_pushvalue(L,-1);
+   lua_setfield(L,-3,"write"); //-3
+   
+   lua_newtable(L);
+   lua_pushvalue(L,-1);
+   lua_setfield(L,-4,"read"); //-2
+   int w=1,r=1;
+   for (i = 0; i < nr_events; i++) {
+/*    TODO verify error
+      if(events[i].events & EPOLLERR) || (events[i].events & EPOLLHUP)) {
+         lua_pushnil(L);
+         lua_pushstring(L,strerror(errno));
+         return 2;  
+      }
+*/
+      if (events[i].events & EPOLLOUT) { //fd available for write
+         
+         lua_pushinteger(L,events[i].data.fd);
+         lua_rawseti(L,-3,w++);
+      }
+      if(events[i].events & EPOLLIN) { //fd available for read
+         lua_pushinteger(L,events[i].data.fd);
+         lua_rawseti(L,-2,r++);
+      }
+   }
+   lua_pop(L,2);
+   return 1;
+}
+
+int epool_close(lua_State* L) {
+   int epfd=lua_tointeger(L,1);
+   if(close(epfd)){
+      lua_pushnil(L);
+      lua_pushstring(L,strerror(errno));
+      return 2;
+   }
+   lua_pushboolean(L,1);
+   return 1;
+}
+
+#endif

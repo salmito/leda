@@ -35,6 +35,9 @@ install5.2: 5.2
 uninstall5.2: 
 	make uninstall LUA_INSTALL_PATH=$(LUA_INSTALL_PATH_5_2) LIB_INSTALL_PATH=$(LIB_INSTALL_PATH_5_2)
 
+windows32:
+	cd $(SRC_DIR)/kernel && make LUA_INC_FLAGS="$(LUA_5_1_INC)" MINGW32="true" && cd -
+
 install: install5.1
 
 uninstall: uninstall5.1

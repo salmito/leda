@@ -13,12 +13,14 @@ leda={output={}}
 -----------------------------------------------------------------------------
 leda.mutex=__mutex
 leda.io=__io
+leda.epoll=__epoll
 leda.socket=__socket
 
 -----------------------------------------------------------------------------
 -- Define an easier name for the wait_event method
 -----------------------------------------------------------------------------
 leda.wait_event=__wait_event
+leda.peek_event=__peek_event
 
 -----------------------------------------------------------------------------
 -- Define an easier name for the sleep function

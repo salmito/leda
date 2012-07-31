@@ -32,11 +32,12 @@ THE SOFTWARE.
 
 //Currently not being used for anything
 
-extern "C" {
-
 struct atomicInt {
    tbb::atomic<int> i;
 };
+
+
+extern "C" {
 
 atomic atomic_new(int i) {
    atomic a;

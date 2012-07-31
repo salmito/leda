@@ -151,6 +151,7 @@ void copy_values_directly
       }
       case LUA_TNIL:
         lua_pushnil (dst);
+        break;
       default:
          lua_pushfstring(src,"Value type '%s' not supported",
          lua_typename(src,lua_type(src,i)));

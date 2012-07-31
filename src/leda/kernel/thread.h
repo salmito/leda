@@ -49,6 +49,7 @@ typedef struct thread_data {
 enum return_status{ 
    ENDED=0xF1F21AB,
    EMMIT_CONTINUATION_AND_PASS_THREAD,
+   PCALL_ERROR,
    YIELDED
 };
 

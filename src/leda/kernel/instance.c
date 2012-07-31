@@ -184,9 +184,31 @@ int instance_wait_for_event(lua_State *L) {
    int args=restore_event_to_lua_state(L,&e);
 
    _DEBUG("Instance: Stage '%s' fetched an event with '%d' args directly\n",STAGE(i->stage)->name,args);
-   dump_stack(L);
+//   dump_stack(L);
    return args;
 }
+
+int instance_peek_for_event(lua_State *L) {
+   lua_getfield( L, LUA_REGISTRYINDEX, "__SELF" );
+   instance i=lua_touserdata(L,-1);
+   lua_pop(L,1);
+   
+   event e;
+   int args=0;
+   if(TRY_POP(event_queues[i->stage],e)){ 
+      args=restore_event_to_lua_state(L,&e);
+   }
+   else {
+      lua_pushnil(L);
+      lua_pushstring(L,"No pending events available");
+      return 2;
+   }
+
+   _DEBUG("Instance: Stage '%s' fetched an event with '%d' args directly\n",STAGE(i->stage)->name,args);
+//   dump_stack(L);
+   return args;
+}
+
 
 void register_mutex_api(lua_State * L) {
    lua_newtable(L);
@@ -214,6 +236,32 @@ void register_io_api(lua_State * L) {
    lua_pushcfunction(L,leda_unwrap_io);
    lua_rawset(L,-3);
    lua_setglobal(L,"__io");
+   /* AIO epoll */
+   #ifndef _WIN32
+   lua_newtable(L);
+   lua_pushliteral(L,"close");
+   lua_pushcfunction(L,epool_close);
+   lua_rawset(L,-3);
+   lua_pushliteral(L,"wait");
+   lua_pushcfunction(L,epool_wait);
+   lua_rawset(L,-3);
+   lua_pushliteral(L,"remove");
+   lua_pushcfunction(L,epool_remove_descriptor);
+   lua_rawset(L,-3);
+   lua_pushliteral(L,"add_read");
+   lua_pushcfunction(L,epool_add_read);
+   lua_rawset(L,-3);
+   lua_pushliteral(L,"add_write");
+   lua_pushcfunction(L,epool_add_write);
+   lua_rawset(L,-3);
+   lua_pushliteral(L,"add_read_write");
+   lua_pushcfunction(L,epool_add_read_write);
+   lua_rawset(L,-3);
+   lua_pushliteral(L,"create");
+   lua_pushcfunction(L,epool_create);
+   lua_rawset(L,-3);
+   lua_setglobal(L,"__epoll");
+   #endif
 }
 
 void register_sock_api(lua_State * L) {
@@ -225,6 +273,7 @@ void register_sock_api(lua_State * L) {
    lua_pushcfunction(L,leda_unwrap_sock);
    lua_rawset(L,-3);
    lua_setglobal(L,"__socket");
+ 
 }
 
 
@@ -234,6 +283,8 @@ void register_utils_api(lua_State * L) {
    
    lua_pushcfunction(L,instance_wait_for_event);
    lua_setglobal(L,"__wait_event");
+   lua_pushcfunction(L,instance_peek_for_event);
+   lua_setglobal(L,"__peek_event");
    register_io_api(L);
    register_sock_api(L);
    register_mutex_api(L);
@@ -389,7 +440,7 @@ int instance_release(instance i) {
       instance_destroy(i);
       return -1; //cannot push instance (it shouldn't get here)
    }
-
+   SIGNAL_ALL(&queue_used_cond);
    _DEBUG("Instance: Instance %d of stage '%s' released\n",i->instance_number,STAGE(i->stage)->name);
    return 0;// ok
 }

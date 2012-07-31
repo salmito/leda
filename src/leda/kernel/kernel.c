@@ -40,7 +40,7 @@ THE SOFTWARE.
 
 #define __VERSION "0.2.0-beta4"
 
-#define CONNECTOR_TIMEOUT 1.0
+#define CONNECTOR_TIMEOUT 2.0
 
 #define LEDA_NAME          "leda.kernel"
 #define LEDA_ENV           "leda kernel environment"
@@ -165,13 +165,15 @@ int leda_run(lua_State * L) {
       while(1) {
          time_d timeout=SIGNAL_TIMEOUT_PREPARE(CONNECTOR_TIMEOUT);
          bool_t timedout=SIGNAL_WAIT(&queue_used_cond,&queue_used_lock,timeout);
-
+//	      printf("AQUI\n");
+//         bool_t timedout=FALSE;
          lua_pushvalue(L,-1);
          lua_pushboolean(L,!timedout);
          lua_call(L,1,0);
 
          //comment the line below to disable end condition
          if(READ(pool_size)==-queue_size(ready_queue)) break;
+         //while(1) usleep(1000000000);
       }
    } else { /*if the controller did not define a push_event function, 
              * sleep forever
@@ -188,7 +190,8 @@ int leda_run(lua_State * L) {
       lua_call(L,0,0);
    else 
       lua_pop(L,1);
-
+      
+   usleep(200000); //give some time for threads to kill themselves
   
    SIGNAL_FREE(&queue_used_cond);
    MUTEX_FREE(&queue_used_lock);
