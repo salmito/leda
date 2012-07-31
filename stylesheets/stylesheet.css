@@ -57,7 +57,7 @@ body {
 }
 
 a {
-  color: #C67D33;
+  color: #CC7A00;
   text-decoration: none;
   -webkit-transition: color ease-in-out 0.3s;
 }
@@ -374,7 +374,7 @@ footer .owner p a {
 
 .markdown-body h2 {
   font-size: 24px;
-  color: #557398;
+  color: #CC7A00;
 }
 
 .markdown-body h3 {
