@@ -57,14 +57,14 @@ body {
 }
 
 a {
-  color: #63a52a;
+  color: #FF9933;
   text-decoration: none;
   -webkit-transition: color ease-in-out 0.3s;
 }
 
 a:hover {
   text-decoration: underline;
-  color: #90D355;
+  color: #FFCC66;
 }
 
 h1.title {
