@@ -37,6 +37,28 @@ THE SOFTWARE.
 
 #define tofile(L,i)	((FILE **)luaL_checkudata(L, i, LUA_FILEHANDLE))
 
+int leda_wrap_io(lua_State *L) {  
+   FILE ** f=tofile(L,1);
+   int fd=fileno(*f);
+   int newfd=dup(fd);
+   lua_pushinteger(L,newfd);
+   return 1;
+}
+
+int leda_unwrap_io(lua_State *L) {
+   int fd = luaL_checkint(L, 1);
+   const char * mode="rw";
+   if(lua_type(L,2)==LUA_TSTRING) {
+      mode=lua_tostring(L, 2);
+   }
+   FILE **f = (FILE **)lua_newuserdata(L, sizeof(FILE *));
+   *f = NULL;
+   luaL_getmetatable(L, LUA_FILEHANDLE);
+   lua_setmetatable(L, -2);
+   *f = fdopen(fd, mode);
+   return (*f != NULL);   
+}
+
 int leda_wrap_sock(lua_State *L) {
    luaL_checktype(L,1,LUA_TUSERDATA);
    lua_getfield(L,1,"getfd");
@@ -69,20 +91,12 @@ int leda_wrap_sock(lua_State *L) {
    return 1;
 }
 
-int leda_wrap_io(lua_State *L) {  
-   FILE ** f=tofile(L,1);
-   int fd=fileno(*f);
-   int newfd=dup(fd);
-   lua_pushinteger(L,newfd);
-   return 1;
-}
-
 int leda_unwrap_sock(lua_State *L) {  
    int fd = luaL_checkint(L, 1);
    char typestr[128];
    if(lua_type(L,2)==LUA_TSTRING) {
       size_t len;const char * t = lua_tolstring(L, 2,&len);
-      sprintf(typestr,"%*s",(int)len,t);
+      sprintf(typestr,"%*s",(int)(len>128?128:len),t);
    } else {
      sprintf(typestr,"tcp{client}");
    }
@@ -110,21 +124,6 @@ int leda_unwrap_sock(lua_State *L) {
    }
    lua_setmetatable(L, -2);
    return 1;
-}
-
-
-int leda_unwrap_io(lua_State *L) {
-   int fd = luaL_checkint(L, 1);
-   const char * mode="rw";
-   if(lua_type(L,2)==LUA_TSTRING) {
-      mode=lua_tostring(L, 2);
-   }
-   FILE **f = (FILE **)lua_newuserdata(L, sizeof(FILE *));
-   *f = NULL;
-   luaL_getmetatable(L, LUA_FILEHANDLE);
-   lua_setmetatable(L, -2);
-   *f = fdopen(fd, mode);
-   return (*f != NULL);   
 }
 
 /*************** EPOOL API ***********************/
@@ -230,7 +229,7 @@ int epool_wait(lua_State* L) {
       to=lua_tonumber(L,2);
 
    int timeout=-1;
-   if(to>0.0) {
+   if(to>=0.0) {
       timeout=(int)to*1000.0;
    }
       

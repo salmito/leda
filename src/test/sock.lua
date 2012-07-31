@@ -56,4 +56,4 @@ g=graph{wait_client,read_request,local_echo}
 
 
 wait_client:send(9999)
-g:run()
+g:run(leda.controller.fixed_thread_pool.get(10))

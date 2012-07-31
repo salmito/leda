@@ -2,11 +2,12 @@
 -- Leda's Instance Internal Lua API
 -- Author: Tiago Salmito, Noemi Rodriguez, Ana Lucia de Moura
 -----------------------------------------------------------------------------
-
 -----------------------------------------------------------------------------
 -- Build proxies for the output of the stage
 -----------------------------------------------------------------------------
 leda={output={}}
+
+leda.marshal=require "leda.utils.marshal"
 
 -----------------------------------------------------------------------------
 -- Define an easier name for the utils libraries
@@ -43,6 +44,10 @@ function leda.get_output(key)
       return leda.output[key]
    end
    return nil,string.format("Output '%s' not found",key)
+end
+
+function leda.send(key,...)
+   return leda.get_output(key):send(...)
 end
 
 -----------------------------------------------------------------------------

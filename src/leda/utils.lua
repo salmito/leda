@@ -26,10 +26,13 @@ function leda.insert_before(s1,s2,key)
 end
 utils.insert_before=leda.insert_before
 
-function leda.insert_after(s1,s2,key)
-   key=key or 1
-   s1.output[key]=connector()
-   s2.input=s1.output[key]
+function leda.insert_after(s1,s2,key1,key2)
+   key1=key1 or 1
+   key2=key2 or key1
+   local old=s1.output[key1]
+   s1.output[key1]=connector()
+   s2.input=s1.output[key2]
+   s2.output[key2]=old
 end
 utils.insert_after=leda.insert_after
 
@@ -37,8 +40,19 @@ function leda.add_before(s1,s2,key)
    s1.input=s2.input
    s1:add_output(key,s2.input)
 end
-
 utils.add_before=leda.add_before
+
+function leda.insert_proxy(s1,s2,s3,key1,key2,con1,con2)
+   key1=key1 or 1
+   key2=key2 or 1
+   con1=con1 or connector()
+   con2=con2 or connector()
+   s1.output[key1]=con1
+   s3.input=con1
+   s3.output[key2]=con2
+   s2.input=con2
+end
+utils.insert_proxy=leda.insert_proxy
 
 -----------------------------------------------------------------------------
 -- Switch stage selects an specific output and send pushed 'data'

@@ -4,11 +4,20 @@ wait_client=stage{
    handler=function(port)
        local server_sock=socket.bind("*",port)
        print("SERVER: Waiting on port >> ",port)
+       local sockfd=leda.socket.wrap(server_sock)
+       epfd,err=leda.epoll.create(1)
+       local a,err=leda.epoll.add_read(epfd,sockfd)
        while true do
-          local cli_sock=server_sock:accept()
-          local cli=leda.socket.wrap(cli_sock)
-          print("SERVER: Sending client",cli)
-          leda.get_output():send(cli)
+          local sockets,err=leda.epoll.wait(epfd,0);
+          if sockets.read[1] then
+            local srv=leda.socket.unwrap(sockets.read[1],"tcp{server}")
+            local cli_sock=srv:accept()
+            local cli=leda.socket.wrap(cli_sock)
+            print("SERVER: Sending client",cli)
+            leda.get_output():send(cli)
+            leda.socket.wrap(srv)
+          end
+          coroutine.yield()
        end
    end, 
    init=function () require "socket" end,
@@ -22,7 +31,7 @@ epoll_reader=stage{
       local a,err=leda.epoll.add_read(epfd,sock)
       if not a then print(err) end
       while true do
-         local sockets,err=leda.epoll.wait(epfd,1);
+         local sockets,err=leda.epoll.wait(epfd,0);
          if sockets then
             for i=1,#sockets.read do
                local cli=leda.socket.unwrap(sockets.read[i])
@@ -39,6 +48,7 @@ epoll_reader=stage{
          end
          local new_sock=leda.peek_event()
          if new_sock then leda.epoll.add_read(epfd,new_sock) end
+         coroutine.yield()
       end
    end,
    init=function() require "socket" end,
@@ -59,4 +69,4 @@ g=graph{wait_client,epoll_reader,local_echo}
 
 
 wait_client:send(9999)
-g:run()
+g:run(leda.controller.fixed_thread_pool.get(1))

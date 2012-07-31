@@ -7,7 +7,7 @@ Leda's TODO list:
    - Controller API
       - Pass the graph state to controllers
    
-   - Build windows binaries for leda
+  OK Build windows binaries for leda
    
   OK Create a pending event queue for instances
       - Do not create a new instance if the recycle queue 
@@ -18,7 +18,7 @@ Leda's TODO list:
    - Optionally remove the TBB dependency by implementating a
      lockfree queue that operates the same way as the TBB concurrent_queue
      
-   - Pass simple Lua tables between instances
+  OK Pass simple Lua tables between instances
    
    
    - LOAD_STAGE 
@@ -27,5 +27,6 @@ Leda's TODO list:
   OK WAIT_EVENT
      sleep the current thread until an event for that stage is throwed
 
-   - error handling
-   - 
+  OK error handling
+  
+   - dup on sockets 
