@@ -2,4 +2,4 @@ Leda's known bug list:
 
 Submit new bugs on https://github.com/TiagoBraw/leda/issues
 
-   - 
+   - SIGNAL fails on windows (causing a GPF)
