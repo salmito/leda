@@ -33,6 +33,7 @@ THE SOFTWARE.
 
 #include "event.h"
 #include "thread.h"
+#include "extra/lmarshal.h"
 
 #define MAXN 1024
 
@@ -54,10 +55,16 @@ struct _element {
  */
 void destroy_event(event e) {
    size_t i;
-   for(i=0;i<e->n;i++)
-      if(e->payload[i].type==LUA_TSTRING && e->payload[i].data.str) 
-         free(e->payload[i].data.str);
-   
+   for(i=0;i<e->n;i++) {
+      switch(e->payload[i].type) {
+         case LUA_TSTRING:
+         case LUA_TFUNCTION:
+         case LUA_TTABLE:
+         case LUA_TUSERDATA:
+         if(e->payload[i].data.str) 
+            free(e->payload[i].data.str);
+         }
+    }
    free(e->payload);
    free(e);
 }
@@ -112,6 +119,13 @@ int restore_event_to_lua_state(lua_State * L, event *e_t) {
          case LUA_TLIGHTUSERDATA:
             lua_pushlightuserdata(L, e->payload[i].data.ptr);
             break;
+         case LUA_TFUNCTION:
+         case LUA_TTABLE:
+         case LUA_TUSERDATA:
+            lua_pushcfunction(L,mar_decode);
+            lua_pushlstring(L, e->payload[i].data.str,e->payload[i].len);
+            lua_call(L,1,1);
+            break;
       }
    }
    int ret=e->n;
@@ -152,6 +166,18 @@ void copy_values_directly
       case LUA_TNIL:
         lua_pushnil (dst);
         break;
+      case LUA_TFUNCTION:
+      case LUA_TTABLE:
+      case LUA_TUSERDATA: {
+          lua_pushcfunction(src,mar_encode);
+          lua_pushvalue(src,i);
+          lua_call(src,1,1);
+          size_t len; const char *s = lua_tolstring( src, -1, &len );
+          lua_pushcfunction(dst,mar_decode);
+          lua_pushlstring (dst, s, len);
+          lua_call(dst,1,1);
+          lua_pop(src,1);
+         } break;              
       default:
          lua_pushfstring(src,"Value type '%s' not supported",
          lua_typename(src,lua_type(src,i)));
@@ -197,6 +223,19 @@ bool_t copy_event_element(lua_State *L, size_t i, element e) {
          e->data.ptr=lua_touserdata(L, i);
          e->len=sizeof(void *);
          break;
+       case LUA_TFUNCTION:
+       case LUA_TTABLE:
+       case LUA_TUSERDATA: {
+          e->type=lua_type(L,i);
+          lua_pushcfunction(L,mar_encode);
+          lua_pushvalue(L,i);
+          lua_call(L,1,1);
+          size_t len; const char *s = lua_tolstring( L, -1, &len );
+          e->data.str=malloc(len);
+          e->len=len;
+          memcpy(e->data.str,s,len);
+          lua_pop(L,1);
+          } break;
        default:
          return FALSE;
    }

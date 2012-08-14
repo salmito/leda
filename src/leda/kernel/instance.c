@@ -34,6 +34,7 @@ THE SOFTWARE.
 #include "queue.h"
 #include "mutex.h"
 #include "extra/leda-io.h"
+#include "extra/lmarshal.h"
 
 int leda_sleep(lua_State * L);
 
@@ -64,6 +65,25 @@ extern SIGNAL_T queue_used_lock;
 static char const instance_chunk[]= 
 #include "instance.lo"
 
+static void registerlib(lua_State * L,char const * name, lua_CFunction f) {
+   lua_getglobal(L,"package");
+   lua_getfield(L,-1,"preload");
+   lua_pushcfunction(L,f);
+   lua_setfield(L,-2,name);
+   lua_pop(L,2);
+}
+
+static void openlibs(lua_State * L) {
+   lua_cpcall(L,luaopen_base,NULL);
+   lua_cpcall(L,luaopen_package,NULL);
+   registerlib(L,"io", luaopen_io);
+   registerlib(L,"os", luaopen_os);
+   registerlib(L,"table", luaopen_table);
+   registerlib(L,"string", luaopen_string);
+   registerlib(L,"math", luaopen_math);
+   registerlib(L,"debug", luaopen_debug);   
+}
+
 /*Create an empty new lua_state and returns it */
 lua_State * new_lua_state(bool_t libs) {
    lua_State * L = luaL_newstate();
@@ -78,7 +98,7 @@ lua_State * new_lua_state(bool_t libs) {
 
    lua_gc( L, LUA_GCSTOP, 0);
    
-   if(libs) luaL_openlibs(L);
+   if(libs) openlibs(L);
    else {
       //TODO pehaps it's good to load only the base library in this case?
    }
@@ -148,7 +168,7 @@ bool_t instance_try_push_pending_event(instance src,stage_id dst, event e) {
    //someone consume an event
    if(src && STAGE(src->stage)->backpressure) {
       PUSH(event_queues[dst],e);
-      SIGNAL_ALL(&queue_used_cond);
+      //SIGNAL_ALL(&queue_used_cond);
       return TRUE;
    } 
    return FALSE; //Could not send an event (the pending event queue is full)
@@ -156,7 +176,7 @@ bool_t instance_try_push_pending_event(instance src,stage_id dst, event e) {
 
 /* Push instance to the ready queue */
 void push_ready_queue(instance i) {
-   _DEBUG("Instance: Pushing instance '%d' of stage '%s' onto the ready queue\n",
+   if(i) _DEBUG("Instance: Pushing instance '%d' of stage '%s' onto the ready queue\n",
    i->instance_number,STAGE(i->stage)->name);
    bool_t ret=TRY_PUSH(ready_queue,i);
    if(!ret) {
@@ -264,6 +284,15 @@ void register_io_api(lua_State * L) {
    #endif
 }
 
+void register_marshal_api(lua_State * L) {
+   lua_pushcfunction(L,mar_encode);
+   lua_setglobal(L,"__encode");
+   lua_pushcfunction(L,mar_decode);
+   lua_setglobal(L,"__decode");
+   lua_pushcfunction(L,mar_clone);
+   lua_setglobal(L,"__clone");
+}
+
 void register_sock_api(lua_State * L) {
    lua_newtable(L);
    lua_pushliteral(L,"wrap");
@@ -277,7 +306,7 @@ void register_sock_api(lua_State * L) {
 }
 
 
-void register_utils_api(lua_State * L) {
+void register_debug_api(lua_State * L) {
    lua_pushcfunction(L,leda_sleep);
    lua_setglobal(L,"__sleep");
    
@@ -285,9 +314,7 @@ void register_utils_api(lua_State * L) {
    lua_setglobal(L,"__wait_event");
    lua_pushcfunction(L,instance_peek_for_event);
    lua_setglobal(L,"__peek_event");
-   register_io_api(L);
-   register_sock_api(L);
-   register_mutex_api(L);
+   
 }
 
 
@@ -347,6 +374,14 @@ instance instance_aquire(stage_id s) {
    lua_pushstring (ret->L, STAGE(s)->name); //value
    lua_settable(ret->L,-3); //Set __name
 
+   lua_pushliteral(ret->L,"__serial"); //key
+   lua_pushboolean (ret->L, STAGE(s)->serial); //value
+   lua_settable(ret->L,-3); //Set __init
+
+   lua_pushliteral(ret->L,"__backpressure"); //key
+   lua_pushboolean (ret->L, STAGE(s)->backpressure); //value
+   lua_settable(ret->L,-3); //Set __init
+
    //Push the init and handler chunks into the table
    lua_pushliteral(ret->L,"__init"); //key
    lua_pushlstring (ret->L, STAGE(s)->init, STAGE(s)->init_len); //value
@@ -402,12 +437,20 @@ instance instance_aquire(stage_id s) {
    /* Push the endcode for this instance, for now is only an integer*/
    lua_pushinteger(ret->L,ENDED);   
    lua_setglobal(ret->L,"__end_code");
+   /* Push the endcode for this instance, for now is only an integer*/
+   lua_pushinteger(ret->L,YIELDED);   
+   lua_setglobal(ret->L,"__yield_code");
 
 
    /* load api with assorted functions useful for concurrency*/
-   register_utils_api(ret->L);
+   register_debug_api(ret->L);
+   register_io_api(ret->L);
+   register_sock_api(ret->L);
+   register_mutex_api(ret->L);
+   register_marshal_api(ret->L);
      
    /* Call the lua_chunk loaded in the luaL_loadbuffer */
+   dump_stack(ret->L);
    lua_call( ret->L, 0 , 0 );
    _DEBUG("Instance created for stage '%d' name='%s'\n",(int)s,STAGE(s)->name);
 

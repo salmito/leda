@@ -7,14 +7,15 @@
 -- Declare module and import dependencies
 -----------------------------------------------------------------------------
 local base = _G
-local tostring,type,assert,pairs,setmetatable,getmetatable,print =
-      tostring,type,assert,pairs,setmetatable,getmetatable,print
+local tostring,type,assert,pairs,setmetatable,getmetatable,print,io =
+      tostring,type,assert,pairs,setmetatable,getmetatable,print,io
 local string,table,kernel=string,table,leda.kernel
 local dbg = leda.debug.get_debug("Graph: ")
 local is_connector=leda.l_connector.is_connector
 local is_stage = leda.l_stage.is_stage
 local default_controller=require("leda.controller.default")
 local dump = string.dump
+local leda=leda
 
 module("leda.l_graph")
 
@@ -69,12 +70,12 @@ end
 --
 -- If a connector is already on the graph, nothing is done
 -----------------------------------------------------------------------------
-local function add_connector(self,c)
+local function add_connector(self,c,dump_f)
    assert(is_connector(c),string.format("Invalid parameter ('connector' expected, got '%s')",type(c)))
    if not is_member(self.connectors,c) then
       dbg("Adding connector '%s' to graph '%s'",tostring(c),tostring(self))
          --Dump the send function
-      if type(c.sendf)=="function" then
+      if type(c.sendf)=="function" and dump_f then
          c.sendf=dump(c.sendf)
       end
       table.insert(self.connectors,c)
@@ -138,6 +139,18 @@ function is_graph(g)
   return false
 end
 
+local function label_connector(c)
+     if c.sendf==leda.e then
+         c.type="e"
+      elseif c.sendf==leda.t then
+         c.type="t"
+      elseif c.sendf==leda.te then
+         c.type="te"
+      else
+         c.type="u"
+      end
+end
+
 -----------------------------------------------------------------------------
 -- Verify if a graph 'g' is a well-formed leda graph
 --
@@ -147,7 +160,7 @@ end
 -- returns:       'true' if 'g' is a well formed graph
 --                fails with an error message if not
 -----------------------------------------------------------------------------
-function index.verify(g)
+function index.verify(g,dump_f)
    --reset previous producers and consumers
    for _,c in pairs(g.connectors) do
       c.producers={}
@@ -162,18 +175,33 @@ function index.verify(g)
          add_connector(g,c)
          c:add_producer(s)
       end
-      if #s.input.producers ==0 and #s.input.pending==0 then
-         dbg("WARNING: Connector '%s' does not have any producers and there is no data peding",tostring(s.input))
-      end
    end
-
    -- Calling bind function after connectors has been initialized
    for _,s in pairs(g.stages) do
       if type(s.bind)=="function" then
          s:bind()
       end
    end
-
+   --reset previous producers and consumers (in case of bind modified the graph)
+   for _,c in pairs(g.connectors) do
+      c.producers={}
+      c.consumers={}   
+   end
+   g.connectors={}   
+   --initialize connectors
+   for _,s in pairs(g.stages) do
+      label_connector(s.input)      
+      add_connector(g,s.input,dump_f)
+      s.input:add_consumer(s)
+      for _,c in pairs(s.output) do
+         label_connector(c)
+         add_connector(g,c,dump_f)
+         c:add_producer(s)
+      end
+      if #s.input.producers ==0 and #s.input.pending==0 then
+         io.stderr:write(string.format("WARNING: Connector '%s' does not have any producers and there is no data peding\n",tostring(s.input)))
+      end
+   end
    return true
 end
 
@@ -203,7 +231,7 @@ end
 -- if no controller was provided, use the default one
 -----------------------------------------------------------------------------
 function index.run(self,c1,...)
-   local v,err=index.verify(self)
+   local v,err=index.verify(self,true)
 --   self:dump()
    dbg("Running graph '%s'...",tostring(self))
    if v then 

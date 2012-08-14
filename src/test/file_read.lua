@@ -8,12 +8,13 @@ s1=stage{
          leda.get_output():send(line)
          line = a:read()
       end
-   end
+   end,
+	init=function() require "io" end
 }
 
 s2=stage{leda.utils.print}
 
-leda.insert_before(s1,s2)
+leda.connect(s1,s2)
 
 g=graph{s1,s2}
 

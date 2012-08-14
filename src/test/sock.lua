@@ -49,8 +49,8 @@ local_echo=stage{
    name="echo request locally"
 }
 
-leda.insert_before(read_request,local_echo)
-leda.insert_before(wait_client,read_request)
+read_request:connect(local_echo)
+wait_client:connect(read_request)
 
 g=graph{wait_client,read_request,local_echo}
 

@@ -104,7 +104,7 @@ char const * get_return_status_name(int status) {
 }
 
 /* Call an instance loaded with 'args' values at the top of its stack */
-void thread_call(instance i) {
+void thread_resume_instance(instance i) {
    _DEBUG("Thread: CALLING STAGE '%s' in=%d top=%d args=%d ready_queue_size=%d event_queue='%d'\n",
          main_graph->s[i->stage]->name,i->instance_number,lua_gettop(i->L),(int)i->args,
          (int)queue_size(ready_queue),
@@ -142,10 +142,13 @@ void thread_call(instance i) {
          break;
          
       case YIELDED: 
-      default:  
          //handler coroutine yielded, put it again in the ready queue
          //It will be resumed with the value 'true' as return value
          emmit_self(i);
+         break;
+      default:
+         fprintf(stderr,"Error, cannot resume main coroutine of stage '%s'\n",STAGE(i->stage)->name);
+         instance_destroy(i);
    }
  
 
@@ -233,7 +236,7 @@ void emmit_self_and_pass_the_thread(instance caller) {
    //Pass the thread to the callee (call directly its instance)
    _DEBUG("Thread: Emmited self, passing the thread to the stage '%s'.\n",
       main_graph->s[dst_id]->name);
-   thread_call(callee);
+   thread_resume_instance(callee);
 }
 
 /* Pass thread direcly to another instance
@@ -281,7 +284,7 @@ int call(lua_State * L) {
    callee->args=top-1;
    
    //Resume coroutine
-   thread_call(callee);
+   thread_resume_instance(callee);
    
    //Returns 'true' to caller
    lua_pushboolean(L,TRUE);
@@ -378,7 +381,7 @@ static THREAD_RETURN_T THREAD_CALLCONV thread_main(void *t_val) {
          break; //exit the main loop
       }
       t->status=RUNNING; //change status to RUNNING      
-      thread_call(i); //call continuation
+      thread_resume_instance(i); //call continuation
       t->status=WAITING; //change status to WAITING
    }
    ADD(pool_size,-1);

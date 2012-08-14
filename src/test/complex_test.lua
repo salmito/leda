@@ -8,8 +8,11 @@ s1=stage{
    handler=function (i)
 --      print("S1",i)
       while true do
-         leda.sleep(2)   
-         local ret,err=leda.get_output('out'):send("S2")
+         leda.sleep(1)
+         local t='upvalue'
+         a={test="testing"}
+         a.a=a
+         local ret,err=leda.get_output('out'):send(a,function () return t end)
          --if not ret then print("ERROR",ret,err) end
          --print("S1",i,"(cont 1)")
          --leda.get_output('out1'):send("S3")
@@ -25,15 +28,16 @@ s1=stage{
 }
 
 s2=stage{
-   handler=function ()
-      while 1 do
-      print("S2",a)
+   handler=function (a,f)
+--      while 1 do
+      print("S2",a.a.a.a.a.a.a.test,f())
       print("===== sleeping zzzz =====")
-      leda.get_output(1):send("S4")
+      leda.sleep(2)
+      local str=leda.get_output(1):send("S4")
       print("S2\t\t(cont)")
-      str=leda.wait_event()
+--      str=leda.debug.wait_event()
       print("VIXE",str)
-      end
+--      end
    end,
    name="S2",
    serial=true,
@@ -51,9 +55,6 @@ local g=graph{s1,s2,s3,s4}
 
 --s1:set_method(leda.throw_event)
 s1.output.out.sendf=leda.e
-s2:set_method(leda.e)
-s3:set_method(leda.e)
-s4:set_method(leda.e)
 
 s1.input:send(1)
 

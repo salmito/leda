@@ -11,48 +11,14 @@ local utils=leda.utils
 -----------------------------------------------------------------------------
 -- Defining auxiliary functions
 -----------------------------------------------------------------------------
------------------------------------------------------------------------------
--- Insert a stage
--- param:   's1':     
---          's2':   
---
--- returns: 
------------------------------------------------------------------------------
-function leda.insert_before(s1,s2,key)
-   key=key or 1
-   s1.input=s2.input
-   s2.input=connector{}
-   s1:add_output(key,s2.input)
-end
-utils.insert_before=leda.insert_before
-
-function leda.insert_after(s1,s2,key1,key2)
-   key1=key1 or 1
-   key2=key2 or key1
-   local old=s1.output[key1]
-   s1.output[key1]=connector()
-   s2.input=s1.output[key2]
-   s2.output[key2]=old
-end
-utils.insert_after=leda.insert_after
-
-function leda.add_before(s1,s2,key)
-   s1.input=s2.input
-   s1:add_output(key,s2.input)
-end
-utils.add_before=leda.add_before
-
-function leda.insert_proxy(s1,s2,s3,key1,key2,con1,con2)
+function utils.insert_proxy(s2,s1,key1,key2)
    key1=key1 or 1
    key2=key2 or 1
-   con1=con1 or connector()
-   con2=con2 or connector()
-   s1.output[key1]=con1
-   s3.input=con1
-   s3.output[key2]=con2
-   s2.input=con2
+   local con=s1.output[key1] or leda.connector()
+   s1.output[key1]=leda.connector()
+   s2.input=s1.output[key1]
+   s2.output[key2]=con
 end
-utils.insert_proxy=leda.insert_proxy
 
 -----------------------------------------------------------------------------
 -- Switch stage selects an specific output and send pushed 'data'
@@ -98,21 +64,15 @@ utils.copy={
 }
 
 -----------------------------------------------------------------------------
--- Loop indefinitely sending the input event to its output
--- param:   'i':     period of loop
--- param:   '...':   data to be sent at
+-- Load  and execute a lua chunk
+-- param:   'str'    chunk to be loaded
+-- param:   '...':   data to be copyied and sent
 -----------------------------------------------------------------------------
-utils.loop={
-   handler= function (...) 
-      local args={...} 
-      while true do 
-         leda.output[1]:send(select(2,...)) 
-         leda.sleep(args[1]) 
-      end 
+utils.eval={
+   handler=function (...)
+      local args={...}
+      loadstring(args[1])(select(2,...))
    end,
-   bind=function(self) 
-      assert(self.output[1],"Copy must have an output at [1]") 
-   end
 }
 
 -----------------------------------------------------------------------------
@@ -120,9 +80,11 @@ utils.loop={
 -- param:   '...':   data to be printed
 -----------------------------------------------------------------------------
 utils.print={
+	"Printer",
    handler=
    function (...)
       print(...)
+      leda.send(1,...)
    end
 }
 
@@ -130,41 +92,16 @@ utils.print={
 -- Serialize arguments into a string
 -- param:   '...':   data to be serialized
 -----------------------------------------------------------------------------
---[[utils.simple_serializer={
+utils.serializer={
    handler=
    function (...)
-      leda.get_output(1):send(serialize{...})
-   end,
-   init=
-   function ()
-      function serialize (tt, indent, done)
-         done = done or {}
-         indent = indent or 0
-         if type(tt) == "table" then
-            for key, value in pairs (tt) do
-               io.write(string.rep (" ", indent)) -- indent it
-               if type (value) == "table" and not done [value] then
-                  done [value] = true
-                  io.write(string.format("[%s] => table\n", tostring (key)));
-                  io.write(string.rep (" ", indent+4)) -- indent it
-                  io.write("(\n");
-                  table_print (value, indent + 7, done)
-                  io.write(string.rep (" ", indent+4)) -- indent it
-                  io.write(")\n");
-               else
-                  io.write(string.format("[%s] => %s\n",
-                  tostring (key), tostring(value)))
-               end
-            end
-         else
-            io.write(tt .. "\n")
-         end
-      end
+      local str=leda.encode({...})
+      leda.send(1,str)
    end,
    bind=
    function(self) 
-      assert(#self.output>1,"Serializer must have an output at [1]") 
+      assert(#self.output[1].consumers>0,"Serializer must have a consumer at output [1]") 
    end
-}--]]
+}
 
 return utils

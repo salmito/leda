@@ -1,19 +1,20 @@
 local utils=require "leda.utils"
 
+local a={test="testing"}
+
 local s1=stage{
    handler=function()
-      leda.send(1,leda.marshal.encode({test="testing"}))
+		leda.send(1,a)
    end
 }
 
 local s2=stage{
-   handler=function(table)
-      local test=leda.marshal.decode(table)
+   handler=function(test)
       print(test.test)
    end
 }
 
-utils.insert_before(s1,s2)
+s1:connect(s2)
 
 s1:send()
 

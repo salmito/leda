@@ -37,8 +37,9 @@ THE SOFTWARE.
 #include "graph.h"
 #include "queue.h"
 #include "instance.h"
+#include "extra/lmarshal.h"
 
-#define __VERSION "0.2.0-beta4"
+#define __VERSION "0.2.0-beta5"
 
 #define CONNECTOR_TIMEOUT 2.0
 
@@ -170,7 +171,6 @@ int leda_run(lua_State * L) {
          lua_pushvalue(L,-1);
          lua_pushboolean(L,!timedout);
          lua_call(L,1,0);
-
          //comment the line below to disable end condition
          if(READ(pool_size)==-queue_size(ready_queue)) break;
          //while(1) usleep(1000000000);
@@ -261,6 +261,9 @@ int luaopen_leda_kernel (lua_State *L) {
 	   {"run", leda_run},
   	   {"to_pointer", leda_to_pointer},
   	   {"new_thread", thread_new},
+  	   {"encode", mar_encode},
+  	   {"decode", mar_decode},
+  	   {"clone", mar_clone},
   	   {"sleep", leda_sleep},
 
   	   //functions for controllers

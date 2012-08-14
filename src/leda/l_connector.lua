@@ -46,6 +46,10 @@ function index.add_producer(self,producer)
    table.insert(self.producers,producer)
 end
 
+function index.method(self,sendf) 
+    self.sendf=sendf
+end
+
 -----------------------------------------------------------------------------
 -- Add a consumer to a connector, 'consumer' must be a stage
 -----------------------------------------------------------------------------
@@ -64,7 +68,7 @@ function index.send(self,...)
 end
 
 -----------------------------------------------------------------------------
--- Function to throws an event for each consumer of the connector
+-- Function that throw an event to each consumer of the connector
 -----------------------------------------------------------------------------    
 function emmit_func (con,...)  
    for _,c in ipairs(con) do
@@ -75,7 +79,7 @@ function emmit_func (con,...)
 end
 
 -----------------------------------------------------------------------------
--- Function to pass the thread for each consumer of the connector in order
+-- Function that pass the thread to each consumer of the connector in order
 -- and wait for them to complete
 -----------------------------------------------------------------------------    
 function call_func(con,...) 
@@ -87,8 +91,8 @@ function call_func(con,...)
 end
 
 -----------------------------------------------------------------------------
--- Function that and throws an event with the continuation of the handler
--- and pass the thread for each consumer of the connector in order
+-- Function that throws an event with the continuation of itself
+-- and pass the thread to each consumer of the connector in order
 -----------------------------------------------------------------------------    
 function emmit_self_call_func(con,...) 
    for _,c in ipairs(con) do 

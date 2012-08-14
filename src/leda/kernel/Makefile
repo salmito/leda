@@ -18,6 +18,7 @@ OBJ=  kernel.o \
       event.o \
       extra/threading.o \
       extra/leda-io.o \
+      extra/lmarshal.o \
 		tbb_queue.o \
 		tbb_atomic.o \
 
@@ -54,11 +55,11 @@ tbb_atomic.o: tbb_atomic.cpp $(HEADERS) Makefile
 	$(LUA) extra/bin2c.lua $< -o $@
 
 $(MODULE): $(OBJ)
-	$(G_PLUS_PLUS) -shared $^ -o $@ $(LDFLAGS)
+	$(CC) -shared $^ -o $@ $(LDFLAGS)
 
 clean:
 	rm -f $(OBJ) instance.lo
 	
 ultraclean:
-	rm -f $(OBJ) instance.lo ../kernel.so ../kernel.dll
+	rm -f $(OBJ) instance.lo $(MARSHAL) $(MODULE)
 

@@ -7,13 +7,14 @@
 -- Declare module and import dependencies
 -----------------------------------------------------------------------------
 local base = _G
-local type,pairs,assert,tostring,setmetatable,getmetatable=
-      type,pairs,assert,tostring,setmetatable,getmetatable
+local type,pairs,assert,tostring,setmetatable,getmetatable,error=
+      type,pairs,assert,tostring,setmetatable,getmetatable,error
 local string,table,kernel= string,table,leda.kernel
 local is_connector=leda.l_connector.is_connector
 local connector=leda.l_connector.new_connector
 local dbg = leda.debug.get_debug("Stage: ")
 local dump = string.dump
+local leda=leda
 
 module("leda.l_stage")
 
@@ -56,47 +57,39 @@ end
 -----------------------------------------------------------------------------
 -- Proxy to set the method sendf of the input connector of a stage
 -----------------------------------------------------------------------------
-function index.set_method(self,sendf) 
+function index.input_method(self,sendf) 
     self.input.sendf=sendf
 end
 
------------------------------------------------------------------------------
--- Sets the output field of a stage
--- param:      'output' must be a table with all values being connectors
------------------------------------------------------------------------------
-function index.set_output(self,output)
-   for k,v in pairs(output) do
-      assert(is_connector(v),"Only connector values are allowed")
+function index.method(self,key,sendf) 
+   key=key or 1
+   if is_connector(self.output[key]) then
+      self.output[key].sendf=sendf
+   else 
+      error("Invalid connector type")
    end
-   self.output=output
 end
 
 -----------------------------------------------------------------------------
--- Add an output connector to a stage
--- params:
---             'key' the key of the output connector,
---             if absent, key will be the next integer key 
---             of the output table
---
---             'output' must be a connector or a stage, 
---             in which case, its input connector is used as output
+-- method stage:connect([key,]tail)
+-- Connect two stages at output key, if key is absent, assume it is the 
+-- fist integer key of the output vector
+-- the 'tail' argument can be a connector to be used or a stage, in which case 
+-- its input connector is used.
 -----------------------------------------------------------------------------
-function index.add_output (self,key,output)
-   if not output then
-      output=key
-	   key=nil
-	end
-	if is_stage(output) then
-	   output=output.input
-	end
-	assert(is_connector(output),"parameter must be a connector")
-   if key then
-      self.output[key]=output
-   else
-      table.insert(self.output,output)
-   end
+function index.connect(head,key,tail)
+   if not tail then tail = key key = 1 end
+   if not is_stage(head) then error("Invalid argument") end
+   if is_stage(tail) then
+      head.output[key] = head.output[key] or 
+                         connector{tostring(head).."."..tostring(key)} 
+      tail.input=head.output[key]
+   elseif is_connector(tail) then 
+      head.output[key]=tail
+   else error("Invalid argument") end
 end
- 
+leda.connect=index.connect
+
 -----------------------------------------------------------------------------
 -- Creates a new stage and returns it
 -- param:   't': table used to hold the stage representation
@@ -105,22 +98,33 @@ function new_stage(t)
    --assertions
    assert(type(t)=="table","Invalid parameter ('table' expected, got '%s'",type(t))
    
-   if type(t[1])=="table" then
+   if is_stage(t[1]) then
       t.handler=t.handler or t[1].handler
       t.init=t.init or t[1].init
       t.input=t.input or t[1].input
       t.output=t.output or t[1].output
       t.name=t.name or t[1].name
       t.serial=t.serial or t[1].serial
+      t.backpressure=t.backpressure or t[1].backpressure
+   elseif type(t[1])=="table" then
+      t.handler=t.handler or t[1].handler
+      t.init=t.init or t[1].init
+      t.input=t.input or t[1].input
+      t.output=t.output or t[1].output
+      t.name=t.name or t[1].name
+      t.serial=t.serial or t[1].serial
+      t.backpressure=t.backpressure or t[1].backpressure
+   elseif type(t[1])=="string" then
+      t.name=t[1]
+   elseif type(t[1])=="function" then
+      t.handler=t[1]
    end
   
-   assert(t.handler,"Stage must have a handler field")
-
---   assert(type(t.handler)=="function","Stage handler must be a function")
+   assert(type(t.handler)=="function","Stage's 'handler' field must be a function")
 
    --Dump the event handler defined for the stage
    if type(t.handler)=="function" then
-      t.handler=dump(t.handler)
+      t.handler=kernel.encode(t.handler)
    end
    
    assert(type(t.handler)=="string","Stage 'handler' field must be a lua chunk")

@@ -51,11 +51,10 @@ windows32:
 #	cd $(SRC_DIR) && make windows64
 
 
-tar tgz:
+tar tgz: ultraclean
 ifeq "$(VERSION)" ""
 	echo "Usage: make tar VERSION=x.x"; false
 else
-	$(MAKE) ultraclean
 	-rm -rf $(MODULE)-$(VERSION)
 	mkdir $(MODULE)-$(VERSION)
 	tar c * --exclude="*.tar.gz" --exclude=".git" --exclude="$(MODULE)-*" | (cd $(MODULE)-$(VERSION) && tar x)

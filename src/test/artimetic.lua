@@ -18,6 +18,7 @@ end
 
 function p_init() 
    require "socket" 
+   require "os" 
    sleep=function(p) 
 --      while os.time()-t<p do end
       socket.select(nil,nil,p) 
@@ -32,13 +33,6 @@ function consume(data,i)
    print(string.format("Data consumed: %d  i='%d'",data,i))
 end
 
-function insert(s1,s2)
-   s1.input.name=tostring(s1).."_input"
-   s1.input=s2.input
-   s2.input=connector{}
-   s1:add_output(s2.input)
-end
-
 local g=graph{"Producer-consumer",
       prod=stage{name="Producer",handler=produce,init=p_init},
       cons=stage{name="Consumer",handler=consume},
@@ -46,17 +40,17 @@ local g=graph{"Producer-consumer",
 }
 
 
-insert(g.prod,g.cons)
-insert(g.sqrt,g.cons)
+leda.connect(g.prod,g.cons)
+leda.connect(g.sqrt,g.cons)
 
 g.prod.input.name="Prod_input"
 g.sqrt.input.name="Sqrt_input"
 g.cons.input.name="Cons_input"
 
 
-g.prod:set_method(leda.t)
-g.sqrt:set_method(leda.t)
-g.cons:set_method(leda.t)
+g.prod.input:method(leda.t)
+g.sqrt.input:method(leda.t)
+g.cons.input:method(leda.t)
 
 g.prod:send(os.time(),0)
 

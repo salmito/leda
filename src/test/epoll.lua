@@ -14,10 +14,10 @@ wait_client=stage{
             local cli_sock=srv:accept()
             local cli=leda.socket.wrap(cli_sock)
             print("SERVER: Sending client",cli)
-            leda.get_output():send(cli)
+            leda.send(1,cli)
             leda.socket.wrap(srv)
           end
-          coroutine.yield()
+          leda.nice()
        end
    end, 
    init=function () require "socket" end,
@@ -40,15 +40,15 @@ epoll_reader=stage{
                   print(err)
                   leda.epoll.remove(epfd,sockets.read[i])
                else 
-                  leda.get_output():send(line) 
+                  leda.send(1,line) 
                   leda.socket.wrap(cli)
                end
             end
          else print(err) 
          end
-         local new_sock=leda.peek_event()
+         local new_sock=leda.debug.peek_event()
          if new_sock then leda.epoll.add_read(epfd,new_sock) end
-         coroutine.yield()
+         leda.nice()
       end
    end,
    init=function() require "socket" end,
@@ -62,8 +62,8 @@ local_echo=stage{
    name="echo request locally"
 }
 
-leda.insert_before(epoll_reader,local_echo)
-leda.insert_before(wait_client,epoll_reader)
+leda.connect(epoll_reader,local_echo)
+leda.connect(wait_client,epoll_reader)
 
 g=graph{wait_client,epoll_reader,local_echo}
 
