@@ -146,7 +146,7 @@ time_d now_secs(void) {
     int rc= gettimeofday( &tv, NULL /*time zone not used any more (in Linux)*/ );
     assert( rc==0 );
 
-    return ((double)tv.tv_sec) + ((tv.tv_usec)/1000) / 1000.0;
+    return (double)(tv.tv_sec*1000000 + tv.tv_usec) / 1000000.0;
 #endif // THREADAPI THREADAPI_PTHREAD
 }
 

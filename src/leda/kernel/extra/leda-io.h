@@ -12,14 +12,14 @@ int leda_wrap_sock(lua_State *L);
 int leda_unwrap_sock(lua_State *L);
 
 #ifndef _WIN32
-int epool_close(lua_State* L);
-int epool_wait(lua_State* L);
-int epool_wait_read(lua_State* L);
-int epool_add_write(lua_State *L);
-int epool_add_read(lua_State *L);
-int epool_add_read_write(lua_State *L);
-int epool_remove_descriptor(lua_State *L);
-int epool_create(lua_State *L);
+int epoll_close(lua_State* L);
+int epoll_lwait(lua_State* L);
+int epoll_wait_read(lua_State* L);
+int epoll_add_write(lua_State *L);
+int epoll_add_read(lua_State *L);
+int epoll_add_read_write(lua_State *L);
+int epoll_remove_descriptor(lua_State *L);
+int epoll_lcreate(lua_State *L);
 #endif //_WIN32
 
 #endif// _LEDA_IO_H_

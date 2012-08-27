@@ -1,41 +1,21 @@
-/*
-===============================================================================
-
-Copyright (C) 2012 Tiago Salmito, Noemi Rodriguez, Ana Lucia de Moura
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
-
-===============================================================================
-*/
 #ifndef _GRAPH_H_
 #define _GRAPH_H_
 
-#define GRAPH_METATABLE   "leda graph"
+#define GRAPH_METATABLE   "leda read-only graph"
 #include <lua.h>
 
 #include "extra/threading.h"
 
 #define STAGE(i) main_graph->s[i]
 #define CONNECTOR(i) main_graph->c[i]
+#define CLUSTER(i) main_graph->cl[i]
+#define DAEMON(i) main_graph->d[i]
 
 typedef size_t stage_id;
 typedef size_t connector_id;
+typedef size_t cluster_id;
+typedef size_t daemon_id;
+
 
 typedef struct {
    union {
@@ -51,28 +31,40 @@ typedef struct stage_data {
    char const * name;
    char const * handler;
    char const * init;
+   size_t name_len;
    size_t init_len;
    size_t handler_len;
    key * output;
    size_t n_out;
-   connector_id input;
-   void * unique_id;
    bool_t serial;
-   bool_t backpressure;
+   int unique_id;
+   cluster_id cluster;
 } * stage;
-
 
 typedef struct connector_data {
    char const * name;
-   stage_id * p;
-   size_t n_p;
-   stage_id * c;
-   size_t n_c;
+   size_t name_len;
+   stage_id p;
+   stage_id c;
    char const * send;
    size_t send_len;
-   void * unique_id;
+   int unique_id;
 } * connector;
 
+typedef struct daemon_data {
+   char const * host;
+   size_t host_len;
+   int port;
+} * leda_daemon;
+
+typedef struct cluster_data {
+   char const * name;
+   size_t name_len;
+   daemon_id * daemons;
+   size_t n_daemons;
+   bool_t local;
+   int unique_id;
+} * cluster;
 
 //graph read only representation (thread-safe)
 typedef struct graph_data {
@@ -80,18 +72,18 @@ typedef struct graph_data {
    size_t n_s;
    connector * c;
    size_t n_c;
+   cluster * cl;
+   size_t n_cl;   
+   leda_daemon * d;
+   size_t n_d;
    char const * name;
+   size_t name_len;
 } * graph;
 
 extern graph main_graph;
 
-stage_id get_stage_id_from_ptr(graph g, void * id);
-connector_id get_connector_id_from_ptr(graph g, void * id);
-
-connector graph_get_connector(graph g,connector_id id);
-stage graph_get_stage(graph g, stage_id id);
-graph build_graph_representation(lua_State *L,int i);
-void graph_destroy(graph g);
-void graph_dump(graph g);
+int graph_createmetatable (lua_State *L);
+graph to_graph(lua_State *L,int i);
+int graph_build(lua_State * L);
 
 #endif //_GRAPH_H_

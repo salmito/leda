@@ -4,13 +4,15 @@ local a={test="testing"}
 
 local s1=stage{
    handler=function()
-		leda.send(1,a)
-   end
+	   local b="xxx"
+           leda.send(1,a,function () return b end,io.stderr)
+   end,
+   init = function () require "io" end
 }
 
 local s2=stage{
-   handler=function(test)
-      print(test.test)
+   handler=function(test,f)
+      print(test.test,f())
    end
 }
 

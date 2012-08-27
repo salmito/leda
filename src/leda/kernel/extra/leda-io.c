@@ -136,7 +136,7 @@ int leda_unwrap_sock(lua_State *L) {
 #include <fcntl.h>
 #include <errno.h>
 
-int epool_create(lua_State *L) {
+int epoll_lcreate(lua_State *L) {
    int size=lua_tointeger(L,1);
    int epfd = epoll_create (size);
    if(epfd==-1) {
@@ -148,7 +148,7 @@ int epool_create(lua_State *L) {
    return 1;
 }
 
-int epool_add_read(lua_State *L) {
+int epoll_add_read(lua_State *L) {
    struct epoll_event event; 
    int epfd=lua_tointeger(L,1);
    int fd=lua_tointeger(L,2);
@@ -166,7 +166,7 @@ int epool_add_read(lua_State *L) {
    return 1;
 }
 
-int epool_add_read_write(lua_State *L) {
+int epoll_add_read_write(lua_State *L) {
    struct epoll_event event; 
    int epfd=lua_tointeger(L,1);
    int fd=lua_tointeger(L,2);
@@ -184,7 +184,7 @@ int epool_add_read_write(lua_State *L) {
    return 1;
 }
 
-int epool_add_write(lua_State *L) {
+int epoll_add_write(lua_State *L) {
    struct epoll_event event; 
    int epfd=lua_tointeger(L,1);
    int fd=lua_tointeger(L,2);
@@ -203,7 +203,7 @@ int epool_add_write(lua_State *L) {
 }
 
 
-int epool_remove_descriptor(lua_State *L) {
+int epoll_remove_descriptor(lua_State *L) {
    struct epoll_event event;
    int epfd=lua_tointeger(L,1);
    int fd=lua_tointeger(L,2);
@@ -222,7 +222,7 @@ int epool_remove_descriptor(lua_State *L) {
 
 #define MAX_EVENTS   64
 
-int epool_wait(lua_State* L) {
+int epoll_lwait(lua_State* L) {
    int epfd=lua_tointeger(L,1);
    lua_Number to=-1;
    if(lua_type(L,2)==LUA_TNUMBER)
@@ -237,7 +237,7 @@ int epool_wait(lua_State* L) {
    int nr_events, i;
 
    nr_events = epoll_wait (epfd, events, MAX_EVENTS, timeout);
-   if (nr_events < 0) { //epool error
+   if (nr_events < 0) { //epoll error
          lua_pushnil(L);
          lua_pushstring(L,strerror(errno));
          return 2;
@@ -275,7 +275,7 @@ int epool_wait(lua_State* L) {
    return 1;
 }
 
-int epool_close(lua_State* L) {
+int epoll_close(lua_State* L) {
    int epfd=lua_tointeger(L,1);
    if(close(epfd)){
       lua_pushnil(L);

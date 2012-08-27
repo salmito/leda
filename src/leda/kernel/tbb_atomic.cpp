@@ -33,40 +33,40 @@ THE SOFTWARE.
 //Currently not being used for anything
 
 struct atomicInt {
-   tbb::atomic<int> i;
+   tbb::atomic<long int> i;
 };
 
 
 extern "C" {
 
-atomic atomic_new(int i) {
+atomic atomic_new(long int i) {
    atomic a;
    a=new atomicInt();
    a->i=i;
    return a;
 }
 
-int atomic_value(atomic x) {
+long int atomic_value(atomic x) {
    return x->i;
 }
 
 /*do x=y and return the old value of x*/
-int atomic_fetch_and_store(atomic x, int y) {
+long int atomic_fetch_and_store(atomic x, long int y) {
    return x->i.fetch_and_store(y);
 }
 
 /*do x+=y and return the old value of x*/
-int atomic_fetch_and_add(atomic x, int y) {
+long int atomic_fetch_and_add(atomic x, long int y) {
    return x->i.fetch_and_add(y);
 }
 
 /* if x equals z, then do x=y.
    In either case, return old value of x. */
-int atomic_compare_and_swap(atomic x, int y, int z) {
+long int atomic_compare_and_swap(atomic x, long int y, long int z) {
    return x->i.compare_and_swap(y,z);
 }
 
-/*deallocate atomic pointer*/
+/*deallocate atomic polong inter*/
 void atomic_free(atomic a) {
    if(a)
       delete (a);

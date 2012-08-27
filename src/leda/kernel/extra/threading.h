@@ -9,7 +9,8 @@
 #ifdef _WIN32_WCE
   #define PLATFORM_POCKETPC
 #elif (defined _WIN32)
-  #define PLATFORM_WIN32
+//  #define PLATFORM_WIN32
+  #define PLATFORM_LINUX
 #elif (defined __linux__)
   #define PLATFORM_LINUX
 #elif (defined __APPLE__) && (defined __MACH__)
@@ -49,7 +50,8 @@ enum e_status { PENDING, RUNNING, WAITING, DONE, ERROR_ST, CANCELLED };
 #define THREADAPI_PTHREAD 2
 
 #if (defined PLATFORM_WIN32) || (defined PLATFORM_POCKETPC)
-#define THREADAPI THREADAPI_WINDOWS
+//#define THREADAPI THREADAPI_WINDOWS
+#define THREADAPI THREADAPI_PTHREAD
 #else // (defined PLATFORM_WIN32) || (defined PLATFORM_POCKETPC)
 #define THREADAPI THREADAPI_PTHREAD
 #endif // (defined PLATFORM_WIN32) || (defined PLATFORM_POCKETPC)

@@ -60,14 +60,19 @@ void queue_push(queue q, void ** source) {
 }
 
 /* Set the maximum capacity of a queue */
-void queue_set_capacity(queue q,size_t capacity) {
+void queue_set_capacity(queue q,int capacity) {
    q->queue->set_capacity(capacity);
 }
 
 /* Return the current size of the queue */
-size_t queue_size(queue q) {
+int queue_size(queue q) {
    return q->queue->size();
 }
+
+int queue_capacity(queue q) {
+   return q->queue->capacity();
+}
+
 
 /* Push a new pointer 'source' to the queue 'q'
  *

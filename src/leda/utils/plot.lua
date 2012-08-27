@@ -1,5 +1,3 @@
-local utils=require "leda.utils"
-
 local tostring = tostring
 local pcall = pcall
 local antgr=graph
@@ -12,40 +10,57 @@ local node, edge, subgraph, cluster, digraph, strictdigraph =
   gr.node, gr.edge, gr.subgraph, gr.cluster, gr.digraph, gr.strictdigraph
 
 function plot_graph(leda_graph,out)
-   if not leda_graph:verify() then
-      return nil, "Error verifying graph"
-   end
    local g = strictdigraph{
       tostring(leda_graph),
       compound = "1",
-      rankdir = "LR"
+      textwrap="auto",    
+      rankdir = "LR",
    }
-   for i=1,#leda_graph.stages do
-      local sname=tostring(leda_graph.stages[i])
-      if leda_graph.stages[i].serial then
-         sname=sname.."*"
-      end
-      leda_graph.stages[i].node=g:node(sname)
-      leda_graph.stages[i].cluster=g:cluster("Sub"..tostring(leda_graph.stages[i]))
+   g.label=tostring(leda_graph)
+   local start_node=nil
+   local nodes={}
+   if leda_graph.start then
+      start_node=g:node{"START",shape='Mdiamond'}
    end
-   for i=1,#leda_graph.connectors do
-      if leda_graph.connectors[i].type=="e" or leda_graph.connectors[i].type=="u" then
-         for p=1,#leda_graph.connectors[i].producers do
-            local head=leda_graph.connectors[i].producers[p].node
-            for c=1,#leda_graph.connectors[i].consumers do
-               local tail=leda_graph.connectors[i].consumers[c].node
-               g:edge{head,tail,label=tostring(leda_graph.connectors[i])}
-            end
+   local main_cluster=g:cluster{'Main'}
+   main_cluster.label="Main"
+   local clusters={}
+   for s in pairs(leda_graph:stages()) do
+      local sname=tostring(s)
+      if s.serial then
+         sname="["..sname.."]"
+      end
+      local cl=main_cluster
+      local s_cl=leda_graph:get_cluster(s)
+         clusters[s]=clusters[s] or g:cluster{tostring(s_cl)}
+         cl=clusters[s]
+         clusters[s].label=tostring(s_cl)
+         if s_cl:is_serial() then
+            clusters[s].label="["..tostring(s_cl).."]"
          end
-      elseif leda_graph.connectors[i].type=="t" or leda_graph.connectors[i].type=="te" then
-         for p=1,#leda_graph.connectors[i].producers do
-            local head=leda_graph.connectors[i].producers[p].node
-            for c=1,#leda_graph.connectors[i].consumers do
-               leda_graph.connectors[i].producers[p].cluster:edge{head,leda_graph.connectors[i].consumers[c].node,label=tostring(leda_graph.connectors[i])}
-            end
+      nodes[s]=cl:node{sname}
+--      s.cluster=g:cluster("Sub"..tostring(leda_graph.stages[i]))
+   end
+   for c in pairs(leda_graph.conns) do
+      local node=start_node
+      if c.producer then
+         node=nodes[c.producer]
+      end
+      local color=nil
+      local style=nil
+      local arrowType=nil
+      if c:get_type()=='call' then
+         color="#FF0000"
+         arrowType="dot"
+      elseif c:get_type()=='fork' then
+         color="#0000FF"
+         arrowType="invdot"
+      elseif c:get_type()=='emmit' then
+         if not c.producer or leda_graph:get_cluster(c.producer) ~= leda_graph:get_cluster(c.consumer) then
+            style="dashed"
          end
       end
-      
+      g:edge{node,nodes[c.consumer],label=tostring(c),color=color,fontcolor=color,style=style,arrowhead=arrowType}
    end
    if not out then
       g:show()

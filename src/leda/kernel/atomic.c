@@ -30,11 +30,11 @@ THE SOFTWARE.
 #include "thread.h"
 
 struct atomicInt {
-   int i;
+   long int i;
    MUTEX_T lock;
 };
 
-atomic atomic_new(int x) {
+atomic atomic_new(long int x) {
    atomic a;
    a=malloc(sizeof(struct atomicInt));
    a->i=x;
@@ -42,27 +42,27 @@ atomic atomic_new(int x) {
    return a;
 }
 
-int atomic_value(atomic x) {
+long int atomic_value(atomic x) {
 //   MUTEX_LOCK(&x->lock);
-   //int oldx=x->i;
+   //long int oldx=x->i;
 //   MUTEX_UNLOCK(&x->lock);
 //   return oldx;
    return x->i;
 }
 
 /*do x=y and return the old value of x*/
-int atomic_fetch_and_store(atomic x, int y) {
+long int atomic_fetch_and_store(atomic x, long int y) {
    MUTEX_LOCK(&x->lock);
-   int oldx=x->i;
+   long int oldx=x->i;
    x->i=y;
    MUTEX_UNLOCK(&x->lock);
    return oldx;
 }
 
 /*do x+=y and return the old value of x*/
-int atomic_fetch_and_add(atomic x, int y) {
+long int atomic_fetch_and_add(atomic x, long int y) {
    MUTEX_LOCK(&x->lock);
-   int oldx=x->i;
+   long int oldx=x->i;
    x->i+=y;
    MUTEX_UNLOCK(&x->lock);
    return oldx;
@@ -70,16 +70,16 @@ int atomic_fetch_and_add(atomic x, int y) {
 
 /* if x equals z, then do x=y.
    In either case, return old value of x. */
-int atomic_compare_and_swap(atomic x, int y, int z) {
+long int atomic_compare_and_swap(atomic x, long int y, long int z) {
    MUTEX_LOCK(&x->lock);
-   int oldx=x->i;
+   long int oldx=x->i;
    if(oldx==z)
       x->i=y;
    MUTEX_UNLOCK(&x->lock);
    return oldx;
 }
 
-/*deallocate atomic pointer*/
+/*deallocate atomic polong inter*/
 void atomic_free(atomic a) {
    MUTEX_FREE(&a->lock);
    free(a);

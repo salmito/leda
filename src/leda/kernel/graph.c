@@ -34,58 +34,81 @@ THE SOFTWARE.
 
 graph main_graph;
 
-/* get a connector representation from the 'id' defined on graph 'g' */
+/** get a connector representation from the 'id' defined on graph 'g' */
 connector graph_get_connector(graph g,connector_id id) {
    if(!g) return NULL;
    if(id > g->n_c) return NULL;
    return g->c[id];
 }
 
-/* get a stage representation from the 'id' defined on graph 'g' */
+/** get a cluster representation from the 'id' defined on graph 'g' */
+cluster graph_get_cluster(graph g,cluster_id id) {
+   if(!g) return NULL;
+   if(id > g->n_cl) return NULL;
+   return g->cl[id];
+}
+
+
+/** get a stage representation from the 'id' defined on graph 'g' */
 stage graph_get_stage(graph g,stage_id id) {
    if(!g) return NULL;
    if(id > g->n_s) return NULL;
    return g->s[id];
 }
 
-/* lookup the correspondent connector_id from a connector unique id
- */
-connector_id get_connector_id_from_ptr(graph g, void * id) {
-   int i;
-   if(!g) return -1; //Graph is null
-
-   for(i=0;i<g->n_c;i++) {
-      if(g->c[i]->unique_id==id) 
-         return i;
-   }
-   
-   return -2; //connector not found
-}
-
-/* lookup the correspondent stage_id from a stage unique id */
-stage_id get_stage_id_from_ptr(graph g, void * id) {
-   int i;
-   if(!g) return -1; //Graph is null
-
-   for(i=0;i<g->n_s;i++) {
-      if(g->s[i]->unique_id==id) 
-         return i;
-   }
-   
-   return -2; //stage not found
-}
-
-
-/* Build a graph internal representation for the graph defined in
+/** Build a graph internal representation for the graph defined in
  * in the stack on 'index'
  */
-graph build_graph_representation(lua_State *L, int index) {
-   int i,n;
+graph build_graph_representation(lua_State *L, int index, graph g) {
+   int i,j;
    //argument must be a table with a graph definition
    luaL_checktype(L,index, LUA_TTABLE);
-
-   struct graph_data * g=calloc(1,sizeof(struct graph_data));
+   bool_t create_stages_id=FALSE;
+   bool_t create_connectors_id=FALSE;
+   bool_t create_clusters_id=FALSE;
+   bool_t create_daemons_id=FALSE;
    
+   lua_getfield(L,index,"stagesid");
+   if(lua_type(L,-1)!=LUA_TTABLE) {
+      lua_pop(L,1);
+      create_stages_id=TRUE;
+      lua_newtable(L); //Table to hold stagesid
+      lua_pushvalue(L,-1);
+      lua_setfield(L,index,"stagesid");
+   }
+   int stagesid=lua_gettop(L);
+   
+   lua_getfield(L,index,"connectorsid");
+   if(lua_type(L,-1)!=LUA_TTABLE) {
+      lua_pop(L,1);
+      create_connectors_id=TRUE;
+      lua_newtable(L); //Table to hold connectorsid
+      lua_pushvalue(L,-1);
+      lua_setfield(L,index,"connectorsid");
+   } 
+   int connectorsid=lua_gettop(L);
+   
+   lua_getfield(L,index,"clustersid");
+   if(lua_type(L,-1)!=LUA_TTABLE) {
+      lua_pop(L,1);
+      create_clusters_id=TRUE;
+      lua_newtable(L); //Table to hold clustersid
+      lua_pushvalue(L,-1);
+      lua_setfield(L,index,"clustersid");
+   } 
+   int clustersid=lua_gettop(L);
+
+   lua_getfield(L,index,"daemonsid");
+   if(lua_type(L,-1)!=LUA_TTABLE) {
+      lua_pop(L,1);
+      create_daemons_id=TRUE;
+      lua_newtable(L); //Table to hold clustersid
+      lua_pushvalue(L,-1);
+      lua_setfield(L,index,"daemonsid");
+   } 
+   int daemonsid=lua_gettop(L);
+
+   //struct graph_data * g=calloc(1,sizeof(struct graph_data));
    char const * str;
    size_t len;
    
@@ -95,88 +118,167 @@ graph build_graph_representation(lua_State *L, int index) {
    memcpy(gname,str,len);
    gname[len]='\0';
    g->name=gname;
+   g->name_len=len;
    lua_pop(L,1); //pop the name field
 
-   //first, iterate thgough the connectors field
-   lua_pushstring(L,"connectors");
-   lua_rawget(L, index);
+   //first, iterate through the daemons
+   lua_getfield(L, index, "count_daemons");
+   luaL_checktype(L, -1, LUA_TFUNCTION);
+   lua_pushvalue(L,index);
+   lua_call(L,1,1);
+   luaL_checktype(L, -1, LUA_TNUMBER);
+   g->n_d=lua_tointeger(L,-1);
+   lua_pop(L,1); //remove number_of_daemons
    
-   luaL_checktype(L,-1, LUA_TTABLE);
-   n=lua_objlen(L,-1); //get size of 'connectors' field
+   g->d=calloc(g->n_d,sizeof(leda_daemon));
+   lua_getfield(L,index,"daemons");
+   luaL_checktype(L, -1, LUA_TFUNCTION);
+   lua_pushvalue(L,index);
+   lua_call(L,1,1);
+   luaL_checktype(L, -1, LUA_TTABLE);
+   lua_pushnil(L);
+   i=0;
+   while (lua_next(L, -2) != 0) {
+      leda_daemon d=calloc(1,sizeof(struct daemon_data));
+      lua_pop(L,1);
+      lua_getfield(L,-1,"host"); //push cluster.daemon[j].host
+      str=lua_tolstring(L, -1, &len);
+      char * dhost=malloc(len+1);
+      memcpy(dhost,str,len);
+      dhost[len]='\0';
+      d->host_len=len;
+      d->host=dhost;
+      lua_pop(L,1); //pop cluster.daemon[j].host
+
+      lua_getfield(L,-1,"port"); //push cluster.daemon[j].port
+      d->port=lua_tointeger(L,-1);
+      lua_pop(L,1); //pop cluster.daemon[j].port
+         
+      if(create_daemons_id) {
+         lua_pushvalue(L,-1);
+         lua_pushinteger(L,i);
+         lua_settable(L,daemonsid);
+         g->d[i++]=d;        
+       } else {
+         lua_pushvalue(L,-1);
+         lua_gettable(L,daemonsid);
+         int idx=lua_tointeger(L,-1);
+         g->d[idx]=d;
+         lua_pop(L,1); //pop daemon key
+       }
+//       lua_pop(L,1); //pop daemon key
+   }   
+   lua_pop(L,1); //pop daemons
    
-   struct connector_data ** connectors=calloc(n,sizeof(struct connector_data *));
-      
-   for(i=1;i<=n;i++) {
-      struct connector_data * c=calloc(1,sizeof(struct connector_data));
-      lua_rawgeti(L,-1,i); //push g.connectors[i]
-      c->unique_id=(void *)lua_topointer(L,-1);
-      
-      lua_getfield (L, -1, "name"); //push the name field of connector
+   //then, iterate through the clusters
+   lua_getfield(L, index, "count_clusters");
+   luaL_checktype(L, -1, LUA_TFUNCTION);
+   lua_pushvalue(L,index);
+   lua_call(L,1,1);
+   luaL_checktype(L, -1, LUA_TNUMBER);
+   g->n_cl=lua_tointeger(L,-1);
+   lua_pop(L,1); //remove number_of_clusters
+
+   g->cl=calloc(g->n_cl,sizeof(cluster));
+   lua_getfield(L,index,"clusters");
+   luaL_checktype(L, -1, LUA_TFUNCTION);
+   lua_pushvalue(L,index);
+   lua_call(L,1,1);
+   luaL_checktype(L, -1, LUA_TTABLE);
+   lua_pushnil(L);
+   i=0;
+   
+   while (lua_next(L, -2) != 0) {
+      cluster cl=calloc(1,sizeof(struct cluster_data));
+      lua_getfield (L, -2, "name"); //push the name field of cluster
       str=lua_tolstring(L, -1, &len);
       char * cname=malloc(len+1);
       memcpy(cname,str,len);
       cname[len]='\0';
-      c->name=cname;
+      cl->name=cname;
+      cl->name_len=len;
       lua_pop(L,1); //pop the name field
       
-      lua_getfield (L, -1, "sendf"); //push the send field of connector
-      str=lua_tolstring(L, -1, &len);
-      char * send=malloc(len+1);
-      memcpy(send,str,len);
-      send[len]='\0';
-      c->send=send;
-      c->send_len=len;
-      lua_pop(L,1); //pop the send field
-   
-      lua_pop(L,1); //pop g.connectors[i]
-      connectors[i-1]=c;
+      lua_getfield(L,-2,"contains");
+      luaL_checktype(L, -1, LUA_TFUNCTION);
+      lua_pushvalue(L,-3);
+      lua_pushvalue(L,2);
+      lua_pushvalue(L,3);
+      lua_call(L,3,1);
+      cl->local=lua_toboolean(L,-1);
+      lua_pop(L,1);
+
+      lua_getfield (L, -2, "daemons");
+
+      if(lua_type(L,-1)==LUA_TTABLE) {
+         cl->n_daemons=lua_objlen(L,-1);
+         cl->daemons=calloc(cl->n_daemons,sizeof(daemon_id));
+         for(j=1;j<=cl->n_daemons;j++) {
+            lua_rawgeti(L,-1,j); //push cluster.daemon[j]
+            lua_pushvalue(L,-1);
+            lua_gettable(L,daemonsid);
+            int idx=lua_tointeger(L,-1);
+            lua_pop(L,1);
+            cl->daemons[j-1]=idx;
+            lua_pop(L,1);//pop cluster.daemon[j]
+         }
+      } else {
+         cl->daemons=NULL;
+         cl->n_daemons=0;
+      }
+      if(create_clusters_id) {
+         lua_pushvalue(L,-2);
+         lua_pushinteger(L,i);
+         lua_settable(L,clustersid);
+         g->cl[i++]=cl;
+         lua_pop(L,2); //pop cluster[key].daemons && cluster key
+       } else {
+         lua_pushvalue(L,-2);
+         lua_gettable(L,clustersid);
+         int idx=lua_tointeger(L,-1);
+         g->cl[idx]=cl;
+         lua_pop(L,3); //pop cluster[key].daemons && cluster key
+       }
+
    }
-   lua_pop(L,1); //pop the connectors field
+   lua_pop(L,1); //pop clusters
    
-   g->c=(connector *)connectors;
-   g->n_c=n;
-
-        
-   //then, iterate thgough the stages field
-   lua_pushstring(L,"stages");
-   lua_rawget(L, index);
-   luaL_checktype(L,-1, LUA_TTABLE);
-   n=lua_objlen(L,-1); //get size of 'stages' field
-   
-   struct stage_data ** stages=calloc(n,sizeof(struct stage_data *));
-      
-   for(i=1;i<=n;i++) {
-      struct stage_data * s=calloc(1,sizeof(struct stage_data));
-
-      lua_rawgeti(L,-1,i); //push stages[i]
-      s->unique_id=(void *)lua_topointer(L,-1);
-
-      lua_getfield (L, -1, "serial"); //check if the serial field is present
+   lua_getfield(L, index, "count_stages");
+   luaL_checktype(L, -1, LUA_TFUNCTION);
+   lua_pushvalue(L,index);
+   lua_call(L,1,1);
+   luaL_checktype(L, -1, LUA_TNUMBER);
+   g->n_s=lua_tointeger(L,-1);
+   lua_pop(L,1); //remove number_of_stages
+   g->s=calloc(g->n_s,sizeof(stage));
+   lua_getfield(L,index,"stages");
+   luaL_checktype(L, -1, LUA_TFUNCTION);
+   lua_pushvalue(L,index);
+   lua_call(L,1,1);
+   luaL_checktype(L, -1, LUA_TTABLE);
+   lua_pushnil(L);
+   i=0;
+   //now, iterate through the stages
+   while (lua_next(L, -2) != 0) {
+      stage s=calloc(1,sizeof(struct stage_data));
+      lua_getfield (L, -2, "serial"); //check if the serial field is present
       if(lua_isnil(L,-1)) {
          s->serial=FALSE;
       } else {
          s->serial=TRUE;
       }
       lua_pop(L,1); //pop stages[i].serial
-
-      lua_getfield (L, -1, "backpressure"); //check if the backpresure field is present
-      if(lua_isnil(L,-1)) {
-         s->backpressure=FALSE;
-      } else {
-         s->backpressure=TRUE;
-      }
-      lua_pop(L,1); //pop stages[i].backpressure
-
       
-      lua_getfield (L, -1, "name"); //push the name field of stage
+      lua_getfield (L, -2, "name"); //push the name field of stage
       str=lua_tolstring(L, -1, &len); //verify if it's a string
-      char * name=malloc(len+1);
-      memcpy(name,str,len);
-      name[len]='\0';
-      s->name=name;
+      char * sname=malloc(len+1);
+      memcpy(sname,str,len);
+      sname[len]='\0';
+      s->name=sname;
+      s->name_len=len;
       lua_pop(L,1); //pop the name field
       
-      lua_getfield (L, -1, "handler"); //push the handler field of stage
+      lua_getfield (L, -2, "handler"); //push the handler field of stage
       str=lua_tolstring(L, -1, &len); //verify if it's a string
       char * handler=malloc(len+1);
       memcpy(handler,str,len);
@@ -185,7 +287,7 @@ graph build_graph_representation(lua_State *L, int index) {
       s->handler_len=len;
       lua_pop(L,1); //pop the handler field
       
-      lua_getfield (L, -1, "init"); //push the init field of stage
+      lua_getfield (L, -2, "init"); //push the init field of stage
       str=lua_tolstring(L, -1, &len); //verify if its a string
       char * init=malloc(len+1);
       memcpy(init,str,len);
@@ -193,15 +295,114 @@ graph build_graph_representation(lua_State *L, int index) {
       s->init=init;
       s->init_len=len;
       lua_pop(L,1); //pop the init field
+      
+      lua_getfield (L, index, "get_cluster");
+      lua_pushvalue(L,index);
+      lua_pushvalue(L,-4);
+      lua_call(L,2,1);
+      lua_gettable(L,clustersid);
+      s->cluster=lua_tointeger(L,-1);
+      lua_pop(L,1);
+      if(create_stages_id) {
+         lua_pushvalue(L,-2);
+         lua_pushinteger(L,i);
+         lua_settable(L,stagesid);
+         g->s[i++]=s;
+      } else {
+         lua_pushvalue(L,-2);
+         lua_gettable(L,stagesid);
+         int idx=lua_tointeger(L,-1);
+         lua_pop(L,1);
+         g->s[idx]=s;
+      }
+      lua_pop(L,1); //pop value
+   }
+   
+   //then, iterate through the connectors
+   lua_getfield(L, index, "count_connectors");
+   luaL_checktype(L, -1, LUA_TFUNCTION);
+   lua_pushvalue(L,index);
+   lua_call(L,1,1);
+   luaL_checktype(L, -1, LUA_TNUMBER);
+   g->n_c=lua_tointeger(L,-1);
+   lua_pop(L,1); //remove number_of_stages
+   g->c=calloc(g->n_c,sizeof(connector));
+   lua_getfield(L,index,"connectors");
+   luaL_checktype(L, -1, LUA_TFUNCTION);
+   lua_pushvalue(L,index);
+   lua_call(L,1,1);
+   luaL_checktype(L, -1, LUA_TTABLE);
+   lua_pushnil(L);
+   i=0;
 
-      //iterate through the output field
+   while (lua_next(L, -2) != 0) {
+      lua_pop(L,1);
+      connector c=calloc(1,sizeof(struct connector_data));
+      lua_getfield (L, -1, "port"); //push the name field of connector
+      str=lua_tolstring(L, -1, &len);
+      char * cname=malloc(len+1);
+      memcpy(cname,str,len);
+      cname[len]='\0';
+      c->name=cname;
+      c->name_len=len;
+      lua_pop(L,1); //pop the name field
       
-      lua_pushstring(L,"output");
-      lua_rawget(L, -2); //push stage[i].output
+      lua_getfield (L, -1, "method"); //push the method field of connector
+      str=lua_tolstring(L, -1, &len);
+      char * send=malloc(len+1);
+      memcpy(send,str,len);
+      send[len]='\0';
+      c->send=send;
+      c->send_len=len;
+      lua_pop(L,1); //pop the method field
       
-      luaL_checktype(L,-1, LUA_TTABLE); 
-      lua_pushnil(L);  //first key
+      lua_getfield(L, -1, "producer"); //push the producer stage
+      lua_gettable(L,stagesid);
+      c->p=lua_tointeger(L,-1);
+      lua_pop(L,1); //pop producer id
+      
+      lua_getfield(L, -1, "consumer"); //push the consumer stage
+      lua_gettable(L,stagesid);
+      c->c=lua_tointeger(L,-1);
+      lua_pop(L,1); //pop consumer id
+
+      if(create_connectors_id) {
+         lua_pushvalue(L,-1);
+         lua_pushinteger(L,i);
+         lua_settable(L,connectorsid);
+         g->c[i++]=c;
+      } else {
+         lua_pushvalue(L,-1);
+         lua_gettable(L,connectorsid);
+         int idx=lua_tointeger(L,-1);
+         lua_pop(L,1);
+         g->c[idx]=c;
+      }
+   }
+
+   lua_pop(L,1);//pop connectors
+   
+   //now, iterate again to get stages' output
+   lua_pushnil(L);
+   i=0;
+   while (lua_next(L, -2) != 0) {
+      lua_pop(L,1);
+
+      lua_pushvalue(L,-1);
+      lua_gettable(L,stagesid);
+      int idx=lua_tointeger(L,-1);
+      lua_pop(L,1);
+
+      lua_getfield(L,index,"get_ports");
+      luaL_checktype(L, -1, LUA_TFUNCTION);
+      lua_pushvalue(L,index);
+      lua_pushvalue(L,-3);
+      lua_call(L,2,1);
+      luaL_checktype(L, -1, LUA_TTABLE);  
+         
+      stage s=g->s[idx];
       s->n_out=0;      
+      lua_pushnil(L);
       //iterating to count the number of keys in the output of the stage
       //this is needed to allocate the right ammount of memory for outputs
       while (lua_next(L, -2) != 0) {
@@ -212,12 +413,10 @@ graph build_graph_representation(lua_State *L, int index) {
          }
          lua_pop(L,1);
       }
-     
       //now iterate again, but this time get the keys and connectors from output
       if(s->n_out>0) {
          int k=0;
          s->output=calloc(s->n_out,sizeof(key));
-         
          lua_pushnil(L);  //first key
          while (lua_next(L, -2) != 0) { //-2 key -1 value
             if(lua_type(L, -2)==LUA_TSTRING) {
@@ -227,85 +426,68 @@ graph build_graph_representation(lua_State *L, int index) {
                memcpy(key,str,len);
                key[len]='\0';
                s->output[k].key.c=key;
-               s->output[k].value=get_connector_id_from_ptr(g, (void *)lua_topointer(L,-1));
+               lua_gettable(L,connectorsid);
+               s->output[k].value=lua_tointeger(L,-1);
+               lua_pop(L,1);
             } else if (lua_type(L, -2)==LUA_TNUMBER) {
                lua_Number num=lua_tonumber(L, -2);
                s->output[k].type=_NUMBER;
                s->output[k].key.n=num;
-               s->output[k].value=get_connector_id_from_ptr(g, (void *) lua_topointer(L,-1));
+               lua_gettable(L,connectorsid);
+               s->output[k].value=lua_tointeger(L,-1);
+               lua_pop(L,1);
+            } else {
+               lua_pop(L,1);
             }
 
             if(s->output[k].value<0) {
-               graph_destroy(g);
                return NULL;
             }
-
-            lua_pop(L,1);
             k++;
          }
       }
-  
-      lua_pop(L,1); //pop stage[i].output
-   
-
-      lua_pop(L,1); //pop stages[i]
-      stages[i-1]=s;
+      lua_pop(L,1);      
    }
-   lua_pop(L,1); //pop the g.stages field
-   g->s=(stage *)stages;
-   g->n_s=n;
-
-   //finally, allocate the producers and 
-   //consumers memory references for connectors
-   lua_pushstring(L,"connectors");
-   lua_rawget(L, index);
-
-   luaL_checktype(L,-1, LUA_TTABLE);
-   n=lua_objlen(L,-1); //get size of 'connectors' field
-   
-    for(i=1;i<=n;i++) {
-      int n2,j;
-      lua_rawgeti(L,-1,i); //push connectors[i]
-      
-      lua_pushstring(L,"producers");
-      lua_rawget(L, -2); //push connetors[i].producers
-      luaL_checktype(L, -1, LUA_TTABLE);
-      n2=lua_objlen(L,-1); //Size of producers
-      g->c[i-1]->n_p=n2;  
-      g->c[i-1]->p=calloc(n2,sizeof(stage_id));
-      
-      for(j=1;j<=n2;j++) {
-         lua_rawgeti(L,-1,j); //push producers[j]
-         g->c[i-1]->p[j-1]=get_stage_id_from_ptr(g, (void *)lua_topointer(L,-1));
-         lua_pop(L,1); //pop producers[i]
-      }
-      lua_pop(L,1); //pop c.producers
-      
-      lua_getfield (L, -1, "consumers"); //push c.consumers
-      luaL_checktype(L, -1, LUA_TTABLE);
-      n2=lua_objlen(L,-1); //Size of consumers
-      g->c[i-1]->n_c=n2;
-      g->c[i-1]->c = calloc(n2,sizeof(stage_id));
-      
-      for(j=1;j<=n2;j++) {
-         lua_rawgeti(L,-1,j); //push consumers[j]
-         g->c[i-1]->c[j-1]=get_stage_id_from_ptr(g, (void *)lua_topointer(L,-1));
-         lua_pop(L,1); //pop consumers[i]
-      }
-      
-      lua_pop(L,1); //pop c.consumers
-      lua_pop(L,1);
-   }
-   lua_pop(L,1); //pop g.connectors
-
+   lua_pop(L,5);
 
    return g;
 }
 
-#define NULL_SAFE_FREE(p) if(p) free((void*)p)
+/*Get a graph real_only descriptor from the lua stack*/
+graph to_graph (lua_State *L, int i) {
+  graph t = luaL_checkudata (L, i, GRAPH_METATABLE);
+  luaL_argcheck (L, t != NULL, i, "not a read-only graph descriptor");
+  return t;
+}
+
+int graph_build(lua_State * L) {
+   //check if first argument is a table (with a graph representation)
+   int top=lua_gettop(L);
+   luaL_checktype(L,1, LUA_TTABLE);
+   lua_getfield(L,1,"is_graph");
+   if(lua_type(L,-1)!=LUA_TFUNCTION) luaL_error(L,"Parameter #1 must be a graph");
+   lua_pop(L,1);
+   
+   //build graph representation   
+   graph g=(graph)lua_newuserdata (L,sizeof(struct graph_data));
+   //set the graph metatable for the userdata
+   luaL_getmetatable (L, GRAPH_METATABLE);
+   lua_setmetatable(L,-2);
+   
+   g=build_graph_representation(L,1,g);
+   if(g)
+      return 1;
+   lua_settop(L,top);
+   luaL_error(L,"Error building graph representation");
+   return 0;
+}
+
+#define NULL_SAFE_FREE(p) if((p)) free((void*)(p))
 
 /* destoy a graph representation from the memory */
-void graph_destroy(graph g) {
+int graph_destroy(lua_State* L) {
+   graph g=to_graph(L,1);
+   //printf("Collecting graph '%s'\n",g->name);
    int i;
    for(i=0;i<g->n_s;i++) {
       NULL_SAFE_FREE(g->s[i]->name);
@@ -318,50 +500,85 @@ void graph_destroy(graph g) {
    
    for(i=0;i<g->n_c;i++) {
       NULL_SAFE_FREE(g->c[i]->name);
-      NULL_SAFE_FREE(g->c[i]->p);
-      NULL_SAFE_FREE(g->c[i]->c);
       NULL_SAFE_FREE(g->c[i]->send);
       NULL_SAFE_FREE(g->c[i]);
    }
    NULL_SAFE_FREE(g->c);
+   
+   for(i=0;i<g->n_cl;i++) {
+      NULL_SAFE_FREE(g->cl[i]->name);
+      NULL_SAFE_FREE(g->cl[i]->daemons);
+      NULL_SAFE_FREE(g->cl[i]);
+   }
+   NULL_SAFE_FREE(g->cl);
+   
+   for(i=0;i<g->n_d;i++) {
+      NULL_SAFE_FREE(g->d[i]->host);
+      NULL_SAFE_FREE(g->d[i]);
+   }   
+   
+   NULL_SAFE_FREE(g->d);
+   return 0;
 }
 
 /* Dump a graph representation for debug purposes*/
-void graph_dump(graph g) {
+int graph_dump(lua_State * L) {
+   graph g=to_graph(L,1);
    int i,j;
-   _DEBUG("==== Dumping graph: '%s' ====\n",g->name);
-   _DEBUG("\t==== Stages (%d) ====\n",(int)g->n_s);
+   fprintf(stderr,"==== Dumping graph: '%s' ====\n",g->name);
+   fprintf(stderr,"==== Clusters (%d) ====\n",(int)g->n_cl);
+   for(i=0;i<g->n_cl;i++) {
+      fprintf(stderr,"\tCluster: id=%d name='%s' daemons='%d' local='%d'\n",i,g->cl[i]->name,(int)g->cl[i]->n_daemons,g->cl[i]->local);
+      for(j=0;j<g->cl[i]->n_daemons;j++) {
+         fprintf(stderr,"\t\tDaemon #%d: '%s:%d'\n",j+1,g->d[g->cl[i]->daemons[j]]->host,g->d[g->cl[i]->daemons[j]]->port);
+      }
+   }
+   fprintf(stderr,"==== Stages (%d) ====\n",(int)g->n_s);
    for(i=0;i<g->n_s;i++) {
-      _DEBUG("\tStage: id='%d' unique_id='%p' name='%s' serial='%d' backpressure='%d'\n",i,g->s[i]->unique_id,g->s[i]->name,g->s[i]->serial,g->s[i]->backpressure);
- //    _DEBUG("\t\tHandler function: %s\n",g->s[i]->handler);
- //    _DEBUG("\t\tInit function: %s\n",g->s[i]->init);
-      for(j=0;j<g->s[i]->n_out;j++) {
+      fprintf(stderr,"\tStage: id='%d' name='%s' serial='%d' cluster='%s'\n",i,g->s[i]->name,g->s[i]->serial,g->cl[g->s[i]->cluster]->name);
+//     fprintf(stderr,"\tStage handler: %s\n",g->s[i]->handler);
+       for(j=0;j<g->s[i]->n_out;j++) {
          switch(g->s[i]->output[j].type) {
             case _STRING:
-               _DEBUG("\t\tOutput: key='%s' connector='%s'\n",g->s[i]->output[j].key.c,g->c[g->s[i]->output[j].value]->name);
+               fprintf(stderr,"\t\tOutput: key='%s' connector='%s' id='%d'\n",g->s[i]->output[j].key.c,g->c[g->s[i]->output[j].value]->name,(int)g->s[i]->output[j].value);
                break;
             case _NUMBER:               
-               _DEBUG("\t\tOutput: key='%f' connector='%s'\n",g->s[i]->output[j].key.n,g->c[g->s[i]->output[j].value]->name);
+               fprintf(stderr,"\t\tOutput: key='%f' connector='%s' id='%d'\n",g->s[i]->output[j].key.n,g->c[g->s[i]->output[j].value]->name,(int)g->s[i]->output[j].value);
           }
       }
-   }
-   _DEBUG("\t==== Connectors (%d) ====\n",(int)g->n_c);
-   for(i=0;i<g->n_c;i++) {
-      _DEBUG("\tConnector: id='%d' unique_id='%p' name='%s' prods='%d' cons='%d'\n",i,g->c[i]->unique_id,g->c[i]->name,(int)g->c[i]->n_p,(int)g->c[i]->n_c);
-//      _DEBUG("\t\tSend function: %s\n",g->c[i]->send);
-      _DEBUG("\t\tProducers: ");
-      for(j=0;j<g->c[i]->n_p;j++) {
-         _DEBUG("%d (%s) ",(int)g->c[i]->p[j],g->s[g->c[i]->p[j]]->name);
-      }
-      _DEBUG("\n");
-      _DEBUG("\t\tConsumers: ");
-      for(j=0;j<g->c[i]->n_c;j++) {
-         _DEBUG("%d (%s) ",(int)g->c[i]->c[j],g->s[g->c[i]->c[j]]->name);
-      }
-      _DEBUG("\n");
 
    }
-   _DEBUG("========\n");
+     fprintf(stderr,"==== Connectors (%d) ====\n",(int)g->n_c);
+   for(i=0;i<g->n_c;i++) {
+      fprintf(stderr,"\tConnector: id='%d' name='%s' prod='%s' cons='%s'\n",i,g->c[i]->name,g->s[g->c[i]->p]->name,g->s[g->c[i]->c]->name);
+   }
+
+   fprintf(stderr,"========\n");
+   return 0;
 }
 
+/*create a unique thread metatable*/
+int graph_createmetatable (lua_State *L) {
+	/* Create thread metatable */
+	if (!luaL_newmetatable (L, GRAPH_METATABLE)) {
+		return 0;
+	}
+   lua_pushliteral(L,"dump");
+   lua_pushcfunction(L,graph_dump);
+   lua_rawset(L,-3);
+   
+	/* define metamethods */
+	lua_pushliteral (L, "__index");
+	lua_pushvalue (L, -2);
+	lua_settable (L, -3);
+	
+	lua_pushliteral (L, "__gc");
+	lua_pushcfunction (L, graph_destroy);
+	lua_settable (L, -3);
 
+	lua_pushliteral (L, "__metatable");
+	lua_pushliteral (L, "You're not allowed to get the metatable of a Thread");
+	lua_settable (L, -3);
+	
+	return 1;
+}

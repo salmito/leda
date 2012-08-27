@@ -16,22 +16,32 @@ OBJ=  kernel.o \
 		mutex.o \
       thread.o \
       event.o \
+      stats.o \
       extra/threading.o \
       extra/leda-io.o \
       extra/lmarshal.o \
-		tbb_queue.o \
-		tbb_atomic.o \
-
+      
+ifdef LOCK
+OBJ+= queue.o \
+      atomic.o    
+else
+OBJ+= tbb_queue.o \
+      tbb_atomic.o 
+endif
 HEADERS=*.h extra/*.h
+
+ifdef STATS_OFF
+   CFLAGS+=-DSTATS_OFF
+endif
 
 _SO=.so
 ifeq ($(MINGW32),true)
-#INCFLAGS=-IC:\lua-5.1.4\src -IC:\tbb30_20110704oss\include
+INCFLAGS=-IC:\lua-5.1.4\src -IC:\tbb30_20110704oss\include
 LDFLAGS=$(LDFLAGS_MINGW32)
 _SO=.dll
 CFLAGS=$(INCFLAGS) -Wall -O2 $(DEBUG_FLAGS)
-CC=i586-mingw32msvc-cc
-G_PLUS_PLUS=i586-mingw32msvc-g++
+CC=cc
+G_PLUS_PLUS=g++
 else
 LDFLAGS=$(LDFLAGS_POSIX)
 endif
@@ -55,11 +65,11 @@ tbb_atomic.o: tbb_atomic.cpp $(HEADERS) Makefile
 	$(LUA) extra/bin2c.lua $< -o $@
 
 $(MODULE): $(OBJ)
-	$(CC) -shared $^ -o $@ $(LDFLAGS)
+	$(G_PLUS_PLUS) -shared $^ -o $@ $(LDFLAGS)
 
 clean:
-	rm -f $(OBJ) instance.lo
+	rm -f *.o extra/*.o instance.lo
 	
-ultraclean:
-	rm -f $(OBJ) instance.lo $(MARSHAL) $(MODULE)
+ultraclean: clean
+	rm -f ../kernel.so ../kernel.dll
 

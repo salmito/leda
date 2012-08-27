@@ -17,5 +17,7 @@ void copy_values_directly (lua_State *dst, lua_State *src, int from, int args);
 int restore_event_to_lua_state(lua_State * L, event *e);
 void dump_event(lua_State *L, event e);
 void destroy_event(event e);
+void event_init(int daemon_fd);
+int send_event(lua_State *L);
 
 #endif //_EVENT_H_

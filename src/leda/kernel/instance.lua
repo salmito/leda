@@ -15,11 +15,12 @@ leda.clone=__clone
 -----------------------------------------------------------------------------
 -- Define an easier name for the utils libraries
 -----------------------------------------------------------------------------
+leda.stage=__stage
+local stage=leda.stage
 leda.mutex=__mutex
 leda.io=__io
 leda.epoll=__epoll
 leda.socket=__socket
-
 
 leda.nice=function (...) return coroutine.yield(__yield_code,...) end
 -----------------------------------------------------------------------------
@@ -63,47 +64,55 @@ end
 -----------------------------------------------------------------------------
 -- Build proxies for the output of the stage
 -----------------------------------------------------------------------------
-for key,connector in pairs(stage.__output) do
+for key,connector in pairs(leda.stage.__output) do
    local c,err={}
    --load the sendf function of the connector with 'key'
-   c.sendf,err=loadstring(connector.__sendf)
-   if not c.sendf then 
-      error("Error loading sendf function for stage")
+--   c.sendf,err=loadstring(connector.__sendf)
+   if connector.__sendf=="emmit" then 
+      c.sendf=__emmit
+   elseif connector.__sendf=="call" then 
+      c.sendf=__call
+   elseif connector.__sendf=="fork" then 
+      c.sendf=__fork
+   else
+      error("Error loading send function for stage '"..leda.stage.name.."': Unknown connector type")
    end
    assert(type(c.sendf)=="function","Sendf field must be a function")
-   c.consumers=connector.__consumers;
-   c.send=function(self,...) return self.sendf(self.consumers,...) end
+   c.consumer=connector.__consumer;
+   c.send=function(self,...) return self.sendf(self.consumer,...) end
    leda.output[key]=c
 end
 
 -----------------------------------------------------------------------------
 -- Load the stage init function
 -----------------------------------------------------------------------------
-local init,err=loadstring(stage.__init)
+if leda.stage.__init and leda.stage.__init~="" then
+local init,err=leda.decode(leda.stage.__init)
 if not init then 
-   error("Error loading init function for stage")
+   error("Error loading init function for stage '"..leda.stage.name.."': "..err)
 else
    -- Execute init function of the stage
-   pcall(init) 
+   local ok,err=pcall(init) 
+   if not ok then error("Error executing init function for stage '"..leda.stage.name.."': "..err) end
+end
 end
 -----------------------------------------------------------------------------
 -- Load handler function of the stage 
 -----------------------------------------------------------------------------
 --local function handler_str() return stage.__handler end
-local __handler=leda.decode(stage.__handler)
+local __handler=leda.decode(leda.stage.__handler)
 if not __handler then 
    error("Error loading handler function for stage")
 end
 -----------------------------------------------------------------------------
 -- Create the main coroutine for the stage handler
 -----------------------------------------------------------------------------
-local stage=stage
 local coroutine=coroutine
 local function main_coroutine()
    local end_code=__end_code
    while true do
       --clean environment --DISABLED on lua 5.2
-      if setfenv and not stage.__serial then 
+      if setfenv and not stage.serial then 
          local env=setmetatable({},{__index=_G})
          setfenv(__handler,env)
       end

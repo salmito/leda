@@ -34,11 +34,11 @@ THE SOFTWARE.
 #include "queue.h"
 #include "instance.h"
 #include "event.h"
+#include "stats.h"
 
 MUTEX_T debug_lock;
 atomic pool_size;
 extern queue ready_queue;
-extern queue * event_queues;
 
 /* Thread subsystem internal functions */
 void emmit_self_and_pass_the_thread(instance caller);
@@ -105,10 +105,8 @@ char const * get_return_status_name(int status) {
 
 /* Call an instance loaded with 'args' values at the top of its stack */
 void thread_resume_instance(instance i) {
-   _DEBUG("Thread: CALLING STAGE '%s' in=%d top=%d args=%d ready_queue_size=%d event_queue='%d'\n",
-         main_graph->s[i->stage]->name,i->instance_number,lua_gettop(i->L),(int)i->args,
-         (int)queue_size(ready_queue),
-         (int)queue_size(event_queues[i->stage]));
+   _DEBUG("Thread: CALLING STAGE '%s' instance=%d args=%d\n",
+         main_graph->s[i->stage]->name,i->instance_number,(int)i->args);
    
    //dump_stack(i->L);
    
@@ -190,11 +188,11 @@ void emmit_self_and_pass_the_thread(instance caller) {
 
    //Get instance of the stage 'dst_id' (callee)
    instance callee=instance_aquire(dst_id);
-   
+   STATS_UPDATE_EVENTS(caller->stage,1);
    if(!callee) { //error getting an instance from the 
                  //recycle queue, try to emmit an event insted
       event e=extract_event_from_lua_state(caller->L, 2, args);
-      if(!instance_try_push_pending_event(caller,dst_id,e)) {
+      if(!instance_try_push_pending_event(dst_id,e)) {
         _DEBUG("Thread: ERROR: Event queue for the stage '%s' is full.\n",
             main_graph->s[dst_id]->name);
          lua_settop(caller->L,0);
@@ -253,27 +251,17 @@ int call(lua_State * L) {
    _DEBUG("Thread: Calling top=%d\n",lua_gettop(L));
    stage_id dst_id=lua_tointeger(L,1);
    int top=lua_gettop(L);
-
-   instance callee=instance_aquire(dst_id);
-
-   if(!callee) { //error getting an instance from the 
-             //recycle queue, try to emmit an event insted
-             //(fallback to event-driven)
-      lua_getfield(L, LUA_REGISTRYINDEX, "__SELF" );
-      instance caller=lua_touserdata(L,-1);
-      lua_pop(L,1);
-      
-      event e=extract_event_from_lua_state(L, 2, top-1);
-      if(!instance_try_push_pending_event(caller,dst_id,e)) {
-      
-         lua_pushnil(caller->L);
-         lua_pushfstring(caller->L,"Event queue for the stage '%s' is full.",
-            main_graph->s[dst_id]->name);
-         return 2;
-      }
-      //true to caller
-      lua_pushboolean(caller->L,TRUE);
-      return 1;
+   lua_getfield( L, LUA_REGISTRYINDEX, "__SELF" );
+   instance caller=lua_touserdata(L,-1);
+   lua_pop(L,1);
+   STATS_UPDATE_EVENTS(caller->stage,1);
+   
+   instance callee=instance_wait(dst_id);
+   
+   if(!callee) { //error getting an instance
+      lua_pushnil(L);
+      lua_pushfstring(L,"Error getting an instance for stage '%s'",STAGE(dst_id)->name);
+      return 2;
    }
 
    //Get the  main coroutine of the instance's handler
@@ -305,18 +293,37 @@ int emmit(lua_State * L) {
    stage_id dst_id=lua_tointeger(L,1);
    int const args=lua_gettop(L)-1;
 
+   if(!CLUSTER(STAGE(dst_id)->cluster)->local) {
+      int i;
+      lua_pushcfunction(L,send_event);
+      lua_pushvalue(L,1);
+      lua_newtable(L);
+      for(i=1;i<=args+1;i++) {
+         lua_pushvalue(L,i);
+         lua_rawseti(L,-2,i);
+      }
+      lua_call(L,2,2);
+      if(lua_isnil(L,-1)) {
+         lua_pop(L,1);
+         return 1;
+      }
+      return 2;
+   }
+   lua_getfield( L, LUA_REGISTRYINDEX, "__SELF" );
+   if(!lua_isnil(L,-1)) {
+      instance caller=lua_touserdata(L,-1);
+      STATS_UPDATE_EVENTS(caller->stage,1);
+   }
+   lua_pop(L,1);
+   
    _DEBUG("Thread: Emmiting event to stage '%s' top=%d\n",STAGE(dst_id)->name,lua_gettop(L));
    instance dst=instance_aquire(dst_id);
    _DEBUG("Thread: Result stage=%s instance='%p'\n",STAGE(dst_id)->name,dst);
    
    if(!dst) {   //error getting an instance from the 
                //recycle queue, try to emmit an event insted
-      lua_getfield( L, LUA_REGISTRYINDEX, "__SELF" );
-      instance caller=lua_touserdata(L,-1);
-      lua_pop(L,1);
-      
       event e=extract_event_from_lua_state(L, 2, args);
-      if(!instance_try_push_pending_event(caller,dst_id,e)) {
+      if(!instance_try_push_pending_event(dst_id,e)) {
          //error, event queue is full, push FALSE to sender
          lua_pushnil(L);
          lua_pushfstring(L,"Event queue for the stage '%s' is full.",
@@ -356,7 +363,7 @@ int emmit(lua_State * L) {
  *             Note: any other argument is poped and copyied to 
  *             the aquired instance 
  */
-int emmit_self_call(lua_State * L) {
+int fork_call(lua_State * L) {
    //Push status code EMMIT_SELF_AND_PASS_THREAD to the bottom of the stack
    lua_pushinteger(L,EMMIT_CONTINUATION_AND_PASS_THREAD);
    lua_insert(L,1);
@@ -385,7 +392,7 @@ static THREAD_RETURN_T THREAD_CALLCONV thread_main(void *t_val) {
       t->status=WAITING; //change status to WAITING
    }
    ADD(pool_size,-1);
-   _DEBUG("Thread: Thread killed (pool_size=%d)\n",READ(pool_size));
+   _DEBUG("Thread: Thread killed (pool_size=%ld)\n",READ(pool_size));
    t->status=DONE;
 
    return 0;
@@ -425,7 +432,7 @@ int thread_new (lua_State *L) {
    //Create a new thread and execute it with the 'thread_main' function
    THREAD_CREATE( &t->thread, thread_main, t, 0 );
    ADD(pool_size,1);
-   _DEBUG("Thread: Thread created (pool_size=%d)\n",READ(pool_size));
+   _DEBUG("Thread: Thread created (pool_size=%ld)\n",READ(pool_size));
    //Return the reference pointer of the thread descriptor
    return 1;
 }

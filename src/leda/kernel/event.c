@@ -26,14 +26,26 @@ THE SOFTWARE.
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include <lua.h>
 #include <lauxlib.h>
 #include <lualib.h>
 
+#include <lualib.h>
+
 #include "event.h"
 #include "thread.h"
 #include "extra/lmarshal.h"
+
+#include <sys/epoll.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <sys/socket.h> 
+#include <arpa/inet.h>
+#include <netinet/in.h>
 
 #define MAXN 1024
 
@@ -48,6 +60,8 @@ struct _element {
    } data;
    size_t len; //Size of data (if type is 'string' it holds the size of string)
 };
+
+static THREAD_T event_thread;
 
 /* Free the payload vector of an event.
  * 
@@ -242,8 +256,6 @@ bool_t copy_event_element(lua_State *L, size_t i, element e) {
    return TRUE;
 }
 
-#define ABS(x) (x<0?-x:x)
-
 /* extract a event from a lua stack of length 'args' from the stack 
  * index 'from' (inclusive).
  */
@@ -271,3 +283,267 @@ event extract_event_from_lua_state(lua_State *L, int from, int args) {
   	return e; //copyed ok
 }
 
+void panic(char * error) {
+   fprintf(stderr,"Leda PANIC: %s\n",error);
+   exit(1);
+}
+
+#define EVENT_TYPE 28
+#define INIT_TYPE 27
+
+queue * sockets;
+atomic * cur_daemon;
+lua_State * dummy;
+
+int send_event(lua_State *L) {
+   stage_id s_id=lua_tointeger(L,1);
+   luaL_checktype(L,2,LUA_TTABLE);
+   
+   lua_pushcfunction(L,mar_encode);
+   lua_pushvalue(L,2);
+   lua_call(L,1,1);
+   luaL_checktype(L,-1,LUA_TSTRING);
+   size_t len; const char *payload=lua_tolstring(L,-1,&len); 
+
+   int next_d=STORE(cur_daemon[STAGE(s_id)->cluster],
+   (READ(cur_daemon[STAGE(s_id)->cluster])+1)%CLUSTER(STAGE(s_id)->cluster)->n_daemons);
+   
+   daemon_id dst_id=CLUSTER(STAGE(s_id)->cluster)->daemons[next_d];
+   int sockfd;
+   if(!TRY_POP(sockets[dst_id],sockfd)) {
+      _DEBUG("Daemon: Connecting to daemon '%s:%d'\n",DAEMON(dst_id)->host,DAEMON(dst_id)->port);
+      struct sockaddr_in adr_inet;
+      int len_inet;
+      adr_inet.sin_family = AF_INET;  
+      adr_inet.sin_port = htons(DAEMON(dst_id)->port); 
+      if (!inet_aton(DAEMON(dst_id)->host,&adr_inet.sin_addr) ) {
+        lua_pop(L,1);
+        lua_pushboolean(L,FALSE);
+        lua_pushfstring(L,"Bad address '%s'",DAEMON(dst_id)->host);
+        return 2;
+      }
+      len_inet = sizeof adr_inet; 
+      if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+        lua_pop(L,1);
+        lua_pushboolean(L,FALSE);
+        lua_pushliteral(L,"Could not create socket");
+        return 2;
+      }
+      if( connect(sockfd, (struct sockaddr *)&adr_inet, sizeof(adr_inet)) < 0) {
+        lua_pop(L,1);
+        lua_pushboolean(L,FALSE);
+        lua_pushfstring(L,"Could not establish connection with daemon '%s:%d'",DAEMON(dst_id)->host,DAEMON(dst_id)->port);
+        return 2;
+      }
+      _DEBUG("Daemon: Connected to daemon '%s:%d'\n",DAEMON(dst_id)->host,DAEMON(dst_id)->port);
+   }
+   char c=EVENT_TYPE;
+   int size=write(sockfd,&c,1);
+   if(size!=1) {
+      lua_pop(L,1);
+      close(sockfd);
+      lua_pushboolean(L,FALSE);
+      lua_pushfstring(L,"Error sending event to daemon '%s:%d': %s",DAEMON(dst_id)->host,DAEMON(dst_id)->port,strerror(errno));
+   }
+
+/*   size=write(sockfd,&s_id,sizeof(stage_id));
+   if(size!=sizeof(stage_id)) {
+      lua_pop(L,1);
+      close(sockfd);
+      lua_pushboolean(L,FALSE);
+      lua_pushfstring(L,"Error sending event to daemon '%s:%d': %s",DAEMON(dst_id)->host,DAEMON(dst_id)->port,strerror(errno));
+   }*/
+   size=write(sockfd,&len,sizeof(size_t));
+   if(size!=sizeof(size_t)) {
+      lua_pop(L,1);
+      close(sockfd);   
+      lua_pushboolean(L,FALSE);
+      lua_pushfstring(L,"Error sending event to daemon '%s:%d': %s",DAEMON(dst_id)->host,DAEMON(dst_id)->port,strerror(errno));
+   }
+   
+   int writed=0;
+   while(writed<len) {
+      size=write(sockfd,payload+writed,len-writed);
+      if(size<0) {
+         lua_pop(L,1);
+         close(sockfd);      
+         lua_pushboolean(L,FALSE);
+         lua_pushfstring(L,"Error sending event to daemon '%s:%d': %s",DAEMON(dst_id)->host,DAEMON(dst_id)->port,strerror(errno));      
+         return 2;
+      } else if(size==0) {
+         lua_pop(L,1);
+         close(sockfd);
+         lua_pushboolean(L,FALSE);
+         lua_pushfstring(L,"Error sending event to daemon '%s:%d': Daemon closed connection",DAEMON(dst_id)->host,DAEMON(dst_id)->port);
+         return 2;
+      }
+      writed+=size;
+   }
+   char res=0;
+  
+   size=read(sockfd,&res,sizeof(char));
+   if(size!=sizeof(char)) {
+      lua_pop(L,1);
+      close(sockfd);
+      lua_pushboolean(L,FALSE);
+      lua_pushfstring(L,"Error sending event to daemon '%s:%d': %s",DAEMON(dst_id)->host,DAEMON(dst_id)->port,strerror(errno));
+      return 2;
+   }
+   if(res==1) {
+      lua_pop(L,1);
+      if(!TRY_PUSH(sockets[dst_id],sockfd)) 
+         close(sockfd);
+      lua_pushboolean(L,TRUE);
+      _DEBUG("Daemon: Sent remote event\n");
+      return 1;
+   } 
+   char buf[2048];
+   size=read(sockfd,buf,2048);
+   if(size<=0) {
+      lua_pop(L,1);
+      close(sockfd);
+      lua_pushboolean(L,FALSE);
+      lua_pushfstring(L,"Error sending event to daemon '%s:%d': %*s",DAEMON(dst_id)->host,DAEMON(dst_id)->port,buf,strerror(errno));
+      return 2;
+   }
+   lua_pop(L,1);
+   close(sockfd);
+   lua_pushboolean(L,FALSE);
+   lua_pushfstring(L,"Error sending event to daemon '%s:%d': %*s",DAEMON(dst_id)->host,DAEMON(dst_id)->port,buf,size);
+   return 2;
+}
+
+int read_event(int fd) {
+   char type=0;
+   int size=read(fd,&type,1);
+   if(size!=1) return 1;
+   if(type==INIT_TYPE) {
+      size=write(fd,"Deamon has already started\n",27);
+      _DEBUG("Daemon: Error: Deamon has already started\n");
+      close(fd);
+   } else if(type!=EVENT_TYPE) return 1;
+
+//   stage_id id;
+//   size=read(fd,&id,sizeof(stage_id));
+//   if(size!=sizeof(stage_id)) return 1;
+
+   size_t len=0;
+   size=read(fd,&len,sizeof(size_t));
+   if(size!=sizeof(size_t)) return 1;
+
+   int readed=0;
+   if(len<=0) return 1;
+   char * buf=malloc(len);
+   if(!buf) return 1;
+
+   while(readed<len) {
+      size=read(fd,buf+readed,len-readed);
+      if(size<=0) {
+         free(buf);
+         return 1;
+      }
+      readed+=size;
+   }
+   if(readed!=len) {
+      free(buf);
+      return 1;
+   }
+
+   lua_pushcfunction(dummy,emmit);
+   int begin=lua_gettop(dummy);
+   lua_getglobal(dummy,"unpack"); //Push unpack function
+   lua_pushcfunction(dummy,mar_decode);
+   lua_pushlstring(dummy,buf,len);
+   free(buf);
+   lua_call(dummy,1,1); //decode event
+   lua_call(dummy,1,LUA_MULTRET); //Unpack event
+   int args=lua_gettop(dummy)-begin;
+
+   lua_call(dummy,args,2);
+   
+   if(lua_toboolean(dummy,-2)==TRUE) {
+      char res=TRUE;
+      size=write(fd,&res,sizeof(char));
+      if(size!=sizeof(char)) return 1;
+   } else {
+      char res=FALSE;
+      size=write(fd,&res,sizeof(char));
+      if(size!=sizeof(char)) return 1;
+      const char * b=lua_tolstring(dummy,-1,&len);
+      size=write(fd,b,len);
+      return 1;
+   }
+   return 0;
+}
+
+static THREAD_RETURN_T THREAD_CALLCONV event_main(void *t_val) {
+   int daemon_fd=*(int*)t_val;
+   free(t_val);
+   int epfd = epoll_create (128);
+   if(epfd==-1) {
+      perror("Leda PANIC: Error creating epfd");
+   }
+   {
+      struct epoll_event event;
+      event.data.fd = daemon_fd;
+      event.events = EPOLLIN;
+   
+      if(epoll_ctl (epfd, EPOLL_CTL_ADD, daemon_fd, &event)) {
+         perror("Leda PANIC: Error on daemon_fd");
+      }
+   }
+   
+   _DEBUG("Daemon: Waiting for incomming events\n")
+   while(TRUE) {
+      struct epoll_event events[128];
+      int nr_events, i;
+   
+      nr_events = epoll_wait (epfd, events, 128, -1);
+      if (nr_events < 0) { //epoll error
+         perror("Epoll error");
+      }
+      for (i = 0; i < nr_events; i++) {
+         if(events[i].events & EPOLLIN) { //fd available for read
+            if(events[i].data.fd==daemon_fd) { //new connection for daemon
+               _DEBUG("Daemon: Incomming new connection\n");
+               socklen_t addrlen=sizeof(struct sockaddr_in);
+               struct sockaddr_in address;
+               int client_fd = accept(daemon_fd, (struct sockaddr *)&address, &addrlen);
+               if (client_fd<0) perror("Error accepting connection");
+               
+               struct epoll_event event;
+               event.data.fd = client_fd;
+               event.events = EPOLLIN;
+   
+               if(epoll_ctl (epfd, EPOLL_CTL_ADD, client_fd, &event)) {
+                  perror("Epoll error");
+               }
+            } else {
+               struct epoll_event event;
+               event.data.fd = events[i].data.fd;
+               event.events = EPOLLIN;
+               if(read_event(events[i].data.fd)) {
+                  _DEBUG("Daemon: Client closed the connection\n");
+                  close(events[i].data.fd);
+                  epoll_ctl (epfd, EPOLL_CTL_DEL, events[i].data.fd, &event);
+               }
+            }
+         }
+      }
+      
+   }
+   return NULL;
+}
+
+void event_init(int daemon_fd){
+   int *p=malloc(sizeof(int));
+   *p=daemon_fd;
+   int i;
+   dummy=new_lua_state(FALSE);
+   sockets=calloc(main_graph->n_d,sizeof(queue));
+   for(i=0;i<main_graph->n_d;i++) sockets[i]=queue_new();
+   cur_daemon=calloc(main_graph->n_cl,sizeof(atomic));
+   for(i=0;i<main_graph->n_cl;i++) cur_daemon[i]=atomic_new(0);
+   
+   THREAD_CREATE( &event_thread, event_main, p, 0 );
+}

@@ -3,35 +3,28 @@
 -- Author: Tiago Salmito, Noemi Rodriguez, Ana Lucia de Moura
 -----------------------------------------------------------------------------
 
-local debug=require("leda.debug")
 local kernel = require("leda.kernel")
-local l_connector = require("leda.l_connector")
-local l_stage = require("leda.l_stage")
-local l_graph = require("leda.l_graph")
-
-local dbg = leda.debug.get_debug("Leda: ")
+local debug= require("leda.debug")
+local leda_stage = require("leda.leda_stage")
+local leda_graph = require("leda.leda_graph")
+local daemon = require("leda.daemon")
 
 module("leda")
 
 --Exporting graph related functions
-graph=l_graph.graph
-is_graph=l_graph.is_graph
-dump_graph=l_graph.dump
+graph=leda_graph.graph
+is_graph=leda_graph.is_graph
+is_cluster=leda_graph.is_cluster
+dump_graph=leda_graph.dump
+
+emmit=leda_connector.emmit
+call=leda_connector.call
+fork=leda_connector.fork
 
 --Exporting stage related functions
-stage=l_stage.new_stage
-is_stage=l_stage.is_stage
-
---Exporting built in connector types tunctions
-pass_thread=l_connector.call_func
-throw_event=l_connector.emmit_func
-pass_thread_and_throw_event=l_connector.emmit_self_call_func
-
---Short name for them
-t=pass_thread
-e=throw_event
-te=pass_thread_and_throw_event
+stage=leda_stage.new_stage
+is_stage=leda_stage.is_stage
 
 --Exporting connector related functions
-connector=l_connector.new_connector
-is_connector=l_connector.is_connector
+is_connector=leda_connector.is_connector
+start_daemon=daemon.start

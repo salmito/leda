@@ -33,6 +33,7 @@ THE SOFTWARE.
 #include "thread.h"
 #include "queue.h"
 #include "mutex.h"
+#include "stats.h"
 #include "extra/leda-io.h"
 #include "extra/lmarshal.h"
 
@@ -100,6 +101,7 @@ lua_State * new_lua_state(bool_t libs) {
    
    if(libs) openlibs(L);
    else {
+      lua_cpcall(L,luaopen_base,NULL);
       //TODO pehaps it's good to load only the base library in this case?
    }
    
@@ -111,6 +113,8 @@ lua_State * new_lua_state(bool_t libs) {
 void instance_destroy(instance i) {
    //Lock protected subtract
    SUB(number_of_instances[i->stage],1);
+   time_d t=now_secs()-i->init_time;
+   STATS_UPDATE_TIME(i->stage,(int)(t*1000000));
    lua_close(i->L);
    free(i);
 }
@@ -159,18 +163,18 @@ void instance_init(size_t recycle_limit_t,size_t pending_limit_t) {
    }
 }
 
-bool_t instance_try_push_pending_event(instance src,stage_id dst, event e) {
+bool_t instance_try_push_pending_event(stage_id dst, event e) {
    if(TRY_PUSH(event_queues[dst],e))
       return TRUE;
    //If we're here, there is no space left on the pending event queue
    //now what to do?
    //one option is to backpressure the pipeline (block the sender thread until
    //someone consume an event
-   if(src && STAGE(src->stage)->backpressure) {
+   /*if(src && STAGE(src->stage)->backpressure) {
       PUSH(event_queues[dst],e);
-      //SIGNAL_ALL(&queue_used_cond);
+      SIGNAL_ALL(&queue_used_cond);
       return TRUE;
-   } 
+   } */
    return FALSE; //Could not send an event (the pending event queue is full)
 }
 
@@ -260,25 +264,25 @@ void register_io_api(lua_State * L) {
    #ifndef _WIN32
    lua_newtable(L);
    lua_pushliteral(L,"close");
-   lua_pushcfunction(L,epool_close);
+   lua_pushcfunction(L,epoll_close);
    lua_rawset(L,-3);
    lua_pushliteral(L,"wait");
-   lua_pushcfunction(L,epool_wait);
+   lua_pushcfunction(L,epoll_lwait);
    lua_rawset(L,-3);
    lua_pushliteral(L,"remove");
-   lua_pushcfunction(L,epool_remove_descriptor);
+   lua_pushcfunction(L,epoll_remove_descriptor);
    lua_rawset(L,-3);
    lua_pushliteral(L,"add_read");
-   lua_pushcfunction(L,epool_add_read);
+   lua_pushcfunction(L,epoll_add_read);
    lua_rawset(L,-3);
    lua_pushliteral(L,"add_write");
-   lua_pushcfunction(L,epool_add_write);
+   lua_pushcfunction(L,epoll_add_write);
    lua_rawset(L,-3);
    lua_pushliteral(L,"add_read_write");
-   lua_pushcfunction(L,epool_add_read_write);
+   lua_pushcfunction(L,epoll_add_read_write);
    lua_rawset(L,-3);
    lua_pushliteral(L,"create");
-   lua_pushcfunction(L,epool_create);
+   lua_pushcfunction(L,epoll_lcreate);
    lua_rawset(L,-3);
    lua_setglobal(L,"__epoll");
    #endif
@@ -325,8 +329,23 @@ void register_connector_api(lua_State * L) {
    lua_pushcfunction(L,emmit);
    lua_setglobal(L,"__emmit");
 
-   lua_pushcfunction(L,emmit_self_call);
-   lua_setglobal(L,"__emmit_self_call");
+   lua_pushcfunction(L,fork_call);
+   lua_setglobal(L,"__fork");
+}
+
+/* Try to aquire an instance. 
+ * if there is no instances available then wait for a  
+ * instance to be released
+ *
+ */
+instance instance_wait(stage_id s) {
+   instance ret=instance_aquire(s);
+   if(ret==NULL) {
+      POP(recycle_queues[s],ret);
+      ret->init_time=now_secs();
+      STATS_ACTIVE(ret->stage);
+   }
+   return ret; //released instance
 }
 
 /* Try to aquire an instance from its correspondent recycle queue
@@ -341,13 +360,15 @@ instance instance_aquire(stage_id s) {
 
    //Try to recycle an instance from its correspondent queue   
    if(TRY_POP(recycle_queues[s],ret)) {
+      ret->init_time=now_secs();
+      STATS_ACTIVE(ret->stage);
       return ret; //instance recycled
    }
    
    //If not (beacuse the recycle queue was empty) verify if there
    //is space on the recycle queue for one more instance
    if(READ(number_of_instances[s])==recycle_queue_limits[s]) {
-      _DEBUG("Instance: Error: No more instances allowed for stage '%s', (%d == %d)\n",
+      _DEBUG("Instance: Error: No more instances allowed for stage '%s', (%ld == %d)\n",
       STAGE(s)->name,READ(number_of_instances[s]),recycle_queue_limits[s]);
       return NULL;//No more instances allowed for this stage
    }
@@ -370,18 +391,18 @@ instance instance_aquire(stage_id s) {
    lua_newtable(ret->L); //Table holds all information
 
    //Push the init and handler chunks into the table
-   lua_pushliteral(ret->L,"__name"); //key
+   lua_pushliteral(ret->L,"name"); //key
    lua_pushstring (ret->L, STAGE(s)->name); //value
    lua_settable(ret->L,-3); //Set __name
 
-   lua_pushliteral(ret->L,"__serial"); //key
+   lua_pushliteral(ret->L,"serial"); //key
    lua_pushboolean (ret->L, STAGE(s)->serial); //value
    lua_settable(ret->L,-3); //Set __init
 
-   lua_pushliteral(ret->L,"__backpressure"); //key
+   /*lua_pushliteral(ret->L,"__backpressure"); //key
    lua_pushboolean (ret->L, STAGE(s)->backpressure); //value
    lua_settable(ret->L,-3); //Set __init
-
+   */
    //Push the init and handler chunks into the table
    lua_pushliteral(ret->L,"__init"); //key
    lua_pushlstring (ret->L, STAGE(s)->init, STAGE(s)->init_len); //value
@@ -415,21 +436,23 @@ instance instance_aquire(stage_id s) {
       lua_settable(ret->L,-3); //Set __output[key].__sendf
 
       //put consumers ids
-      lua_pushliteral(ret->L,"__consumers"); //key
-      lua_newtable(ret->L); //value __output[key].__consumers
-      int k;
-      for(k=1;k<=CONNECTOR(c)->n_c;k++) {
+      lua_pushliteral(ret->L,"__consumer"); //key
+      lua_pushinteger(ret->L,(int)CONNECTOR(c)->c);
+     // printf("CONSUMER %d %d\n",c,(int)CONNECTOR(c)->c);
+//      lua_newtable(ret->L); //value __output[key].__consumers
+//      int k;
+      /*for(k=1;k<=CONNECTOR(c)->n_c;k++) {
          lua_pushinteger(ret->L,(int)CONNECTOR(c)->c[k-1]); //consumer[k-1]
          lua_rawseti(ret->L,-2,k);
-      }
-      lua_settable(ret->L,-3); //Set __output[key].__consumers=value
+      }*/
+      lua_settable(ret->L,-3); //Set __output[key].__consumer=value
       
       lua_settable(ret->L,-3); //Set __output[key]=value
    }
    lua_settable(ret->L,-3); //Set __output
    
    /* Push the kernel C API functions to the newly created lua_State */
-   lua_setglobal(ret->L,"stage");
+   lua_setglobal(ret->L,"__stage");
 
    /* C methods for passing control to instances */
    register_connector_api(ret->L);
@@ -441,7 +464,6 @@ instance instance_aquire(stage_id s) {
    lua_pushinteger(ret->L,YIELDED);   
    lua_setglobal(ret->L,"__yield_code");
 
-
    /* load api with assorted functions useful for concurrency*/
    register_debug_api(ret->L);
    register_io_api(ret->L);
@@ -450,11 +472,21 @@ instance instance_aquire(stage_id s) {
    register_marshal_api(ret->L);
      
    /* Call the lua_chunk loaded in the luaL_loadbuffer */
-   dump_stack(ret->L);
+//   dump_stack(ret->L);
    lua_call( ret->L, 0 , 0 );
    _DEBUG("Instance created for stage '%d' name='%s'\n",(int)s,STAGE(s)->name);
 
+   ret->init_time=now_secs();
+   STATS_ACTIVE(ret->stage);
    return ret; //created instance
+}
+
+int event_queue_size(stage_id s) {
+   return queue_size(event_queues[s]);
+}
+
+int event_queue_capacity(stage_id s) {
+   return queue_capacity(event_queues[s]);
 }
 
 /* Release a instance, if the queue is full (TRY_PUSH will fail),
@@ -462,6 +494,11 @@ instance instance_aquire(stage_id s) {
  */
 int instance_release(instance i) {
    lua_settop(i->L,0); //empty the instance's stack
+   
+   time_d t=now_secs()-i->init_time;
+
+   STATS_UPDATE_TIME(i->stage,(int)(t*1000000));
+
    event e;
    if(TRY_POP(event_queues[i->stage],e)) { 
       //There are pending events waiting for this instance to finish
@@ -473,6 +510,8 @@ int instance_release(instance i) {
       //push arguments to instance
       i->args=restore_event_to_lua_state(i->L,&e);
       
+      i->init_time=now_secs();
+      STATS_ACTIVE(i->stage);
       push_ready_queue(i);
       _DEBUG("Instance: Instance %d of stage '%s' popped a pending event.\n",
          i->instance_number,STAGE(i->stage)->name);

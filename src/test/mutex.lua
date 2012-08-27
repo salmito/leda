@@ -31,9 +31,10 @@ s2=stage{name="s2",
       print("S2 unlocking")
       leda.mutex.unlock(mutex)
    end,
-   input=s1.output[1]
+   input=s1.output[1],
+   init=function () require "os" end,
 }
-s2:set_method(leda.e)
+s2:input_method(leda.e)
 
 s1.input:send(1)
 

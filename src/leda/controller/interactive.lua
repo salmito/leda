@@ -8,8 +8,8 @@
 -----------------------------------------------------------------------------
 local base = _G
 local dbg = leda.debug.get_debug("Controller: Interactive: ")
-local kernel,plot=leda.kernel,require('leda.utils.plot')
-local table=table
+local plot=require('leda.utils.plot')
+local table,leda=table,leda
 local default_thread_pool_size=2
 local print,loadstring,pcall,os,string,pairs,ipairs,tostring,io,assert=
       print,loadstring,pcall,os,string,pairs,ipairs,tostring,io,assert
@@ -17,6 +17,8 @@ local read=io.read
 local write=io.write
 local stderr=io.stderr
 local prompt='> '
+kernel=leda.kernel
+local kernel=kernel
 
 module("leda.controller.interactive")
 
@@ -59,8 +61,8 @@ local gr=""
 
 function get_init(n)
    return function (g)
-   stderr:write("\027[2J")
-   pool_size=n
+--   stderr:write("\027[2J")
+   pool_size=n or pool_size
    init_time=kernel.gettime()
    for i=1,n do
       kernel.new_thread()
@@ -119,7 +121,7 @@ function update(fn)
       last_t[k]={v.events_pushed,kernel.gettime()}
       local l_e=v.events_pushed-last[1]
       local l_t=kernel.gettime()-last[2]
-      stderr:write(string.format("%d: name='%s' active=%d events=%d queue_size=%d (%d) executed=%d  latency=%.3fms throughput=%.1fev/s\n",k,tostring(v.name),v.active,v.events_pushed,v.event_queue_size,v.event_queue_capacity,v.times_executed,v.average_latency/1000,l_e/l_t))
+      stderr:write(string.format("%d: name='%s' active=%d events=%d queue_size=%d (%d) executed=%d  latency=%.3fms throughput=%.1fev/s\n",k-1,tostring(v.name),v.active,v.events_pushed,v.event_queue_size,v.event_queue_capacity,v.times_executed,v.average_latency/1000,l_e/l_t))
    end
    end
 end

@@ -9,9 +9,9 @@
 local base = _G
 local dbg = leda.debug.get_debug("Controller: Fixed-thread: ")
 local kernel=leda.kernel
-local table=table
+local table,ipairs,pairs,print=table,ipairs,pairs,print
 local default_thread_pool_size=10
-local print=print
+
 
 module("leda.controller.fixed_thread_pool")
 
@@ -32,11 +32,21 @@ function get_init(n)
 end
 init=get_init(default_thread_pool_size)
 
-function event_pushed(timedout)
-   --print("Write happened",timedout)
+--[[function event_pushed(timedout,stats)
    local ps=kernel.thread_pool_size()
-   local qs=kernel.ready_queue_size()
-end
+   local rs=kernel.ready_queue_size()
+   local rc=kernel.ready_queue_capacity()
+   print("Write happened",timedout,ps,rs,rc)
+   if stats then
+   for k,v in ipairs(stats) do 
+      print(k)
+      for k2,v2 in pairs(v) do
+         print(k2,v2)
+      end
+   end
+
+   end
+end--]]
 
 function get(n)
    return {init=get_init(n),event_pushed=event_pushed,finish=finish}

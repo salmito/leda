@@ -104,4 +104,18 @@ utils.serializer={
    end
 }
 
+utils.make_pipeline=function(...)
+   local arg={...}
+   local s={"Linear Pipeline"}
+   local last_s=nil
+   for i,v in ipairs(arg) do
+      assert(type(v)=="function","Argument #"..tostring(i).." must be a function")
+      local stage=leda.stage{"Stage "..tostring(i),handler=v}
+      s:insert(stage)
+      if last_s then last_s:connect(stage) end
+      last_s=stage
+   end
+   return leda.graph(s)
+end
+
 return utils
