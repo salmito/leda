@@ -7,14 +7,14 @@
 -- Declare module and import dependencies
 -----------------------------------------------------------------------------
 local base = _G
-local tostring,type,assert,pairs,setmetatable,getmetatable,print,error,ipairs =
-      tostring,type,assert,pairs,setmetatable,getmetatable,print,error,ipairs
+local tostring,type,assert,pairs,setmetatable,getmetatable,print,error,ipairs,unpack =
+      tostring,type,assert,pairs,setmetatable,getmetatable,print,error,ipairs,unpack
 local string,table,kernel,io=string,table,leda.kernel,io
 local dbg = leda.debug.get_debug("Graph: ")
 local is_connector=leda.leda_connector.is_connector
 local new_connector=leda.leda_connector.new_connector
 local is_stage=leda.leda_stage.is_stage
-local default_controller=require("leda.controller.default")
+local is_cluster=leda.leda_cluster.is_cluster
 local leda=leda
 
 module("leda.leda_graph")
@@ -23,13 +23,6 @@ module("leda.leda_graph")
 -- Graph metatable
 -----------------------------------------------------------------------------
 local graph_metatable = { 
-   __index={}
-}
-
-----------------------------------------------------------------------------
--- Cluster metatable
------------------------------------------------------------------------------
-local cluster_metatable = { 
    __index={}
 }
 
@@ -45,17 +38,6 @@ function graph_metatable.__tostring(g)
 end
 
 -----------------------------------------------------------------------------
--- Cluster __tostring metamethod
------------------------------------------------------------------------------
-function cluster_metatable.__tostring(c) 
-   if c.name then 
-      return c.name
-   else
-      return string.format("Cluster (%s)",kernel.to_pointer(c)) 
-   end
-end
-
------------------------------------------------------------------------------
 -- Graph __index metamethod
 -----------------------------------------------------------------------------
 local index=graph_metatable.__index
@@ -64,7 +46,7 @@ local index=graph_metatable.__index
 -- Add connector to a graph
 -- If a connector is already on the graph, nothing is done
 -----------------------------------------------------------------------------
-function index.add_connector(self,c)
+function index.add(self,c)
    if type(c)=='function' then
       c=c(self)
    end
@@ -74,6 +56,7 @@ function index.add_connector(self,c)
    dbg("Adding connector '%s' to graph '%s'",tostring(c),tostring(self))
    self.conns[c]=true
 end
+index.add_connector=add
 
 -----------------------------------------------------------------------------
 -- Create a new graph and returns it
@@ -84,6 +67,7 @@ function graph(...)
    if type(t[1]=='table') and not is_graph(t[1]) then
       t=t[1]
    end
+   
    if type(t[1])=="string" then
       t.name=t.name or t[1]
       table.remove(t,1)
@@ -92,25 +76,25 @@ function graph(...)
    local gr = setmetatable(t,graph_metatable)
    gr.conns={}
    gr.outputs={}
-   gr.cl={}
    gr.name=gr.name or tostring(gr)
-   gr.default_cluster=gr:create_cluster(gr.name.."_main")
-   for k, v in pairs(gr) do
+
+   for i, v in pairs(gr) do
       --if value is a connector, add it to graph
       if is_connector(v) then
-         gr:add_connector(v)
+         gr:add(v)
       elseif type(v)=='function' then
          local c=v(gr)
          assert(is_connector(c),string.format("Connector constructor returned an invalid value (%s)",type(c)))
-         gr:add_connector(c)
+         gr:add(c)
       else --ignore other values
-         --io.stderr:write(string.format("WARNING: Ignoring parameter #%d of graph '%s'\n",i,gr.name))
+         dbg("WARNING: Ignoring parameter of graph '%s' (type %s)\n",gr.name,type(v))
       end
    end
+   
    if gr.start then
       assert(is_stage(gr.start),string.format("Graph 'start' field must be a stage (got %s)",type(gr.start)))
-      local c=new_connector(nil,'start',gr.start,leda.emmit)
-      gr:add_connector(c)
+      local c=new_connector(nil,'start',gr.start)
+      gr:add(c)
       assert(gr:contains(gr.start),"Graph start field is not a stage in the graph")
    end
    return gr
@@ -129,17 +113,33 @@ function is_graph(g)
 end
 index.is_graph=is_graph
 
+function index.set_start(g,s)
+   assert(is_stage(s),string.format("Invalid parameter (stage expected, got %s)",type(s)))
+   if not g:contains(s) then error(string.format("Stage '%s' not defined on graph '%s'",s,g)) end
+   for c in pairs(g:connectors()) do
+      if c.producer == nil then
+         c.consumer=stage
+         return true
+     end
+   end
+   local c=new_connector(nil,'start',s)
+   g:add(c)
+   return true
+end
+
 function index.contains(g,s)
+   assert(is_graph(g),string.format("Invalid parameter #1 type (Graph expected, got %s)",type(g)))
    if is_stage(s) then
-      local ss=g:stages()
-      return ss[s]==true
+      local stages=g:stages()
+      return stages[s]==true
    elseif is_connector(s) then
       return g.conns[s]==true
    end
-   error(string.format("Invalid parameter type: %s",type(s)))
+   error(string.format("Invalid parameter type (stage or connector expected, got %s)",type(s)))
 end
 
 function index.stages(g)
+   assert(is_graph(g),string.format("Invalid parameter #1 type (Graph expected, got %s)",type(g)))
    local stages={}
    for c,_ in pairs(g.conns) do
       if c.producer then stages[c.producer]=true end
@@ -148,31 +148,86 @@ function index.stages(g)
    return stages
 end
 
+function index.all(g)
+   local res=leda.cluster()
+   for s in pairs(g:stages()) do
+      res[s]=true
+   end
+   return res
+end
+
 function index.clusters(g)
    local clusters={}
-   clusters[g.default_cluster]=g.default_cluster
-   for _,c in pairs(g.cl) do
-      clusters[c]=c
+   cl=g.cluster or {}
+   for c in pairs(cl) do
+      clusters[c]=true
    end
    return clusters
+end
+
+function index.part(g,...)
+   assert(is_graph(g),string.format("Invalid parameter #1 type (graph expected, got %s)",type(g)))
+
+   for s in pairs(g:stages()) do
+      if type(s.bind)=="function" then
+         s.bind(g:get_output_ports(s))
+      end
+   end
+
+   local t={...}
+   
+   local all=leda.cluster()
+   g.cluster=nil
+   local c={}
+   local res={}
+   
+   for _,cl in pairs(t) do
+      if is_stage(cl) then
+         cl=leda.cluster(cl)
+      end
+      if type(cl)=='table' and not is_cluster(cl) then
+         cl=leda.cluster(cl)
+      end
+      if is_cluster(cl) then
+         local i=all*cl
+         assert(i:size()==0,"Invalid cluster, stages "..tostring(i).." are already clustered")
+         for s in pairs(cl) do
+            if is_stage(s) then
+               for key,c in pairs(g:get_output_ports(s)) do
+                  if c.type~='decoupled' then
+                     assert(cl:contains(c.consumer),"Invalid cluster, stages '"..tostring(s).."' and '"..tostring(c.consumer).."' cannot be on different clusters")
+                  end
+               end
+            end
+         end
+         all=all+cl
+         c[cl]=true
+         table.insert(res,cl)
+      end
+   end
+   assert((g:all()-all):size()==0,"Invalid configuration, stages "..tostring(g:all()-all).." must be clustered")
+   assert((all-g:all()):size()==0,"Invalid cluster, stages "..tostring(all-g:all()).." are not on the graph")
+   g.cluster=c
+   return unpack(res)
 end
 
 function index.get_cluster(g,s)
    assert(is_graph(g),string.format("Invalid parameter #1 type (Graph expected, got %s)",type(g)))
    assert(is_stage(s),string.format("Invalid parameter #1 type (Stage expected, got %s)",type(s)))
-   if g.cl[s] then
-      return g.cl[s]
+   for c in pairs(g:clusters()) do
+      if c:contains(s) then return c end
    end
-   return g.default_cluster
+   return nil,"Cluster not found"
 end
 
-function index.get_ports(g,s)
+function index.get_output_ports(g,s)
    assert(is_graph(g),string.format("Invalid parameter #1 type (Graph expected, got %s)",type(g)))
    assert(is_stage(s),string.format("Invalid parameter #1 type (Stage expected, got %s)",type(s)))
    if type(g.outputs[s])=='table' then
       return g.outputs[s]
    end
-   return {}
+   g.outputs[s]={}
+   return g.outputs[s]
 end
 
 function index.connectors(g)
@@ -181,10 +236,10 @@ function index.connectors(g)
    return ret
 end
 
-function index.daemons(g)
+function index.processes(g)
    local ret={}
    for cl in pairs(g:clusters()) do 
-      for _,d in ipairs(cl.daemons) do
+      for _,d in ipairs(cl.process_addr) do
          ret[d]=true
       end
    end
@@ -197,9 +252,9 @@ function index.count_connectors(g)
    return count
 end
 
-function index.count_daemons(g)
+function index.count_processes(g)
    local count=0
-   for k,v in pairs(g:daemons()) do count=count+1 end
+   for k,v in pairs(g:processes()) do count=count+1 end
    return count
 end
 
@@ -226,7 +281,7 @@ function index.plot(g,out)
    if leda.plot_graph then 
       return leda.plot_graph(g,out)
    end
-   error("Module 'leda.utils.plot' not loaded.'")
+   error("Module 'leda.utils.plot' must be loaded.'")
 end
 
 -----------------------------------------------------------------------------
@@ -275,16 +330,20 @@ end
 --                fails with an error message if not
 -----------------------------------------------------------------------------
 function index.verify(g)
-   for c in pairs(g:connectors()) do
-      if c.producer then
-         if g:get_cluster(c.producer)~=g:get_cluster(c.consumer) and c:get_type()~="emmit" then
-            error(string.format("Stages '%s' and '%s' cannot be on different clusters because they exchange threads with each other",tostring(c.producer),tostring(c.consumer)))
-         end
-      end
+   local all=leda.cluster()
+   for cl in pairs(g:clusters()) do
+         i=cl*all
+         assert(i:size()==0,"Invalid cluster, stages "..tostring(i).." are already clustered")
+         all=all+cl
    end
-   for s in pairs(g:stages()) do
-      if type(s.bind)=="function" then
-         s.bind(g:get_ports(s) or {})
+   assert((all-g:all()):size()==0,"Invalid cluster, stages "..tostring(all-g:all()).." are not on the graph")
+   assert((g:all()-all):size()==0,"Invalid configuration, stages "..tostring(g:all()-all).." are not clustered")
+   
+   for c in pairs(g:connectors()) do   
+      if c.producer then
+         if g:get_cluster(c.producer)~=g:get_cluster(c.consumer) and c:get_type()~="decoupled" then
+            error(string.format("Stages '%s' and '%s' are coupled and cannot be on different clusters",tostring(c.producer),tostring(c.consumer)))
+         end
       end
    end
    return true
@@ -294,11 +353,14 @@ end
 -- Proxy to run a graph (passing it to the kernel.run function
 -- if no controller was provided, use the default one
 -----------------------------------------------------------------------------
-function index.run(g,controller)
+function index.run(g,localport,controller)
    assert(is_graph(g),string.format("Invalid parameter #1 (graph expected, got '%s')",type(g)))
+   if not g.cluster then
+      g:part(g:all()):set_process()
+   end
    local flag,err=g:verify()
    if flag then
-      return leda.daemon.run(g,controller,host,port)
+      return leda.process.run(g,controller,localport)
    end
    error(err)
 end
@@ -309,8 +371,8 @@ end
 function index.dump(g)
    print('==== DUMP Stages ====')
    for s,_ in pairs(g:stages()) do 
-      print(string.format("Stage: name='%s' pending='%d' serial='%s' cluster='%s'",tostring(s),#s.pending,tostring(s.serial==true),tostring(g.cl[s])))
-      for k,v in pairs(g:get_ports(s)) do print(string.format("\tOutput: %s -> %s\t",tostring(k),tostring(v.consumer))) end
+      print(string.format("Stage: name='%s' pending='%d' serial='%s' cluster='%s'",tostring(s),#s.pending,tostring(s.serial==true),tostring(g:get_cluster(s))))
+      for k,v in pairs(g:get_output_ports(s)) do print(string.format("\tOutput: %s -> %s\t",tostring(k),tostring(v.consumer))) end
    end
    print('==== DUMP Connectors ====')
    for c,_ in pairs(g:connectors()) do 
@@ -319,43 +381,15 @@ function index.dump(g)
    print('==== DUMP Clusters ====')
 
    for c,_ in pairs(g:clusters()) do
-      print(string.format("Cluster: name='%s' serial='%s'",tostring(c),tostring(c:is_serial()==true)))
-      if c.daemons then
-         for i,d in ipairs(c.daemons) do
+      print(string.format("Cluster: name='%s' serial='%s'",tostring(c),tostring(c:has_serial()==true)))
+      if c.process_addr then
+         for i,d in ipairs(c.process_addr) do
             print(string.format("\tDaemon #%d: '%s:%d'",i,d.host,d.port))
          end
       end
    end
 
    dbg('========')
-end
-
-
-function index.create_cluster(g,...)
-   assert(is_graph(g),string.format("Invalid parameter #1 type (Graph expected, got %s)",type(g)))
-   local stages={...}
-   local i=2
-   local cluster=setmetatable({graph=g,daemons={}},cluster_metatable)
-   for _,s in ipairs(stages) do
-       if type(s)=='string' and not cluster.name then cluster.name=s 
-       else
-       assert(is_stage(s),string.format("Invalid parameter #%d type (stage expected, got %s)",i,type(s)))
-       i=i+1
-       assert(g:contains(s),string.format("Stage '%s' is not on the graph '%s'",tostring(s),tostring(g)))
-       
-      if g.cl[s] then
-         error(string.format("Stage '%s' is already in another cluster",tostring(s)))
-      end
-      cluster[s]=true
-      g.cl[s]=cluster
-      end
-   end
-   return cluster
-end
-
-function is_cluster(c) 
-  if getmetatable(c)==cluster_metatable then return true end
-  return false
 end
 
 function restore_metatables(g)
@@ -367,41 +401,7 @@ function restore_metatables(g)
       setmetatable(s,leda.leda_stage.metatable())
    end
    for cl in pairs(g:clusters()) do
-      setmetatable(cl,cluster_metatable)
+      setmetatable(cl,leda.leda_cluster.metatable())
    end
    return g
-end
-
-function cluster_metatable.__index.is_serial(cluster)
-   assert(is_cluster(cluster),string.format("Invalid parameter #1 (Cluster expected, got %s)",type(cluster)))
-   for s,_ in pairs(cluster) do
-      if is_stage(s) and s.serial then return true end
-   end
-   return false
-end
-
-function cluster_metatable.__index.contains(cluster,host,port)
-   for _,d in ipairs(cluster.daemons) do
-      if d.host==host and d.port==port then
-         return true
-      end
-   end
-   return false
-end
-
-function cluster_metatable.__index.add_daemon(cluster,host,port)
-   assert(is_cluster(cluster),string.format("Invalid parameter #1 (Cluster expected, got %s)",type(cluster)))
-   assert(type(host)=="string",string.format("Invalid parameter #2 (String expected, got %s)",type(host)))
-   port=port or 9999
-   cluster.daemons=cluster.daemons or {}
-   if cluster:is_serial() and #cluster.daemons>0 then
-      error("Cannot add more than one daemon for a cluster with a serial stage")
-   end
-   table.insert(cluster.daemons,leda.daemon.get_daemon(host,port))
-end
-
-function cluster_metatable.__index.set_daemon(cluster,host,port)
-   assert(is_cluster(cluster),string.format("Invalid parameter #1 (Cluster expected, got %s)",type(cluster)))
-   cluster.daemons={}
-   cluster:add_daemon(host,port)
 end

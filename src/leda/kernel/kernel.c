@@ -41,7 +41,7 @@ THE SOFTWARE.
 #include "extra/lmarshal.h"
 #include "extra/leda-io.h"
 
-#define __VERSION "0.2.0-beta5"
+#define __VERSION "0.2.0"
 
 #define CONNECTOR_TIMEOUT 2.0
 
@@ -65,7 +65,7 @@ int leda_send(lua_State *L) {
    }
    lua_pushcfunction(L,emmit);
    lua_pushinteger(L,id);
-   for(i=0;i<args;i++)
+   for(i=1;i<=args;i++)
       lua_pushvalue(L,i+1);
    lua_call(L,args+1,2);
    return 2;
@@ -83,13 +83,15 @@ int leda_run(lua_State * L) {
    main_graph=g;
    //second parameter must be a table for controller
    luaL_checktype(L,3, LUA_TTABLE);
-   //third parameter must be a socket descriptor for the daemon   
-   int daemon_fd=lua_tointeger(L,4);
+   //third parameter must be a socket descriptor for the process   
+   int process_fd=lua_tointeger(L,4);
    //initiate instances for the graph
    //queues are initially unbounded (-1 limit)
    instance_init(-1,-1);
-   stats_init(g->n_s);
-   event_init(daemon_fd);
+   #ifndef STATS_OFF
+      stats_init(g->n_s);
+   #endif
+   event_init(process_fd);
    
    //first, iterate through the stages
    //to push pending sends.

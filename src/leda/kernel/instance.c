@@ -52,7 +52,6 @@ queue ready_queue;
 
 /* defining external signal */
 extern SIGNAL_T queue_used_cond;
-extern SIGNAL_T queue_used_lock;
 
 /* Graph read-only gobal representation of the running graph */
 //g=NULL;
@@ -74,6 +73,37 @@ static void registerlib(lua_State * L,char const * name, lua_CFunction f) {
    lua_pop(L,2);
 }
 
+MUTEX_T require_cs;
+
+/* isolate require function from other threads */
+static int new_require(lua_State *L) {
+	int rc, i;
+	int args = lua_gettop( L);
+
+	lua_pushvalue( L, lua_upvalueindex(1));
+	for( i = 1; i <= args; ++ i)
+		lua_pushvalue( L, i);
+
+	MUTEX_LOCK( &require_cs);
+	rc = lua_pcall( L, args, 1, 0);
+	MUTEX_UNLOCK( &require_cs);
+
+	if (rc)
+		lua_error(L);   // error message already at [-1]
+
+	return 1;
+}
+
+int serialize_require(lua_State * L) {
+	lua_getglobal( L, "require" );
+	if (lua_isfunction( L, -1 )) {
+		lua_pushcclosure( L, new_require, 1);
+		lua_setglobal( L, "require" );
+	}
+	else lua_pop(L,1);
+	return 0;
+}
+
 static void openlibs(lua_State * L) {
    lua_cpcall(L,luaopen_base,NULL);
    lua_cpcall(L,luaopen_package,NULL);
@@ -89,22 +119,15 @@ static void openlibs(lua_State * L) {
 lua_State * new_lua_state(bool_t libs) {
    lua_State * L = luaL_newstate();
 
-   /*TODO 'lua.c' stop the collector during initialization, as pointed out
-    *           by the author the lualanes code. This is done in the following files:
-    *            @lua.c pmain line: 332 (lua 5.1.4)
-    *            @lua.c pmain line: 456 (lua 5.2.1)
-    *
-    *           so i'm doing in here too
-    */
-
    lua_gc( L, LUA_GCSTOP, 0);
    
-   if(libs) openlibs(L);
+   if(libs) {
+      openlibs(L);
+      serialize_require(L);
+   }
    else {
       lua_cpcall(L,luaopen_base,NULL);
-      //TODO pehaps it's good to load only the base library in this case?
    }
-   
    lua_gc( L, LUA_GCRESTART, 0);   
 	return L;
 }
@@ -120,9 +143,7 @@ void instance_destroy(instance i) {
 }
 
 /* Initialize instance subsystem
- * Params:     'g_par'  read-only graph representation 
- *
- *             'limit'  sets maximum size of all recycle queues created
+ * Params:    'limit'  sets maximum size of all queues created
  *                      -1    unbounded queue size
  *                      0     no instances will be stored
  *                      >0    sets size to 'limit'
@@ -142,7 +163,7 @@ void instance_init(size_t recycle_limit_t,size_t pending_limit_t) {
    
    number_of_instances = calloc(main_graph->n_s,sizeof(atomic));;
    
-
+   MUTEX_RECURSIVE_INIT( &require_cs );
    
    //for each stage of the graph, initiate queues and set limits
    for(i=0;i<main_graph->n_s;i++) {
@@ -164,17 +185,12 @@ void instance_init(size_t recycle_limit_t,size_t pending_limit_t) {
 }
 
 bool_t instance_try_push_pending_event(stage_id dst, event e) {
-   if(TRY_PUSH(event_queues[dst],e))
-      return TRUE;
-   //If we're here, there is no space left on the pending event queue
-   //now what to do?
-   //one option is to backpressure the pipeline (block the sender thread until
-   //someone consume an event
-   /*if(src && STAGE(src->stage)->backpressure) {
-      PUSH(event_queues[dst],e);
+   if(TRY_PUSH(event_queues[dst],e)) {
       SIGNAL_ALL(&queue_used_cond);
       return TRUE;
-   } */
+   }
+   //If we're here, there is no space left on the pending event queue
+
    return FALSE; //Could not send an event (the pending event queue is full)
 }
 
@@ -184,17 +200,12 @@ void push_ready_queue(instance i) {
    i->instance_number,STAGE(i->stage)->name);
    bool_t ret=TRY_PUSH(ready_queue,i);
    if(!ret) {
-       /*TODO   The ready queue is FULL, now what to do?
-       *
-       *       One option is to return an error code to the caller.
-       *
-       *       Another option is to do pipeline backpressure 
-       *       (block the sender stage until someone frees a
-       *       slot on the ready queue).
-       */
+       /*   The ready queue is FULL.
+       *       Block the sender stage until someone frees a
+       *       slot on the ready queue.      */
        PUSH(ready_queue,i);
    }
-   SIGNAL_ALL(&queue_used_cond);
+//   SIGNAL_ALL(&queue_used_cond);
 }
 
 int instance_wait_for_event(lua_State *L) {
@@ -261,7 +272,6 @@ void register_io_api(lua_State * L) {
    lua_rawset(L,-3);
    lua_setglobal(L,"__io");
    /* AIO epoll */
-   #ifndef _WIN32
    lua_newtable(L);
    lua_pushliteral(L,"close");
    lua_pushcfunction(L,epoll_close);
@@ -285,7 +295,6 @@ void register_io_api(lua_State * L) {
    lua_pushcfunction(L,epoll_lcreate);
    lua_rawset(L,-3);
    lua_setglobal(L,"__epoll");
-   #endif
 }
 
 void register_marshal_api(lua_State * L) {
@@ -323,14 +332,11 @@ void register_debug_api(lua_State * L) {
 
 
 void register_connector_api(lua_State * L) {
-   lua_pushcfunction(L,call);
-   lua_setglobal(L,"__call");
-
    lua_pushcfunction(L,emmit);
    lua_setglobal(L,"__emmit");
 
-   lua_pushcfunction(L,fork_call);
-   lua_setglobal(L,"__fork");
+   lua_pushcfunction(L,cohort);
+   lua_setglobal(L,"__cohort");
 }
 
 /* Try to aquire an instance. 
@@ -522,7 +528,7 @@ int instance_release(instance i) {
       instance_destroy(i);
       return -1; //cannot push instance (it shouldn't get here)
    }
-   SIGNAL_ALL(&queue_used_cond);
+//   SIGNAL_ALL(&queue_used_cond);
    _DEBUG("Instance: Instance %d of stage '%s' released\n",i->instance_number,STAGE(i->stage)->name);
    return 0;// ok
 }

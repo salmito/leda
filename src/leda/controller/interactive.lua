@@ -10,15 +10,16 @@ local base = _G
 local dbg = leda.debug.get_debug("Controller: Interactive: ")
 local plot=require('leda.utils.plot')
 local table,leda=table,leda
-local default_thread_pool_size=2
+local default_thread_pool_size=1
 local print,loadstring,pcall,os,string,pairs,ipairs,tostring,io,assert=
       print,loadstring,pcall,os,string,pairs,ipairs,tostring,io,assert
 local read=io.read
 local write=io.write
 local stderr=io.stderr
-local prompt='> '
+local prompt="leda-"..leda._VERSION..'> '
 kernel=leda.kernel
 local kernel=kernel
+leda.send=kernel.send
 
 module("leda.controller.interactive")
 
@@ -57,7 +58,7 @@ end
 local last_t={}
 local init_time=kernel.gettime()
 local gr=""
-
+local th={}
 
 function get_init(n)
    return function (g)
@@ -65,7 +66,7 @@ function get_init(n)
    pool_size=n or pool_size
    init_time=kernel.gettime()
    for i=1,n do
-      kernel.new_thread()
+      table.insert(th,kernel.new_thread())
       dbg("Thread %d created",i)
    end
    
@@ -73,7 +74,7 @@ function get_init(n)
   
    plot.plot_graph(g,fn..".dot")
 
-   local f=assert(io.popen("graph-easy "..fn..".dot --boxart","r"))
+   local f=assert(io.popen("graph-easy "..fn..".dot --boxart 2>/dev/null","r"))
    gr=assert(f:read('*a'))
    f:close()
    os.remove(fn)
@@ -85,19 +86,20 @@ function get_init(n)
             stderr:write("Quiting...\n")
             os.exit(0)
          elseif line == '+' then 
-            kernel.new_thread() 
+            table.insert(th,kernel.new_thread())
             stderr:write("\027[2J")
             stderr:write("Thread created...\n")
          elseif line == '-' then 
             kernel.kill_thread() 
             stderr:write("\027[2J")
             stderr:write("Thread killed...\n")
-         else
-            stderr:write("\027[2J")
+         elseif line~="" then
+--            stderr:write("\027[2J")
             eval_lua(line)
+            stderr:write("\n")
+         else
+            update(fn)
          end
-         stderr:write("\n")
-         update(fn)
          stderr:flush()
          line = readline(prompt)
       end
@@ -110,7 +112,6 @@ function update(fn)
    local rs=kernel.ready_queue_size()
    local rc=kernel.ready_queue_capacity()
    local stats=kernel.stats()
-   stderr:write("\n")
    stderr:write(gr)
    stderr:write("\n")
    if stats then
@@ -121,7 +122,7 @@ function update(fn)
       last_t[k]={v.events_pushed,kernel.gettime()}
       local l_e=v.events_pushed-last[1]
       local l_t=kernel.gettime()-last[2]
-      stderr:write(string.format("%d: name='%s' active=%d events=%d queue_size=%d (%d) executed=%d  latency=%.3fms throughput=%.1fev/s\n",k-1,tostring(v.name),v.active,v.events_pushed,v.event_queue_size,v.event_queue_capacity,v.times_executed,v.average_latency/1000,l_e/l_t))
+      stderr:write(string.format("%d: name='%s' ready=%d events=%d queue_size=%d (%d) executed=%d  latency=%.3fms throughput=%.1fev/s\n",k-1,tostring(v.name),v.active,v.events_pushed,v.event_queue_size,v.event_queue_capacity,v.times_executed,v.average_latency/1000,l_e/l_t))
    end
    end
 end

@@ -18,12 +18,13 @@
 typedef struct thread_data {
 	THREAD_T thread;
 	volatile int status;
+	volatile int destroy;
 } * thread;
 
 /* Thread main coroutine exit status*/
 enum return_status{ 
    ENDED=0xF1F21AB,
-   EMMIT_CONTINUATION_AND_PASS_THREAD,
+   EMMIT_COHORT,
    PCALL_ERROR,
    YIELDED
 };
@@ -63,8 +64,7 @@ int thread_new (lua_State *L);
 int thread_createmetatable (lua_State *L);
 int thread_kill (lua_State *L);
 
-int call(lua_State * L);
 int emmit(lua_State * L);
-int fork_call(lua_State * L);
+int cohort(lua_State * L);
 
 #endif //_THREAD_H_

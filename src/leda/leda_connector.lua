@@ -7,8 +7,8 @@
 -- Declare module and import dependencies
 -----------------------------------------------------------------------------
 local string,table,kernel = string,table,leda.kernel
-local getmetatable,setmetatable,type,tostring,assert,io=
-      getmetatable,setmetatable,type,tostring,assert,io
+local getmetatable,setmetatable,type,tostring,assert,io,error=
+      getmetatable,setmetatable,type,tostring,assert,io,error
 
 local dbg = leda.debug.get_debug("Connector: ")
 local dump = string.dump
@@ -49,17 +49,14 @@ function is_connector(c)
    return false
 end
 
-emmit="emmit"
-call="call"
-fork="fork"
+coupled="coupled"
+cohort="cohort"
+decoupled="decoupled"
+
 
 function index.get_type(c)
-   if c.method==emmit then
-      return "emmit"
-   elseif c.method==call then
-      return "call"
-   elseif c.method==fork then
-      return "fork"
+   if c.type=="coupled" or c.type=="decoupled" or c.type=="cohort" then
+      return c.type
    end
    error("Unkown connector type")
 end
@@ -68,19 +65,21 @@ end
 -- Creates a new connector and returns it
 -- param:   'c': table used to hold the connector representation
 -----------------------------------------------------------------------------    
-function new_connector(prod,port,cons,method)
+function new_connector(prod,port,cons,ctype)
    assert(leda.leda_stage.is_stage(prod) or prod==nil,string.format("Parameter #1 must be a stage (got %s)",type(prod)))
    assert(type(port)=="string" or type(port)=="number",string.format("Parameter #2 must be a string or number (got %s)",type(port)))
    assert(leda.leda_stage.is_stage(cons),string.format("Parameter #3 must be a stage (got %s)",type(cons)))
-   method=method or emmit
---   assert(type(method)=="function",string.format("Parameter #4 (method) must be a function (got %s)",type(method)))
+   ctype=ctype or decoupled
    
    local c=setmetatable({}, connector)
+
+   c.type=ctype 
+   assert(c:get_type(),string.format("Unknown connector type: %s",tostring(ctype)))
   
    c.producer=prod
    c.port=port
    c.consumer=cons
-   c.method=method 
+
    
    dbg("Created connector '%s'",tostring(c))
    return c

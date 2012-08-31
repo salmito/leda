@@ -56,7 +56,7 @@ stage graph_get_stage(graph g,stage_id id) {
    return g->s[id];
 }
 
-/** Build a graph internal representation for the graph defined in
+/** Build an internal representation for the graph defined in
  * in the stack on 'index'
  */
 graph build_graph_representation(lua_State *L, int index, graph g) {
@@ -66,8 +66,8 @@ graph build_graph_representation(lua_State *L, int index, graph g) {
    bool_t create_stages_id=FALSE;
    bool_t create_connectors_id=FALSE;
    bool_t create_clusters_id=FALSE;
-   bool_t create_daemons_id=FALSE;
-   
+   bool_t create_processes_id=FALSE;
+
    lua_getfield(L,index,"stagesid");
    if(lua_type(L,-1)!=LUA_TTABLE) {
       lua_pop(L,1);
@@ -98,15 +98,15 @@ graph build_graph_representation(lua_State *L, int index, graph g) {
    } 
    int clustersid=lua_gettop(L);
 
-   lua_getfield(L,index,"daemonsid");
+   lua_getfield(L,index,"processesid");
    if(lua_type(L,-1)!=LUA_TTABLE) {
       lua_pop(L,1);
-      create_daemons_id=TRUE;
+      create_processes_id=TRUE;
       lua_newtable(L); //Table to hold clustersid
       lua_pushvalue(L,-1);
-      lua_setfield(L,index,"daemonsid");
+      lua_setfield(L,index,"processesid");
    } 
-   int daemonsid=lua_gettop(L);
+   int processesid=lua_gettop(L);
 
    //struct graph_data * g=calloc(1,sizeof(struct graph_data));
    char const * str;
@@ -120,55 +120,53 @@ graph build_graph_representation(lua_State *L, int index, graph g) {
    g->name=gname;
    g->name_len=len;
    lua_pop(L,1); //pop the name field
-
-   //first, iterate through the daemons
-   lua_getfield(L, index, "count_daemons");
+   //first, iterate through the processes
+   lua_getfield(L, index, "count_processes");
    luaL_checktype(L, -1, LUA_TFUNCTION);
    lua_pushvalue(L,index);
    lua_call(L,1,1);
    luaL_checktype(L, -1, LUA_TNUMBER);
    g->n_d=lua_tointeger(L,-1);
-   lua_pop(L,1); //remove number_of_daemons
+   lua_pop(L,1); //remove number_of_processes
    
-   g->d=calloc(g->n_d,sizeof(leda_daemon));
-   lua_getfield(L,index,"daemons");
+   g->d=calloc(g->n_d,sizeof(leda_process));
+   lua_getfield(L,index,"processes");
    luaL_checktype(L, -1, LUA_TFUNCTION);
    lua_pushvalue(L,index);
    lua_call(L,1,1);
    luaL_checktype(L, -1, LUA_TTABLE);
    lua_pushnil(L);
    i=0;
+
    while (lua_next(L, -2) != 0) {
-      leda_daemon d=calloc(1,sizeof(struct daemon_data));
+      leda_process d=calloc(1,sizeof(struct process_data));
       lua_pop(L,1);
-      lua_getfield(L,-1,"host"); //push cluster.daemon[j].host
+      lua_getfield(L,-1,"host"); //push cluster.process[j].host
       str=lua_tolstring(L, -1, &len);
       char * dhost=malloc(len+1);
       memcpy(dhost,str,len);
       dhost[len]='\0';
       d->host_len=len;
       d->host=dhost;
-      lua_pop(L,1); //pop cluster.daemon[j].host
+      lua_pop(L,1); //pop cluster.process[j].host
 
-      lua_getfield(L,-1,"port"); //push cluster.daemon[j].port
+      lua_getfield(L,-1,"port"); //push cluster.process[j].port
       d->port=lua_tointeger(L,-1);
-      lua_pop(L,1); //pop cluster.daemon[j].port
-         
-      if(create_daemons_id) {
+      lua_pop(L,1); //pop cluster.process[j].port
+      if(create_processes_id) {
          lua_pushvalue(L,-1);
          lua_pushinteger(L,i);
-         lua_settable(L,daemonsid);
-         g->d[i++]=d;        
+         lua_settable(L,processesid);
+         g->d[i++]=d;
        } else {
          lua_pushvalue(L,-1);
-         lua_gettable(L,daemonsid);
+         lua_gettable(L,processesid);
          int idx=lua_tointeger(L,-1);
          g->d[idx]=d;
-         lua_pop(L,1); //pop daemon key
+         lua_pop(L,1); //pop process key
        }
-//       lua_pop(L,1); //pop daemon key
    }   
-   lua_pop(L,1); //pop daemons
+   lua_pop(L,1); //pop processes
    
    //then, iterate through the clusters
    lua_getfield(L, index, "count_clusters");
@@ -187,7 +185,7 @@ graph build_graph_representation(lua_State *L, int index, graph g) {
    luaL_checktype(L, -1, LUA_TTABLE);
    lua_pushnil(L);
    i=0;
-   
+
    while (lua_next(L, -2) != 0) {
       cluster cl=calloc(1,sizeof(struct cluster_data));
       lua_getfield (L, -2, "name"); //push the name field of cluster
@@ -198,8 +196,8 @@ graph build_graph_representation(lua_State *L, int index, graph g) {
       cl->name=cname;
       cl->name_len=len;
       lua_pop(L,1); //pop the name field
-      
-      lua_getfield(L,-2,"contains");
+
+      lua_getfield(L,-2,"is_local");
       luaL_checktype(L, -1, LUA_TFUNCTION);
       lua_pushvalue(L,-3);
       lua_pushvalue(L,2);
@@ -208,41 +206,40 @@ graph build_graph_representation(lua_State *L, int index, graph g) {
       cl->local=lua_toboolean(L,-1);
       lua_pop(L,1);
 
-      lua_getfield (L, -2, "daemons");
+      lua_getfield (L, -2, "process_addr");
 
       if(lua_type(L,-1)==LUA_TTABLE) {
-         cl->n_daemons=lua_objlen(L,-1);
-         cl->daemons=calloc(cl->n_daemons,sizeof(daemon_id));
-         for(j=1;j<=cl->n_daemons;j++) {
-            lua_rawgeti(L,-1,j); //push cluster.daemon[j]
+         cl->n_processes=lua_objlen(L,-1);
+         cl->processes=calloc(cl->n_processes,sizeof(process_id));
+         for(j=1;j<=cl->n_processes;j++) {
+            lua_rawgeti(L,-1,j); //push cluster.process[j]
             lua_pushvalue(L,-1);
-            lua_gettable(L,daemonsid);
+            lua_gettable(L,processesid);
             int idx=lua_tointeger(L,-1);
             lua_pop(L,1);
-            cl->daemons[j-1]=idx;
-            lua_pop(L,1);//pop cluster.daemon[j]
+            cl->processes[j-1]=idx;
+            lua_pop(L,1);//pop cluster.process[j]
          }
       } else {
-         cl->daemons=NULL;
-         cl->n_daemons=0;
+         luaL_error(L,"Cluster does not have any process");
       }
       if(create_clusters_id) {
-         lua_pushvalue(L,-2);
+         lua_pushvalue(L,-3);
          lua_pushinteger(L,i);
          lua_settable(L,clustersid);
          g->cl[i++]=cl;
-         lua_pop(L,2); //pop cluster[key].daemons && cluster key
+         lua_pop(L,2); //pop cluster[key].processes && cluster key
        } else {
-         lua_pushvalue(L,-2);
+         lua_pushvalue(L,-3);
          lua_gettable(L,clustersid);
          int idx=lua_tointeger(L,-1);
          g->cl[idx]=cl;
-         lua_pop(L,3); //pop cluster[key].daemons && cluster key
+         lua_pop(L,3); //pop cluster[key].processes && cluster key
        }
-
+       
    }
    lua_pop(L,1); //pop clusters
-   
+
    lua_getfield(L, index, "count_stages");
    luaL_checktype(L, -1, LUA_TFUNCTION);
    lua_pushvalue(L,index);
@@ -393,7 +390,7 @@ graph build_graph_representation(lua_State *L, int index, graph g) {
       int idx=lua_tointeger(L,-1);
       lua_pop(L,1);
 
-      lua_getfield(L,index,"get_ports");
+      lua_getfield(L,index,"get_output_ports");
       luaL_checktype(L, -1, LUA_TFUNCTION);
       lua_pushvalue(L,index);
       lua_pushvalue(L,-3);
@@ -439,7 +436,6 @@ graph build_graph_representation(lua_State *L, int index, graph g) {
             } else {
                lua_pop(L,1);
             }
-
             if(s->output[k].value<0) {
                return NULL;
             }
@@ -507,7 +503,7 @@ int graph_destroy(lua_State* L) {
    
    for(i=0;i<g->n_cl;i++) {
       NULL_SAFE_FREE(g->cl[i]->name);
-      NULL_SAFE_FREE(g->cl[i]->daemons);
+      NULL_SAFE_FREE(g->cl[i]->processes);
       NULL_SAFE_FREE(g->cl[i]);
    }
    NULL_SAFE_FREE(g->cl);
@@ -528,9 +524,10 @@ int graph_dump(lua_State * L) {
    fprintf(stderr,"==== Dumping graph: '%s' ====\n",g->name);
    fprintf(stderr,"==== Clusters (%d) ====\n",(int)g->n_cl);
    for(i=0;i<g->n_cl;i++) {
-      fprintf(stderr,"\tCluster: id=%d name='%s' daemons='%d' local='%d'\n",i,g->cl[i]->name,(int)g->cl[i]->n_daemons,g->cl[i]->local);
-      for(j=0;j<g->cl[i]->n_daemons;j++) {
-         fprintf(stderr,"\t\tDaemon #%d: '%s:%d'\n",j+1,g->d[g->cl[i]->daemons[j]]->host,g->d[g->cl[i]->daemons[j]]->port);
+      printf("AE %p\n",g->cl[i]);
+      fprintf(stderr,"\tCluster: id=%d name='%s' processes='%d' local='%d'\n",i,g->cl[i]->name,(int)g->cl[i]->n_processes,g->cl[i]->local);
+      for(j=0;j<g->cl[i]->n_processes;j++) {
+         fprintf(stderr,"\t\tProcess #%d: '%s:%d'\n",j+1,g->d[g->cl[i]->processes[j]]->host,g->d[g->cl[i]->processes[j]]->port);
       }
    }
    fprintf(stderr,"==== Stages (%d) ====\n",(int)g->n_s);
@@ -557,9 +554,9 @@ int graph_dump(lua_State * L) {
    return 0;
 }
 
-/*create a unique thread metatable*/
+/*create a unique graph metatable*/
 int graph_createmetatable (lua_State *L) {
-	/* Create thread metatable */
+	/* Create graph metatable */
 	if (!luaL_newmetatable (L, GRAPH_METATABLE)) {
 		return 0;
 	}

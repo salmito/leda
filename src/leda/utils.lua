@@ -3,22 +3,10 @@ require "leda"
 -----------------------------------------------------------------------------
 -- Defining globals for easy access to the leda main API functions
 -----------------------------------------------------------------------------
-stage,connector,graph=stage or leda.stage,connector or leda.connector,graph or leda.graph
+stage,connector,graph,cluster=stage or leda.stage,connector or leda.connector,graph or leda.graph, cluster or leda.cluster
 
 leda.utils={}
 local utils=leda.utils
-
------------------------------------------------------------------------------
--- Defining auxiliary functions
------------------------------------------------------------------------------
-function utils.insert_proxy(s2,s1,key1,key2)
-   key1=key1 or 1
-   key2=key2 or 1
-   local con=s1.output[key1] or leda.connector()
-   s1.output[key1]=leda.connector()
-   s2.input=s1.output[key1]
-   s2.output[key2]=con
-end
 
 -----------------------------------------------------------------------------
 -- Switch stage selects an specific output and send pushed 'data'
@@ -27,14 +15,14 @@ end
 -----------------------------------------------------------------------------
 utils.switch={
    handler=function (...)
-   local args={...}
+      local args={...}
       local out=leda.get_output(args[1])
       if out then 
          out:send(select(2,...)) 
        else
-         error(string.format("Output '%s' does not exist",tostring(n)))
+         error(string.format("Output '%s' does not exist",tostring(args[1])))
       end
-      end
+   end
 }
 
 -----------------------------------------------------------------------------
@@ -45,7 +33,8 @@ utils.broadcast={
    handler=function (...)
    for _,connector in pairs(leda.output) do
            connector:send(...)
-      end end
+      end 
+   end
 }
 
 -----------------------------------------------------------------------------
@@ -76,11 +65,10 @@ utils.eval={
 }
 
 -----------------------------------------------------------------------------
--- Print received data
+-- Print received data and pass it if connected
 -- param:   '...':   data to be printed
 -----------------------------------------------------------------------------
 utils.print={
-	"Printer",
    handler=
    function (...)
       print(...)
@@ -88,34 +76,21 @@ utils.print={
    end
 }
 
------------------------------------------------------------------------------
--- Serialize arguments into a string
--- param:   '...':   data to be serialized
------------------------------------------------------------------------------
-utils.serializer={
-   handler=
-   function (...)
-      local str=leda.encode({...})
-      leda.send(1,str)
-   end,
-   bind=
-   function(self) 
-      assert(#self.output[1].consumers>0,"Serializer must have a consumer at output [1]") 
-   end
-}
-
-utils.make_pipeline=function(...)
+utils.linear_pipeline=function(...)
    local arg={...}
-   local s={"Linear Pipeline"}
+   local g=leda.graph{}
+
    local last_s=nil
+
    for i,v in ipairs(arg) do
-      assert(type(v)=="function","Argument #"..tostring(i).." must be a function")
-      local stage=leda.stage{"Stage "..tostring(i),handler=v}
-      s:insert(stage)
-      if last_s then last_s:connect(stage) end
+      assert(type(v) or is_stage(v)=="function","Argument #"..tostring(i).." must be a function or a stage")
+      local stage=leda.stage(v)
+      print(stage)
+      if last_s then g:add(last_s:connect(stage)) end
+
       last_s=stage
    end
-   return leda.graph(s)
+   return g
 end
 
 return utils

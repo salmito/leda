@@ -22,22 +22,30 @@ function plot_graph(leda_graph,out)
    if leda_graph.start then
       start_node=g:node{"START",shape='Mdiamond'}
    end
-   local main_cluster=g:cluster{'Main'}
-   main_cluster.label="Main"
+
    local clusters={}
+   
    for s in pairs(leda_graph:stages()) do
       local sname=tostring(s)
       if s.serial then
          sname="["..sname.."]"
       end
-      local cl=main_cluster
       local s_cl=leda_graph:get_cluster(s)
-         clusters[s]=clusters[s] or g:cluster{tostring(s_cl)}
-         cl=clusters[s]
-         clusters[s].label=tostring(s_cl)
-         if s_cl:is_serial() then
-            clusters[s].label="["..tostring(s_cl).."]"
-         end
+      if s_cl then
+--         if #s_cl.process_addr==0 then         
+            clusters[s]=clusters[s] or g:cluster{tostring(s_cl)}
+            cl=clusters[s]
+            clusters[s].label=tostring(s_cl)
+            if s_cl:has_serial() then
+               clusters[s].label="["..tostring(s_cl).."]"
+            end
+--         else
+--             for i,addr in ipairs(s_cl.process_addr) do    
+--             end                   
+--         end
+      else 
+         cl=g 
+      end
       nodes[s]=cl:node{sname}
 --      s.cluster=g:cluster("Sub"..tostring(leda_graph.stages[i]))
    end
@@ -49,16 +57,16 @@ function plot_graph(leda_graph,out)
       local color=nil
       local style=nil
       local arrowType=nil
-      if c:get_type()=='call' then
+      if c:get_type()=='coupled' then
          color="#FF0000"
          arrowType="dot"
-      elseif c:get_type()=='fork' then
-         color="#0000FF"
-         arrowType="invdot"
-      elseif c:get_type()=='emmit' then
+      elseif c:get_type()=='decoupled' then
          if not c.producer or leda_graph:get_cluster(c.producer) ~= leda_graph:get_cluster(c.consumer) then
             style="dashed"
          end
+      elseif c:get_type()=='cohort' then
+         color="#0000FF"
+         arrowType="invdot"
       end
       g:edge{node,nodes[c.consumer],label=tostring(c),color=color,fontcolor=color,style=style,arrowhead=arrowType}
    end

@@ -68,18 +68,17 @@ for key,connector in pairs(leda.stage.__output) do
    local c,err={}
    --load the sendf function of the connector with 'key'
 --   c.sendf,err=loadstring(connector.__sendf)
-   if connector.__sendf=="emmit" then 
-      c.sendf=__emmit
-   elseif connector.__sendf=="call" then 
-      c.sendf=__call
-   elseif connector.__sendf=="fork" then 
-      c.sendf=__fork
+   if connector.__sendf=="cohort" then 
+      c.sendf=__cohort
    else
-      error("Error loading send function for stage '"..leda.stage.name.."': Unknown connector type")
+      c.sendf=__emmit
+--      error("Error loading send function for stage '"..leda.stage.name.."': Unknown connector type")
    end
+
    assert(type(c.sendf)=="function","Sendf field must be a function")
+
    c.consumer=connector.__consumer;
-   c.send=function(self,...) return self.sendf(self.consumer,...) end
+   c.send=function(self,...) return self.sendf(c.consumer,...) end
    leda.output[key]=c
 end
 

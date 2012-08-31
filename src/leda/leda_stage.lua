@@ -71,30 +71,30 @@ end
 -----------------------------------------------------------------------------
 function new_stage(t,init,name,bind,serial)
    local s={}
-   if type(t)=="function" or type(t)=="string" then  -- arg1=handler, arg2=init, arg3=name, ...
+   if type(t)=="function" then  -- arg1=handler, arg2=init, arg3=name, ...
       s.handler=t
       s.init=init
       s.name=name
       s.bind=bind
       s.serial=serial
+   elseif type(t) == "table" and not is_stage(t) then
+      s.handler=t.handler
+      assert(type(s.handler)=="function",string.format("Stage's event handler field must be a function (got %s)",type(s.handler)))
+
+      s.init=t.init
+      s.name=t.name
+      s.bind=t.bind
+      s.serial= t.serial
    elseif is_stage(t) then
       s.handler=t.handler
       s.init=t.init
       s.bind=t.bind
-      s.name=t.name.."'"
+--      s.name=t.name.."'"
       s.serial=t.serial
-   elseif type(t) == "table" then
-      s=t
-      s.handler=s.handler or s[1]
-      s.init=s.init or s[2]
-      s.name=s.name or s[3]
-      s.bind=s.bind or s[4]
-      s.serial= s.serial or s[5]
    end
-   
-   setmetatable(s,stage)
+
+   s=setmetatable(s,stage)
  
-   assert(type(s.handler)=="function",string.format("Stage's event handler field must be a function (got %s)",type(s.handler)))
    assert(type(s.init)=="function" or type(s.init)=="nil",string.format("Stage's init field must be a function or nil",type(s.init)))
 
    s.handler=kernel.encode(s.handler)

@@ -9,12 +9,12 @@
 #define STAGE(i) main_graph->s[i]
 #define CONNECTOR(i) main_graph->c[i]
 #define CLUSTER(i) main_graph->cl[i]
-#define DAEMON(i) main_graph->d[i]
+#define PROCESS(i) main_graph->d[i]
 
 typedef size_t stage_id;
 typedef size_t connector_id;
 typedef size_t cluster_id;
-typedef size_t daemon_id;
+typedef size_t process_id;
 
 
 typedef struct {
@@ -51,17 +51,17 @@ typedef struct connector_data {
    int unique_id;
 } * connector;
 
-typedef struct daemon_data {
+typedef struct process_data {
    char const * host;
    size_t host_len;
    int port;
-} * leda_daemon;
+} * leda_process;
 
 typedef struct cluster_data {
    char const * name;
    size_t name_len;
-   daemon_id * daemons;
-   size_t n_daemons;
+   process_id * processes;
+   size_t n_processes;
    bool_t local;
    int unique_id;
 } * cluster;
@@ -74,7 +74,7 @@ typedef struct graph_data {
    size_t n_c;
    cluster * cl;
    size_t n_cl;   
-   leda_daemon * d;
+   leda_process * d;
    size_t n_d;
    char const * name;
    size_t name_len;
