@@ -56,6 +56,7 @@ local function eval_lua(line)
 end
 
 local last_t={}
+local last_t2={}
 local init_time=kernel.gettime()
 local gr=""
 local th={}
@@ -111,18 +112,32 @@ function update(fn)
    local ps=kernel.thread_pool_size()
    local rs=kernel.ready_queue_size()
    local rc=kernel.ready_queue_capacity()
-   local stats=kernel.stats()
+   local stats,cstats=kernel.stats()
    stderr:write(gr)
    stderr:write("\n")
    if stats then
    stderr:write(string.format("\nTotal execution time: %.3fs\n",kernel.gettime()-init_time))
    stderr:write(string.format("Thread_pool_size=%d\tReady_queue_size=%d\tReady_queue_capacity=%d\n",ps,rs,rc))
+   stderr:write("===== Stages =====\n")
    for k,v in ipairs(stats) do 
-      local last=last_t[k] or {0,0}
-      last_t[k]={v.events_pushed,kernel.gettime()}
-      local l_e=v.events_pushed-last[1]
-      local l_t=kernel.gettime()-last[2]
-      stderr:write(string.format("%d: name='%s' ready=%d events=%d queue_size=%d (%d) executed=%d  latency=%.3fms throughput=%.1fev/s\n",k-1,tostring(v.name),v.active,v.events_pushed,v.event_queue_size,v.event_queue_capacity,v.times_executed,v.average_latency/1000,l_e/l_t))
+      if v.events_pushed>0 or v.times_executed>0 then
+         local last=last_t[k] or {0,0}
+         last_t[k]={v.events_pushed,kernel.gettime()}
+         local l_e=v.events_pushed-last[1]
+         local l_t=kernel.gettime()-last[2]
+         stderr:write(string.format("%d: name='%s' ready=%d maxpar=%d events=%d queue_size=%d executed=%d errors=%d latency=%.3fms throughput=%.1fev/s\n",
+         k-1,tostring(v.name), v.active, v.maxpar, v.events_pushed, v.event_queue_size, v.times_executed, v.errors, v.average_latency/1000, l_e/l_t))
+      end
+   end
+   stderr:write("===== Connectors =====\n")
+   for k,v in ipairs(cstats) do
+      if  v.events_pushed > 0 then
+         local last=last_t2[k] or {0,0}
+         last_t2[k]={v.events_pushed,kernel.gettime()}
+         local l_e=v.events_pushed-last[1]
+         local l_t=kernel.gettime()-last[2]
+         stderr:write(string.format("%d: name='%s.%s -> %s' events=%d latency=%.3fms throughput=%.1fev/s\n",k-1, tostring(v.producer), tostring(v.key), tostring(v.consumer) ,v.events_pushed,v.average_latency/1000,l_e/l_t))
+      end
    end
    end
 end

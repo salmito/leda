@@ -20,6 +20,7 @@ int epoll_add_read(lua_State *L);
 int epoll_add_read_write(lua_State *L);
 int epoll_remove_descriptor(lua_State *L);
 int epoll_lcreate(lua_State *L);
+int socket_flush(lua_State *L);
 #endif //_WIN32
 
 #endif// _LEDA_IO_H_

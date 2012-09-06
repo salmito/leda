@@ -39,6 +39,11 @@ function plot_graph(leda_graph,out)
             if s_cl:has_serial() then
                clusters[s].label="["..tostring(s_cl).."]"
             end
+            if s_cl.process_addr then
+            for _,proc in ipairs(s_cl.process_addr) do
+               clusters[s].label=clusters[s].label..string.format("\\n%s:%d",proc.host,proc.port)
+            end
+            end
 --         else
 --             for i,addr in ipairs(s_cl.process_addr) do    
 --             end                   

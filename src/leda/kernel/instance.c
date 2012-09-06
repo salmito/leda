@@ -46,8 +46,8 @@ int leda_sleep(lua_State * L);
 */
 queue * recycle_queues;
 queue * event_queues;
+atomic * recycle_queue_limits;
 atomic * number_of_instances;
-int * recycle_queue_limits,* event_queue_limits;
 queue ready_queue;
 
 /* defining external signal */
@@ -105,8 +105,10 @@ int serialize_require(lua_State * L) {
 }
 
 static void openlibs(lua_State * L) {
-   lua_cpcall(L,luaopen_base,NULL);
-   lua_cpcall(L,luaopen_package,NULL);
+   lua_pushcfunction(L,luaopen_base);
+   lua_pcall(L,0,0,0);
+   lua_pushcfunction(L,luaopen_package);
+   lua_pcall(L,0,0,0);
    registerlib(L,"io", luaopen_io);
    registerlib(L,"os", luaopen_os);
    registerlib(L,"table", luaopen_table);
@@ -126,7 +128,8 @@ lua_State * new_lua_state(bool_t libs) {
       serialize_require(L);
    }
    else {
-      lua_cpcall(L,luaopen_base,NULL);
+      lua_pushcfunction(L,luaopen_base);
+      lua_pcall(L,0,0,0);
    }
    lua_gc( L, LUA_GCRESTART, 0);   
 	return L;
@@ -137,7 +140,7 @@ void instance_destroy(instance i) {
    //Lock protected subtract
    SUB(number_of_instances[i->stage],1);
    time_d t=now_secs()-i->init_time;
-   STATS_UPDATE_TIME(i->stage,(int)(t*1000000));
+   STATS_UPDATE_TIME(i->stage,(long int)(t*1000000));
    lua_close(i->L);
    free(i);
 }
@@ -156,12 +159,11 @@ void instance_init(size_t recycle_limit_t,size_t pending_limit_t) {
 
    //allocating queue vector (pointers)
    recycle_queues=calloc(main_graph->n_s,sizeof(queue));
-   recycle_queue_limits=calloc(main_graph->n_s,sizeof(int));
+   recycle_queue_limits=calloc(main_graph->n_s,sizeof(atomic));
 
    event_queues=calloc(main_graph->n_s,sizeof(queue));
-   event_queue_limits=calloc(main_graph->n_s,sizeof(int));
-   
-   number_of_instances = calloc(main_graph->n_s,sizeof(atomic));;
+  
+   number_of_instances = calloc(main_graph->n_s,sizeof(atomic));
    
    MUTEX_RECURSIVE_INIT( &require_cs );
    
@@ -174,19 +176,18 @@ void instance_init(size_t recycle_limit_t,size_t pending_limit_t) {
 
       if(STAGE(i)->serial) {
          queue_set_capacity(recycle_queues[i],1);
-         recycle_queue_limits[i]=1;
+         recycle_queue_limits[i]=atomic_new(1);
       } else {
          queue_set_capacity(recycle_queues[i],recycle_limit_t);
-         recycle_queue_limits[i]=recycle_limit_t;
+         recycle_queue_limits[i]=atomic_new(recycle_limit_t);
       }
       queue_set_capacity(event_queues[i],pending_limit_t);
-      event_queue_limits[i]=pending_limit_t;
    }
 }
 
 bool_t instance_try_push_pending_event(stage_id dst, event e) {
    if(TRY_PUSH(event_queues[dst],e)) {
-      SIGNAL_ALL(&queue_used_cond);
+//      SIGNAL_ALL(&queue_used_cond);
       return TRUE;
    }
    //If we're here, there is no space left on the pending event queue
@@ -205,7 +206,6 @@ void push_ready_queue(instance i) {
        *       slot on the ready queue.      */
        PUSH(ready_queue,i);
    }
-//   SIGNAL_ALL(&queue_used_cond);
 }
 
 int instance_wait_for_event(lua_State *L) {
@@ -314,15 +314,21 @@ void register_sock_api(lua_State * L) {
    lua_pushliteral(L,"unwrap");
    lua_pushcfunction(L,leda_unwrap_sock);
    lua_rawset(L,-3);
+   lua_pushliteral(L,"wait_io");
+   lua_pushcfunction(L,wait_io);
+   lua_rawset(L,-3);
+   lua_pushliteral(L,"flush");
+   lua_pushcfunction(L,socket_flush);
+   lua_rawset(L,-3);   
    lua_setglobal(L,"__socket");
- 
 }
 
 
 void register_debug_api(lua_State * L) {
    lua_pushcfunction(L,leda_sleep);
    lua_setglobal(L,"__sleep");
-   
+   lua_pushcfunction(L,leda_gettime);
+   lua_setglobal(L,"__gettime");
    lua_pushcfunction(L,instance_wait_for_event);
    lua_setglobal(L,"__wait_event");
    lua_pushcfunction(L,instance_peek_for_event);
@@ -348,9 +354,9 @@ instance instance_wait(stage_id s) {
    instance ret=instance_aquire(s);
    if(ret==NULL) {
       POP(recycle_queues[s],ret);
-      ret->init_time=now_secs();
-      STATS_ACTIVE(ret->stage);
    }
+   ret->init_time=now_secs();
+   STATS_ACTIVE(ret->stage);
    return ret; //released instance
 }
 
@@ -373,9 +379,9 @@ instance instance_aquire(stage_id s) {
    
    //If not (beacuse the recycle queue was empty) verify if there
    //is space on the recycle queue for one more instance
-   if(READ(number_of_instances[s])==recycle_queue_limits[s]) {
-      _DEBUG("Instance: Error: No more instances allowed for stage '%s', (%ld == %d)\n",
-      STAGE(s)->name,READ(number_of_instances[s]),recycle_queue_limits[s]);
+   if(READ(number_of_instances[s])==READ(recycle_queue_limits[s])) {
+      _DEBUG("Instance: Error: No more instances allowed for stage '%s', (%ld == %ld)\n",
+      STAGE(s)->name,READ(number_of_instances[s]),READ(recycle_queue_limits[s]));
       return NULL;//No more instances allowed for this stage
    }
    
@@ -441,16 +447,14 @@ instance instance_aquire(stage_id s) {
       lua_pushlstring (ret->L, CONNECTOR(c)->send, CONNECTOR(c)->send_len); //value
       lua_settable(ret->L,-3); //Set __output[key].__sendf
 
-      //put consumers ids
+      //push connector id
+      lua_pushliteral(ret->L,"__id"); //key
+      lua_pushinteger (ret->L, c); //value
+      lua_settable(ret->L,-3); //Set __output[key].__id
+
+      //push consumers ids
       lua_pushliteral(ret->L,"__consumer"); //key
       lua_pushinteger(ret->L,(int)CONNECTOR(c)->c);
-     // printf("CONSUMER %d %d\n",c,(int)CONNECTOR(c)->c);
-//      lua_newtable(ret->L); //value __output[key].__consumers
-//      int k;
-      /*for(k=1;k<=CONNECTOR(c)->n_c;k++) {
-         lua_pushinteger(ret->L,(int)CONNECTOR(c)->c[k-1]); //consumer[k-1]
-         lua_rawseti(ret->L,-2,k);
-      }*/
       lua_settable(ret->L,-3); //Set __output[key].__consumer=value
       
       lua_settable(ret->L,-3); //Set __output[key]=value
@@ -491,46 +495,115 @@ int event_queue_size(stage_id s) {
    return queue_size(event_queues[s]);
 }
 
+int recycle_queue_capacity(stage_id s) {
+   return queue_capacity(recycle_queues[s]);
+}
+
 int event_queue_capacity(stage_id s) {
    return queue_capacity(event_queues[s]);
 }
 
-/* Release a instance, if the queue is full (TRY_PUSH will fail),
- * destroy it.
- */
+/* Release a instance, if the recycle queue is full, destroy it. */
 int instance_release(instance i) {
    lua_settop(i->L,0); //empty the instance's stack
-   
+
    time_d t=now_secs()-i->init_time;
-
-   STATS_UPDATE_TIME(i->stage,(int)(t*1000000));
-
+   STATS_UPDATE_TIME(i->stage,(long int)(t*1000000));
+   
    event e;
-   if(TRY_POP(event_queues[i->stage],e)) { 
-      //There are pending events waiting for this instance to finish
-      
-      lua_settop(i->L,0);
-      
-      //Get the  main coroutine of the instance's handler
-      lua_getglobal(i->L, "handler");
-      //push arguments to instance
-      i->args=restore_event_to_lua_state(i->L,&e);
-      
-      i->init_time=now_secs();
-      STATS_ACTIVE(i->stage);
-      push_ready_queue(i);
-      _DEBUG("Instance: Instance %d of stage '%s' popped a pending event.\n",
-         i->instance_number,STAGE(i->stage)->name);
-      return 0;
+   bool_t has_event=TRY_POP(event_queues[i->stage],e);
+   instance new=NULL; 
+   if(has_event) {
+      while(has_event) { 
+         new=instance_aquire(i->stage);
+         if(!new) break;
+         //There are pending events waiting and parallel instances available   
+         lua_settop(new->L,0);
+         
+         //Get the  main coroutine of the instance's handler
+         lua_getglobal(new->L, "handler");
+         //push arguments to instance
+         new->args=restore_event_to_lua_state(new->L,&e);
+         new->init_time=now_secs();
+         push_ready_queue(new);
+         _DEBUG("Instance: Instance %d of stage '%s' popped a pending event.\n",
+            new->instance_number,STAGE(new->stage)->name);
+         
+         has_event=TRY_POP(event_queues[i->stage],e);
+      }
+      if(has_event) {
+         //There are still pending events waiting for this instance to finish     
+         lua_settop(i->L,0);
+         //Get the  main coroutine of the instance's handler
+         lua_getglobal(i->L, "handler");
+         //push arguments to instance
+         i->args=restore_event_to_lua_state(i->L,&e);
+         i->init_time=now_secs();
+         push_ready_queue(i);
+         
+         _DEBUG("Instance: Instance %d of stage '%s' popped a pending event.\n",
+            i->instance_number,STAGE(i->stage)->name);
+        return 0;
+      }
    }
-
+   STATS_INACTIVE(i->stage);
    if(!TRY_PUSH(recycle_queues[i->stage],i)) {
       instance_destroy(i);
       return -1; //cannot push instance (it shouldn't get here)
    }
-//   SIGNAL_ALL(&queue_used_cond);
    _DEBUG("Instance: Instance %d of stage '%s' released\n",i->instance_number,STAGE(i->stage)->name);
    return 0;// ok
+}
+
+int instance_set_maxpar(lua_State * L) {
+   queue q=NULL;
+   int i=lua_tointeger(L,1);
+   int cap=-1;
+   if(!lua_isnumber(L,2)) {
+      cap=i;
+       if(cap<-1) {
+         lua_pushnil(L);
+         lua_pushliteral(L,"Invalid value");
+         return 2;
+      }
+      for(i=0;i<main_graph->n_s;i++) {
+         if(!STAGE(i)->serial) {
+            queue_set_capacity(recycle_queues[i],cap);
+            STORE(recycle_queue_limits[i],cap);
+         }
+      }
+      lua_pushboolean(L,1);
+      return 1;      
+   }
+   
+   cap=lua_tointeger(L,2);
+   if(cap<-1) {
+         lua_pushnil(L);
+         lua_pushliteral(L,"Invalid value");
+         return 2;
+   }
+   if(i<0 || i>=main_graph->n_s) {
+         lua_pushnil(L);
+         lua_pushliteral(L,"Invalid stage id");
+         return 2;
+   } else {
+      q=recycle_queues[i];
+   }
+   if(!q) {
+         lua_pushnil(L);
+         lua_pushliteral(L,"Queue error");
+         return 2;
+   }
+   if(STAGE(i)->serial) {
+         lua_pushnil(L);
+         lua_pushliteral(L,"Cannot change maxpar of a serial stage");
+         return 2;
+   }
+
+   queue_set_capacity(q,cap);
+   STORE(recycle_queue_limits[i],cap);
+   lua_pushboolean(L,1);
+   return 1;
 }
 
 /* Cleanup the instance subsystem and destroy all recycle queues.
@@ -544,10 +617,10 @@ void instance_end() {
          queue_free(recycle_queues[i]);
          queue_free(event_queues[i]);
          atomic_free(number_of_instances[i]);
+         atomic_free(recycle_queue_limits[i]);
     }
    free(number_of_instances);
    free(recycle_queue_limits);
-   free(event_queue_limits);
    free(recycle_queues);
    free(event_queues);
 }

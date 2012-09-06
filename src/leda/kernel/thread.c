@@ -126,12 +126,24 @@ void thread_resume_instance(instance i) {
          break;
          
       case PCALL_ERROR:
+         STATS_UPDATE_ERROR(i->stage,1);
+         STATS_INACTIVE(i->stage);
          instance_destroy(i);
          break;
          
       case EMMIT_COHORT:
          lua_remove(i->L,1);
          emmit_cohort(i);
+         break;
+
+      case WAIT_IO:
+         lua_remove(i->L,1);
+         event_wait_io(i);
+         break;
+
+      case SLEEP:
+         lua_remove(i->L,1);
+         event_sleep(i);
          break;
          
       case YIELDED: 
@@ -143,8 +155,6 @@ void thread_resume_instance(instance i) {
          fprintf(stderr,"Error, cannot resume main coroutine of stage '%s'\n",STAGE(i->stage)->name);
          instance_destroy(i);
    }
- 
-
 }
 
 /* Put the current executing instance in the tail of the ready queue */
@@ -163,6 +173,25 @@ void emmit_self(instance i) {
    push_ready_queue(i);
 }
 
+int wait_io(lua_State * L) {
+   //Push status code WAIT_IO to the bottom of the stack
+   lua_pushinteger(L,WAIT_IO);
+   lua_insert(L,1);
+   int args=lua_gettop(L);
+   //Yield current instance handler
+   return lua_yield(L,args);
+}
+
+int leda_sleep(lua_State * L) {
+   //Push status code SLEEP to the bottom of the stack
+   lua_pushinteger(L,SLEEP);
+   lua_insert(L,1);
+   int args=lua_gettop(L);
+   //Yield current instance handler
+   return lua_yield(L,args);
+}
+
+
 /* Caller thread has yielded with code EMMIT_COHORT, therefore
  * pass direcly to the aquired instance and put the continuaiton
  * of the current instance on the ready queue 
@@ -175,7 +204,10 @@ void emmit_self(instance i) {
  */
 void emmit_cohort(instance caller) {
 //   dump_stack(caller->L);
+   time_d comunication_time=now_secs();
    stage_id dst_id=lua_tointeger(caller->L,1);
+   connector_id con_id=lua_tointeger(caller->L,2);
+   lua_remove(caller->L,2);
    int const args=lua_gettop(caller->L)-1;
 
    _DEBUG("Thread: Stage '%d' emmited itself and called stage '%d' top=%d\n",
@@ -183,16 +215,16 @@ void emmit_cohort(instance caller) {
 
    //Get instance of the stage 'dst_id' (callee)
    instance callee=instance_aquire(dst_id);
-   STATS_UPDATE_EVENTS(caller->stage,1);
+
    if(!callee) { //error getting an instance from the 
-                 //recycle queue
+                 //recycle queue no more instances allowed for callee
          _DEBUG("Thread: ERROR: Cannot get an instance for the stage '%s'.\n",
          main_graph->s[dst_id]->name);
          lua_settop(caller->L,0);
          lua_getglobal(caller->L, "handler");
          lua_pushnil(caller->L);
          lua_pushfstring(caller->L,"Cannot get a parallel instance of the stage '%s'.",
-            main_graph->s[dst_id]->name);
+            STAGE(dst_id)->name);
          caller->args=2;
          return push_ready_queue(caller);
    }
@@ -217,6 +249,11 @@ void emmit_cohort(instance caller) {
    //Pass the thread to the callee (call directly its instance)
    _DEBUG("Thread: Emmited self, passing the thread to the stage '%s'.\n",
       main_graph->s[dst_id]->name);
+   if(con_id>=0) {
+      STATS_UPDATE_EVENTS(caller->stage,1);
+      time_d ct=now_secs()-comunication_time;
+      STATS_UPDATE_CONNECTOR(con_id,ct*1000000);
+   }
    thread_resume_instance(callee);
 }
 
@@ -231,7 +268,10 @@ void emmit_cohort(instance caller) {
  */
 int emmit(lua_State * L) {
    //(instance src,stage_id dst_id, int from, int args)
+   time_d comunication_time=now_secs();
    stage_id dst_id=lua_tointeger(L,1);
+   int con_id=lua_tointeger(L,2);
+   lua_remove(L,2);
    int const args=lua_gettop(L)-1;
 
    if(!CLUSTER(STAGE(dst_id)->cluster)->local) {
@@ -243,20 +283,20 @@ int emmit(lua_State * L) {
          lua_pushvalue(L,i+1);
          lua_rawseti(L,-2,i);
       }
-      dump_stack(L);
+//      dump_stack(L);
       lua_call(L,2,2);
       if(lua_isnil(L,-1)) {
          lua_pop(L,1);
+         if(con_id>=0) {
+            STATS_UPDATE_EVENTS(CONNECTOR(con_id)->p,1);
+            time_d ct=now_secs()-comunication_time;
+            STATS_UPDATE_CONNECTOR(con_id,ct*1000000);
+         }
          return 1;
       }
       return 2;
    }
-   lua_getfield( L, LUA_REGISTRYINDEX, "__SELF" );
-   if(!lua_isnil(L,-1)) {
-      instance caller=lua_touserdata(L,-1);
-      STATS_UPDATE_EVENTS(caller->stage,1);
-   }
-   lua_pop(L,1);
+
    
    _DEBUG("Thread: Emmiting event to stage '%s' top=%d\n",STAGE(dst_id)->name,lua_gettop(L));
    instance dst=instance_aquire(dst_id);
@@ -275,6 +315,11 @@ int emmit(lua_State * L) {
       }
       _DEBUG("Thread: Event emmited for stage '%s'\n",STAGE(dst_id)->name);
       lua_pushboolean(L,TRUE);
+     if(con_id>=0) {
+            STATS_UPDATE_EVENTS(CONNECTOR(con_id)->p,1);
+            time_d ct=now_secs()-comunication_time;
+            STATS_UPDATE_CONNECTOR(con_id,ct*1000000);
+      }
       return 1;
    }
 
@@ -287,8 +332,12 @@ int emmit(lua_State * L) {
    
    dst->args=args;
    push_ready_queue(dst);
-
    lua_pushboolean(L,TRUE);
+   if(con_id>=0) {
+           STATS_UPDATE_EVENTS(CONNECTOR(con_id)->p,1);
+            time_d ct=now_secs()-comunication_time;
+            STATS_UPDATE_CONNECTOR(con_id,ct*1000000);
+   }
    return 1;
 }
 

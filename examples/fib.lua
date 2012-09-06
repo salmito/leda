@@ -18,23 +18,22 @@ local fib=leda.stage{
 			leda.send("loopback",fib,n+1,val+oldval,val)
 		end
 	end,
-	bind=function(fib)
-		assert(#fib.output.value.consumers>=1,"Value output must be connected to someone")
-		fib:connect("loopback",fib)
-		fib:method("loopback",leda.e)
+	bind=function(output)
+		assert(#output.value.consumer,"Value output must be connected to someone")
 	end,
 }
 
 local printer=leda.stage{
-   leda.utils.print,
+  handler=function(...) print(...) end,
    name="Printer"
 }
 
-fib:connect("value",printer)
 
-fib.output.value:method(leda.t)
 
-local graph=leda.graph{fib,printer,proxy}
+local graph=leda.graph{
+fib:connect("value",printer),
+fib:connect("loopback",fib)
+}
 
 fib:send(tonumber(arg[1]))
 

@@ -1,11 +1,8 @@
 -----------------------------------------------------------------------------
 -- Leda Graph Lua API
--- Author: Tiago Salmito, Noemi Rodriguez, Ana Lucia de Moura
+-- @author Tiago Salmito, Noemi Rodriguez, Ana Lucia de Moura
 -----------------------------------------------------------------------------
 
------------------------------------------------------------------------------
--- Declare module and import dependencies
------------------------------------------------------------------------------
 local base = _G
 local tostring,type,assert,pairs,setmetatable,getmetatable,print,error,ipairs,tonumber =
       tostring,type,assert,pairs,setmetatable,getmetatable,print,error,ipairs,tonumber
@@ -19,18 +16,12 @@ local leda=leda
 
 module("leda.leda_cluster")
 
-----------------------------------------------------------------------------
--- Cluster metatable
------------------------------------------------------------------------------
 local cluster_metatable = { 
    __index={}
 }
 
 function metatable() return cluster_metatable end
 
------------------------------------------------------------------------------
--- Cluster __tostring metamethod
------------------------------------------------------------------------------
 function cluster_metatable.__tostring(c) 
    local s = "{"
    local sep = ""
@@ -44,9 +35,6 @@ function cluster_metatable.__tostring(c)
 end
 
 
------------------------------------------------------------------------------
--- Graph __index metamethod
------------------------------------------------------------------------------
 local index=cluster_metatable.__index
 
 function new_cluster(...)
@@ -140,9 +128,6 @@ function index.intersection (c1,c2)
    if (type(c2)=='table' or is_stage(c2)) and not is_cluster(c2) then
       c2=new_cluster(c2)
    end
-
-
-
    local res=new_cluster()
    for s in pairs(c1) do
      if is_stage(s) then
@@ -178,25 +163,29 @@ end
 
 function index.set_process(cluster,host,port)
    assert(is_cluster(cluster),string.format("Invalid parameter #1 (Cluster expected, got %s)",type(cluster)))
---   assert(type(host)=="string",string.format("Invalid parameter #2 (String expected, got %s)",type(host)))
-   port=tonumber(port) or leda.process.default_port
 
-   if cluster:has_serial() and #cluster.process_addr>0 then
-      error("Cannot add more than one process for a cluster with a serial stage")
-   end
-   cluster.process_addr={leda.process.get_process(host,port)}
+   cluster.process_addr={}
+   cluster:add_process(host,port)   
 end
 
 function index.add_process(cluster,host,port)
    assert(is_cluster(cluster),string.format("Invalid parameter #1 (Cluster expected, got %s)",type(cluster)))
---   assert(type(host)=="string",string.format("Invalid parameter #2 (String expected, got %s)",type(host)))
-   port=tonumber(port) or leda.process.default_port
+   if type(host)=="string" then
+      local h,p=string.gmatch(host,"([%w%.]+):(%d+)")()
+      if h then
+         host=h
+         port=p
+      end
+   end
+   port=port or leda.process.default_port
+   port=tonumber(port)
 
    assert(cluster.process_addr,"A process must be set before calling this funcion")
 
    if cluster:has_serial() and #cluster.process_addr>0 then
       error("Cannot add more than one process for a cluster with a serial stage")
    end
+   cluster.process_addr=cluster.process_addr or {}
    table.insert(cluster.process_addr,leda.process.get_process(host,port))
 end
 

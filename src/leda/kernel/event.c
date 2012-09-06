@@ -35,6 +35,7 @@ THE SOFTWARE.
 #include <lualib.h>
 
 #include "event.h"
+#include "instance.h"
 #include "thread.h"
 #include "extra/lmarshal.h"
 
@@ -325,7 +326,7 @@ int send_event(lua_State *L) {
         lua_pushliteral(L,"Could not create socket");
         return 2;
       }
-      if( connect(sockfd, (struct sockaddr *)&adr_inet, sizeof(adr_inet)) < 0) {
+      if(connect(sockfd, (struct sockaddr *)&adr_inet, sizeof(adr_inet)) < 0) {
         lua_pop(L,1);
         lua_pushboolean(L,FALSE);
         lua_pushfstring(L,"Could not establish connection with process '%s:%d'",PROCESS(dst_id)->host,PROCESS(dst_id)->port);
@@ -448,6 +449,7 @@ int read_event(int fd) {
 
    lua_pushcfunction(dummy,emmit);
    lua_pushinteger(dummy,id);
+   lua_pushinteger(dummy,-1); //connector id not known
    int begin=lua_gettop(dummy);
    lua_getglobal(dummy,"unpack"); //Push unpack function
    lua_pushcfunction(dummy,mar_decode);
@@ -457,7 +459,7 @@ int read_event(int fd) {
    lua_call(dummy,1,LUA_MULTRET); //Unpack event
    int args=lua_gettop(dummy)-begin;
 
-   lua_call(dummy,args+1,2);
+   lua_call(dummy,args+2,2);
    
    if(lua_toboolean(dummy,-2)==TRUE) {
       char res=TRUE;
@@ -474,16 +476,223 @@ int read_event(int fd) {
    return 0;
 }
 
+int leda_gettime(lua_State * L) {
+   lua_pushnumber(L,now_secs());
+   return 1;
+}
+
+struct event_epoll_data {
+   int fd;
+   instance i;
+   bool_t timer;
+};
+
+int epfd;
+
+void event_wait_io(instance i) {
+   struct epoll_event event; 
+   //FIXME CAREFULL, ERRORS ARE UNPROTECTED. IT DOES A LONGJUMP SO
+   //THE THREAD WILL BE OUT OF CONTEXT IF SOMETHING HAPPENS
+   
+   int fd=-1;
+   if (lua_type(i->L,1)==LUA_TNUMBER) {
+      fd=lua_tointeger(i->L,1);
+   } else {
+       lua_settop(i->L,0);
+       //Get the  main coroutine of the instance's handler
+       lua_getglobal(i->L, "handler");
+       //Put it on the bottom of the instance's stack
+       lua_pushnil(i->L);
+       lua_pushliteral(i->L,"Invalid argument");
+       //Set the previous number of arguments
+       i->args=2;
+       push_ready_queue(i);
+       return;
+   }
+   int mode=-1;
+   if (lua_type(i->L,2)==LUA_TNUMBER) {
+      mode=lua_tointeger(i->L,2);
+   } else {
+      lua_settop(i->L,0);
+      //Get the  main coroutine of the instance's handler
+      lua_getglobal(i->L, "handler");
+      //Put it on the bottom of the instance's stack
+      lua_pushnil(i->L);
+      lua_pushliteral(i->L,"Invalid argument");
+      //Set the previous number of arguments
+      i->args=2;
+      push_ready_queue(i);
+      return;
+   }
+   
+   int err;
+
+   struct event_epoll_data * ed=malloc(sizeof(struct event_epoll_data));
+   
+   //FIXME DITTO
+   if(!ed) {
+       lua_settop(i->L,0);
+       //Get the  main coroutine of the instance's handler
+       lua_getglobal(i->L, "handler");
+       //Put it on the bottom of the instance's stack
+       lua_pushnil(i->L);
+       lua_pushliteral(i->L,"Malloc error");
+       //Set the previous number of arguments
+       i->args=2;
+       push_ready_queue(i);
+       return;
+   }
+
+   ed->fd=fd;
+   ed->i=i;
+   ed->timer=0;
+
+   event.data.ptr = ed; /* return the fd to us later */
+
+   if(mode==1) 
+      event.events = EPOLLIN /*read*/;
+   else if(mode==2)
+         event.events = EPOLLOUT /*write*/;
+   else if(mode==3)
+         event.events = EPOLLIN /*read*/| EPOLLOUT /*write*/;
+   else {
+       lua_settop(i->L,0);
+       //Get the  main coroutine of the instance's handler
+       lua_getglobal(i->L, "handler");
+       //Put it on the bottom of the instance's stack
+       lua_pushnil(i->L);
+       lua_pushliteral(i->L,"Invalid argument");
+       //Set the previous number of arguments
+       i->args=2;
+       push_ready_queue(i);
+       return;
+   }
+   
+
+   if((err = epoll_ctl (epfd, EPOLL_CTL_ADD, ed->fd, &event))) {
+       free(ed);
+       close(ed->fd);
+       lua_settop(i->L,0);
+       //Get the  main coroutine of the instance's handler
+       lua_getglobal(i->L, "handler");
+       //Put it on the bottom of the instance's stack
+       lua_pushnil(i->L);
+       lua_pushfstring(i->L,"Epoll ERROR: %s",strerror(errno));
+       //Set the previous number of arguments
+       i->args=2;
+       push_ready_queue(i);
+       return;
+   }
+}
+
+#include <sys/timerfd.h>
+ 
+void event_sleep(instance i) {
+   struct epoll_event event; 
+   //FIXME CAREFULL, THIS ERROR IS UNPROTECTED. IT DOES A LONGJUMP SO
+   //THE THREAD WILL BE OUT OF CONTEXT IF IT HAPPENS
+   double time=now_secs()+lua_tonumber(i->L,1);
+   if(time<=0.0) {
+       lua_settop(i->L,0);
+       //Get the  main coroutine of the instance's handler
+       lua_getglobal(i->L, "handler");
+       //Put it on the bottom of the instance's stack
+       lua_pushnil(i->L);
+       lua_pushliteral(i->L,"Invalid timer");
+       //Set the previous number of arguments
+       i->args=2;
+       push_ready_queue(i);
+       return;
+   }
+   time_t secs=time;
+   long nsecs=(time-secs)*1000000000L;
+   
+   int err;
+
+   struct event_epoll_data * ed=malloc(sizeof(struct event_epoll_data));
+   
+   if(!ed) {
+       lua_settop(i->L,0);
+       //Get the  main coroutine of the instance's handler
+       lua_getglobal(i->L, "handler");
+       //Put it on the bottom of the instance's stack
+       lua_pushnil(i->L);
+       lua_pushliteral(i->L,"Malloc error");
+       //Set the previous number of arguments
+       i->args=2;
+       push_ready_queue(i);
+       return;
+   }
+  
+   ed->fd=timerfd_create(CLOCK_REALTIME, 0);
+   if(ed->fd < 0) {
+       free(ed);
+       lua_settop(i->L,0);
+       //Get the  main coroutine of the instance's handler
+       lua_getglobal(i->L, "handler");
+       //Put it on the bottom of the instance's stack
+       lua_pushnil(i->L);
+       lua_pushfstring(i->L,"Error creating timer: %s",strerror(errno));
+       //Set the previous number of arguments
+       i->args=2;
+       push_ready_queue(i);
+       return;
+   }
+   struct itimerspec t={{0,0L},{0,0L}};
+   t.it_value.tv_sec=secs;
+   t.it_value.tv_nsec=nsecs;
+   
+   if(timerfd_settime(ed->fd, TFD_TIMER_ABSTIME, &t, NULL) < 0) {
+       free(ed);
+       close(ed->fd);
+       lua_settop(i->L,0);
+       //Get the  main coroutine of the instance's handler
+       lua_getglobal(i->L, "handler");
+       //Put it on the bottom of the instance's stack
+       lua_pushnil(i->L);
+       lua_pushfstring(i->L,"Error setting timer: %s",strerror(errno));
+       //Set the previous number of arguments
+       i->args=2;
+       push_ready_queue(i);
+       return;
+   }
+   ed->i=i;
+   ed->timer=1;
+
+   event.data.ptr = ed; /* return the fd to us later */
+
+   event.events = EPOLLIN;   
+
+   if((err = epoll_ctl (epfd, EPOLL_CTL_ADD, ed->fd, &event))) {
+       free(ed);
+       close(ed->fd);
+       lua_settop(i->L,0);
+       //Get the  main coroutine of the instance's handler
+       lua_getglobal(i->L, "handler");
+       //Put it on the bottom of the instance's stack
+       lua_pushnil(i->L);
+       lua_pushfstring(i->L,"Epoll error: %s",strerror(errno));
+       //Set the previous number of arguments
+       i->args=2;
+       push_ready_queue(i);
+   }
+}
+
+
 static THREAD_RETURN_T THREAD_CALLCONV event_main(void *t_val) {
    int process_fd=*(int*)t_val;
    free(t_val);
-   int epfd = epoll_create (128);
+   struct event_epoll_data * ed=malloc(sizeof(struct event_epoll_data));
+   epfd = epoll_create (1024);
    if(epfd==-1) {
       perror("Leda PANIC: Error creating epfd");
    }
    {
       struct epoll_event event;
-      event.data.fd = process_fd;
+      ed->i=NULL;
+      ed->fd=process_fd;
+      ed->timer=0;
+      event.data.ptr = ed;
       event.events = EPOLLIN;
    
       if(epoll_ctl (epfd, EPOLL_CTL_ADD, process_fd, &event)) {
@@ -502,7 +711,8 @@ static THREAD_RETURN_T THREAD_CALLCONV event_main(void *t_val) {
       }
       for (i = 0; i < nr_events; i++) {
          if(events[i].events & EPOLLIN) { //fd available for read
-            if(events[i].data.fd==process_fd) { //new connection for process
+            ed=events[i].data.ptr;
+            if(ed->fd==process_fd) { //new connection for process
                _DEBUG("Process: Incomming new connection\n");
                socklen_t addrlen=sizeof(struct sockaddr_in);
                struct sockaddr_in address;
@@ -513,25 +723,63 @@ static THREAD_RETURN_T THREAD_CALLCONV event_main(void *t_val) {
                }
                
                struct epoll_event event;
-               event.data.fd = client_fd;
+               
+               struct event_epoll_data * ned=malloc(sizeof(struct event_epoll_data));
+               ned->fd=client_fd;
+               ned->i=NULL;
+               ned->timer=0;
+               event.data.ptr = ned;
                event.events = EPOLLIN;
    
                if(epoll_ctl (epfd, EPOLL_CTL_ADD, client_fd, &event)) {
                   perror("Epoll error");
                }
-            } else {
+            } else if(ed->i==NULL) {
                struct epoll_event event;
-               event.data.fd = events[i].data.fd;
+               event.data.fd = ed->fd;
                event.events = EPOLLIN;
-               if(read_event(events[i].data.fd)) {
+               if(read_event(ed->fd)) {
                   _DEBUG("Process: Client closed the connection\n");
-                  close(events[i].data.fd);
-                  epoll_ctl (epfd, EPOLL_CTL_DEL, events[i].data.fd, &event);
+                  close(ed->fd);
+                  epoll_ctl (epfd, EPOLL_CTL_DEL, ed->fd, &event);
+//                  free(ed);
                }
-            }
+            } else {
+               lua_settop(ed->i->L,0);
+               //Get the  main coroutine of the instance's handler
+               lua_getglobal(ed->i->L, "handler");
+               //Put it on the bottom of the instance's stack
+               lua_pushboolean(ed->i->L,TRUE);
+               //Set the previous number of arguments
+               ed->i->args=1;
+               push_ready_queue(ed->i);
+               struct epoll_event event;
+               event.data.fd = ed->fd;
+               event.events = EPOLLIN;
+               epoll_ctl (epfd, EPOLL_CTL_DEL, ed->fd, &event);
+               if(ed->timer==1) 
+                  close(ed->fd);
+//               free(ed);
+            } 
+         } else if(events[i].events & EPOLLOUT) {
+            ed=events[i].data.ptr;
+            if(ed->i!=NULL) {
+               lua_settop(ed->i->L,0);
+               //Get the  main coroutine of the instance's handler
+               lua_getglobal(ed->i->L, "handler");
+               //Put it on the bottom of the instance's stack
+               lua_pushboolean(ed->i->L,TRUE);
+               //Set the previous number of arguments
+               ed->i->args=1;
+               push_ready_queue(ed->i);
+           } 
+           struct epoll_event event;
+           event.data.fd = ed->fd;
+           event.events = EPOLLOUT;
+           epoll_ctl (epfd, EPOLL_CTL_DEL, ed->fd, &event);
+//           free(ed);
          }
       }
-      
    }
    return NULL;
 }

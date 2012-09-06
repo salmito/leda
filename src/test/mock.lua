@@ -1,13 +1,33 @@
 require "leda"
 
-local f=function(event) print(leda.stage.name,event) local r,err=leda.send('output1',event) end --print(leda.stage.name,a) end
+local f=function(event)
+   leda.sleep(1)
+   local s,err=leda.send('output1',event) 
+   if not s then
+      print("ERROR",leda.stage.name,err)
+   end
+   local s,err=leda.send('output2',event)
+   if not s then
+      print("ERROR",leda.stage.name,err)
+   end
+end
+
+local f2=function(event) 
+  local s,err=leda.send('output1',event) 
+   if not s then
+      print("ERROR",leda.stage.name,err)
+   end
+end
+
+local f3=function(event)
+end
 
 stage1=leda.stage{name="stage1",handler=f,bind=function (o) assert(o.output1) o.output1.type=leda.cohort end}
-stage2=leda.stage{name="stage2",handler=f}
-stage3=leda.stage{name="stage3",handler=f}
+stage2=leda.stage{name="stage2",handler=f2}
+stage3=leda.stage{name="stage3",handler=f3}
 stage4=leda.stage{name="stage4",handler=f}
-stage5=leda.stage{name="stage5",handler=f}
-stage6=leda.stage{name="stage6",handler=f}
+stage5=leda.stage{name="stage5",handler=f2}
+stage6=leda.stage{name="stage6",handler=f3}
 
 local grafo=leda.graph{"Grafo",
 	start=stage1, --opcional
@@ -16,7 +36,7 @@ local grafo=leda.graph{"Grafo",
 	stage2:connect('output1',stage4),
 	stage4:connect('output1',stage5),
 	stage4:connect('output2',stage6,leda.couple),
---	stage6:connect('output1',stage1)
+	stage5:connect('output1',stage1)
 }
 --grafo:plot()
 local a1=leda.cluster(stage1,stage2)
@@ -27,6 +47,19 @@ local a4=leda.cluster(stage5,stage6)
 --grafo:part{a1,a2,a3,a4}
 
 stage1:send("e1")
+stage1:send("e2")
+stage1:send("e3")
+stage1:send("e4")
+stage1:send("e5")
+stage1:send("e6")
+
+g=grafo
+
+t=g:part(stage1+stage2+stage3,stage4+stage5+stage6):map('localhost',{'localhost:7777'})
+
+--t[1]:set_process()
+--t[2]:set_process('localhost',8888)
+
 
 --grafo:run()
 

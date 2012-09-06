@@ -78,7 +78,8 @@ for key,connector in pairs(leda.stage.__output) do
    assert(type(c.sendf)=="function","Sendf field must be a function")
 
    c.consumer=connector.__consumer;
-   c.send=function(self,...) return self.sendf(c.consumer,...) end
+   c.id=connector.__id;
+   c.send=function(self,...) return self.sendf(c.consumer,c.id,...) end
    leda.output[key]=c
 end
 

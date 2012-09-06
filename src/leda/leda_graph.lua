@@ -208,7 +208,36 @@ function index.part(g,...)
    assert((g:all()-all):size()==0,"Invalid configuration, stages "..tostring(g:all()-all).." must be clustered")
    assert((all-g:all()):size()==0,"Invalid cluster, stages "..tostring(all-g:all()).." are not on the graph")
    g.cluster=c
-   return unpack(res)
+   res.map=function(self,...)
+      local args={...}
+      for i,t in ipairs(args) do
+         if type(t)=='string' then t={t} end
+         assert(type(t)=="table",string.format("Invalid parameter #%d type (table expected, got %s)",i,type(t)))
+         for j,proc in ipairs(t) do
+            if j==1 then
+               self[i]:set_process(proc)
+            else
+               self[i]:add_process(proc)
+            end
+         end
+      end
+      local d_list={}
+      for cl in pairs(g:clusters()) do
+         if #cl.process_addr==0 then
+            g.cluster=nil
+            error(string.format("Cluster '%s' does not have any process",tostring(cl)))
+         end
+         for _,d in ipairs(cl.process_addr) do
+            if d_list[d]==true then
+               g.cluster=nil
+               error(string.format("Process '%s:%d' is already running a cluster",d.host,d.port))
+            end
+            d_list[d]=true
+         end
+      end
+      return self
+   end
+   return res
 end
 
 function index.get_cluster(g,s)
@@ -353,14 +382,14 @@ end
 -- Proxy to run a graph (passing it to the kernel.run function
 -- if no controller was provided, use the default one
 -----------------------------------------------------------------------------
-function index.run(g,localport,controller)
+function index.run(g,...)
    assert(is_graph(g),string.format("Invalid parameter #1 (graph expected, got '%s')",type(g)))
    if not g.cluster then
-      g:part(g:all()):set_process()
+      g:part(g:all()):map("localhost")
    end
    local flag,err=g:verify()
    if flag then
-      return leda.process.run(g,controller,localport)
+      return leda.process.run(g,...)
    end
    error(err)
 end

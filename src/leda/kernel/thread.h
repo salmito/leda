@@ -25,6 +25,8 @@ typedef struct thread_data {
 enum return_status{ 
    ENDED=0xF1F21AB,
    EMMIT_COHORT,
+   WAIT_IO,
+   SLEEP,
    PCALL_ERROR,
    YIELDED
 };
@@ -37,7 +39,9 @@ char const * get_return_status_name(int status);
    #define lua_objlen lua_rawlen
    #define luaL_reg luaL_Reg
    #define REGISTER_LEDA(L,libname,funcs) \
-           lua_getglobal(L,"leda");  \
+           lua_newtable(L); \
+           lua_pushvalue(L,-1); \
+           lua_setglobal(L,"leda");  \
            lua_pushliteral(L,"kernel");  \
            lua_newtable(L); \
            luaL_setfuncs (L,funcs,0); \
@@ -64,6 +68,7 @@ int thread_new (lua_State *L);
 int thread_createmetatable (lua_State *L);
 int thread_kill (lua_State *L);
 
+int wait_io(lua_State * L);
 int emmit(lua_State * L);
 int cohort(lua_State * L);
 

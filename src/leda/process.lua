@@ -10,10 +10,10 @@ local is_graph=leda.leda_graph.is_graph
 
 local socket=require("socket")
 local dbg = leda.debug.get_debug("Process: ")
-
+local default_p=9999
 local localhost=localhost or "127.0.0.1"
 localhost=socket.dns.toip(localhost)
-local l_localport=localport or 9999
+local l_localport=localport or default_p
 l_localport=tonumber(l_localport)
 local processes={}
 local process_socket=nil
@@ -21,6 +21,8 @@ local magicbyte='\027'
 local default_controller=require("leda.controller.default")
 
 module("leda.process")
+
+default_port=default_p
 
 function get_process(host,port)
    if not host and not port then
@@ -47,7 +49,7 @@ local function is_local(d)
    return false
 end
 
-function start(p_port,controller,has_graph)
+function start(p_port,maxpar,controller,has_graph)
    l_localport=p_port or l_localport
    process_socket=assert(socket.bind("*", l_localport))
    local ip, port = process_socket:getsockname()
@@ -75,7 +77,7 @@ function start(p_port,controller,has_graph)
       local ro_gr=kernel.build_graph(gr,localhost,l_localport)
       client:send("ACCEPTED\n")
       client:close()
-      init(gr,ro_gr,localhost,l_localport,controller)
+      init(gr,ro_gr,localhost,l_localport,controller,maxpar)
    end
 end
 
@@ -123,7 +125,7 @@ local function send_graph(g,d)
    client:close()
 end
 
-function run(g,controller,localport)
+function run(g,localport,maxpar,controller)
    assert(is_graph(g),string.format("Invalid parameter #1 (graph expected, got %s)",type(g)))
    assert(type(localhost)=="string",string.format("Invalid local hostname (string expected, got %s)",type(localhost)))
    l_localport=localport or l_localport
@@ -148,12 +150,13 @@ function run(g,controller,localport)
          send_graph(g,d)
       end
    end
-   start(l_localport,nil,true)   
-   init(g,ro_graph,localhost,l_localport,controller)
+   start(l_localport,nil,nil,true)   
+   init(g,ro_graph,localhost,l_localport,controller,maxpar)
 end
 
-function init(g,ro_g,host,port,controller)
+function init(g,ro_g,host,port,controller,maxpar)
    io.stderr:write(string.format("Starting graph\n",host,port))
 --   ro_g:dump()
-   leda.kernel.run(g,ro_g,controller or default_controller,process_socket:getfd())
+   maxpar=maxpar or -1
+   leda.kernel.run(g,ro_g,controller or default_controller,maxpar,process_socket:getfd())
 end

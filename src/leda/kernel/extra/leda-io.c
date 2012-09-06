@@ -28,6 +28,7 @@ THE SOFTWARE.
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/socket.h>
 
 #include <lua.h>
 #include <lauxlib.h>
@@ -164,6 +165,14 @@ int epoll_add_read(lua_State *L) {
    }
    lua_pushboolean(L,1);
    return 1;
+}
+
+int socket_flush(lua_State *L) {
+   int fd=lua_tointeger(L,1);
+   int nfd=dup(fd);
+   shutdown(nfd,SHUT_RDWR);
+   close(nfd);
+   return 0;
 }
 
 int epoll_add_read_write(lua_State *L) {

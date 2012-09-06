@@ -524,7 +524,6 @@ int graph_dump(lua_State * L) {
    fprintf(stderr,"==== Dumping graph: '%s' ====\n",g->name);
    fprintf(stderr,"==== Clusters (%d) ====\n",(int)g->n_cl);
    for(i=0;i<g->n_cl;i++) {
-      printf("AE %p\n",g->cl[i]);
       fprintf(stderr,"\tCluster: id=%d name='%s' processes='%d' local='%d'\n",i,g->cl[i]->name,(int)g->cl[i]->n_processes,g->cl[i]->local);
       for(j=0;j<g->cl[i]->n_processes;j++) {
          fprintf(stderr,"\t\tProcess #%d: '%s:%d'\n",j+1,g->d[g->cl[i]->processes[j]]->host,g->d[g->cl[i]->processes[j]]->port);

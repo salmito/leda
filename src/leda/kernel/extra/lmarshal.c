@@ -39,6 +39,10 @@
 
 #include "lmarshal.h"
 
+#if LUA_VERSION_NUM > 501
+   #define lua_objlen lua_rawlen
+#endif
+
 typedef struct mar_Buffer {
     size_t size;
     size_t seek;
@@ -368,7 +372,11 @@ static void mar_decode_value
             dec_buf.size = l;
             dec_buf.head = l;
             dec_buf.seek = 0;
-            lua_load(L, (lua_Reader)buf_read, &dec_buf, "=marshal");
+            lua_load(L, (lua_Reader)buf_read, &dec_buf, "=marshal"
+            #if LUA_VERSION_NUM > 501
+               ,NULL
+            #endif
+            );
             mar_incr_ptr(l);
 
             lua_pushvalue(L, -1);

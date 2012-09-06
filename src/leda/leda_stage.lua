@@ -80,7 +80,6 @@ function new_stage(t,init,name,bind,serial)
    elseif type(t) == "table" and not is_stage(t) then
       s.handler=t.handler
       assert(type(s.handler)=="function",string.format("Stage's event handler field must be a function (got %s)",type(s.handler)))
-
       s.init=t.init
       s.name=t.name
       s.bind=t.bind

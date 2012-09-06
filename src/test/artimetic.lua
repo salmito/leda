@@ -34,7 +34,7 @@ function consume(data,i)
 end
 
 local g=graph{"Producer-consumer",
-      prod=stage{name="Producer",handler=produce,init=p_init},
+      stage{name="Producer",handler=produce,init=p_init}:connect
       cons=stage{name="Consumer",handler=consume},
       sqrt=stage{name="Sqrt",handler=square},
 }

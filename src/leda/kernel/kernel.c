@@ -55,6 +55,7 @@ SIGNAL_T queue_used_cond;
 MUTEX_T queue_used_lock;
 extern queue ready_queue;
 extern queue * event_queues;
+extern queue * recycle_queues;
 
 int leda_send(lua_State *L) {
    int i,id=lua_tointeger(L,1),args=lua_gettop(L)-1;
@@ -65,9 +66,10 @@ int leda_send(lua_State *L) {
    }
    lua_pushcfunction(L,emmit);
    lua_pushinteger(L,id);
+   lua_pushinteger(L,-1); //connector id not known
    for(i=1;i<=args;i++)
       lua_pushvalue(L,i+1);
-   lua_call(L,args+1,2);
+   lua_call(L,args+2,2);
    return 2;
 }
 
@@ -84,12 +86,13 @@ int leda_run(lua_State * L) {
    //second parameter must be a table for controller
    luaL_checktype(L,3, LUA_TTABLE);
    //third parameter must be a socket descriptor for the process   
-   int process_fd=lua_tointeger(L,4);
+   int default_maxpar=lua_tointeger(L,4);
+   int process_fd=lua_tointeger(L,5);
    //initiate instances for the graph
    //queues are initially unbounded (-1 limit)
-   instance_init(-1,-1);
+   instance_init(default_maxpar,-1);
    #ifndef STATS_OFF
-      stats_init(g->n_s);
+      stats_init(g->n_s,g->n_c);
    #endif
    event_init(process_fd);
    
@@ -115,13 +118,14 @@ int leda_run(lua_State * L) {
       for(i=1;i<=n;i++) {
          lua_pushcfunction(L,emmit);
          lua_pushinteger(L,id);
+         lua_pushinteger(L,-1); //Connector id not known
          int begin=lua_gettop(L);
          lua_getglobal(L,"unpack"); //Push unpack function
          luaL_checktype(L,-1,LUA_TFUNCTION);
-         lua_rawgeti(L,-4,i);
+         lua_rawgeti(L,-5,i);
          lua_call(L,1,LUA_MULTRET); //Unpack the pending arguments
          int args=lua_gettop(L)-begin;
-         lua_call(L,args+1,2); //Call the emmit function
+         lua_call(L,args+2,2); //Call the emmit function
          bool_t ok=lua_toboolean(L,-2); 
        
          if(!ok) {
@@ -169,15 +173,10 @@ int leda_ready_queue_isempty(lua_State * L) {
 
 
 /* Kernel Lua function to sleep for a time in miliseconds*/
-int leda_sleep(lua_State * L) {
+int leda_sleep_(lua_State * L) {
    lua_Number n=lua_tonumber(L,1);
    usleep((useconds_t)(n*1000000.0));
    return 0;
-}
-
-int leda_gettime(lua_State * L) {
-   lua_pushnumber(L,now_secs());
-   return 1;
 }
 
 /* Kernel Lua function to get the pointer of a lua value 
@@ -190,7 +189,7 @@ int leda_to_pointer(lua_State * L) {
 
 int leda_get_stats(lua_State * L) {
    STATS_PUSH(L);
-   return 1;
+   return 2;
 }
 
 /* Get the size of the thread pool */
@@ -202,17 +201,19 @@ int leda_get_thread_pool_size(lua_State * L) {
 int leda_set_capacity(lua_State * L) {
    queue q=NULL;
    int i=lua_tointeger(L,1);
-   if(i==0) {
+   if(i<0) {
       q=ready_queue;
-   } else if(i<0 || i>main_graph->n_s) {
-         lua_pushboolean(L,0);
-         return 1;
+   } else if(i>=main_graph->n_s) {
+         lua_pushnil(L);
+         lua_pushliteral(L,"Invalid stage id");
+         return 2;
    } else {
-      q=event_queues[i-1];
+      q=event_queues[i];
    }
    if(!q) {
-      lua_pushboolean(L,0);
-      return 1;
+      lua_pushnil(L);
+      lua_pushliteral(L,"Queue error");
+      return 2;
    }
    int cap=lua_tointeger(L,2);
    queue_set_capacity(q,cap);
@@ -242,7 +243,6 @@ int luaopen_leda_kernel (lua_State *L) {
   	   {"encode", mar_encode},
   	   {"decode", mar_decode},
   	   {"clone", mar_clone},
-  	   {"sleep", leda_sleep},
   	   {"gettime", leda_gettime},
  	   {"send", leda_send},
   	   {"build_graph", graph_build},
@@ -251,7 +251,10 @@ int luaopen_leda_kernel (lua_State *L) {
   	   {"new_thread", thread_new},
   	   {"kill_thread", thread_kill},
   	   {"stats", leda_get_stats},
+  	   {"stats_reset", stats_reset},
+  	   {"maxpar", instance_set_maxpar},
  	   {"ready_queue_size", leda_ready_queue_size},
+ 	   
   	   {"set_capacity", leda_set_capacity},
  	   {"ready_queue_capacity", leda_ready_queue_capacity},
   	   {"thread_pool_size", leda_get_thread_pool_size},
