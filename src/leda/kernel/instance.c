@@ -271,30 +271,6 @@ void register_io_api(lua_State * L) {
    lua_pushcfunction(L,leda_unwrap_io);
    lua_rawset(L,-3);
    lua_setglobal(L,"__io");
-   /* AIO epoll */
-   lua_newtable(L);
-   lua_pushliteral(L,"close");
-   lua_pushcfunction(L,epoll_close);
-   lua_rawset(L,-3);
-   lua_pushliteral(L,"wait");
-   lua_pushcfunction(L,epoll_lwait);
-   lua_rawset(L,-3);
-   lua_pushliteral(L,"remove");
-   lua_pushcfunction(L,epoll_remove_descriptor);
-   lua_rawset(L,-3);
-   lua_pushliteral(L,"add_read");
-   lua_pushcfunction(L,epoll_add_read);
-   lua_rawset(L,-3);
-   lua_pushliteral(L,"add_write");
-   lua_pushcfunction(L,epoll_add_write);
-   lua_rawset(L,-3);
-   lua_pushliteral(L,"add_read_write");
-   lua_pushcfunction(L,epoll_add_read_write);
-   lua_rawset(L,-3);
-   lua_pushliteral(L,"create");
-   lua_pushcfunction(L,epoll_lcreate);
-   lua_rawset(L,-3);
-   lua_setglobal(L,"__epoll");
 }
 
 void register_marshal_api(lua_State * L) {
@@ -306,27 +282,26 @@ void register_marshal_api(lua_State * L) {
    lua_setglobal(L,"__clone");
 }
 
-void register_sock_api(lua_State * L) {
+void register_aio_api(lua_State * L) {
    lua_newtable(L);
-   lua_pushliteral(L,"wrap");
-   lua_pushcfunction(L,leda_wrap_sock);
-   lua_rawset(L,-3);
-   lua_pushliteral(L,"unwrap");
-   lua_pushcfunction(L,leda_unwrap_sock);
-   lua_rawset(L,-3);
    lua_pushliteral(L,"wait_io");
    lua_pushcfunction(L,wait_io);
    lua_rawset(L,-3);
    lua_pushliteral(L,"flush");
    lua_pushcfunction(L,socket_flush);
    lua_rawset(L,-3);   
-   lua_setglobal(L,"__socket");
+   lua_setglobal(L,"__aio");
 }
-
 
 void register_debug_api(lua_State * L) {
    lua_pushcfunction(L,leda_sleep);
    lua_setglobal(L,"__sleep");
+   lua_pushcfunction(L,leda_quit);
+   lua_setglobal(L,"__quit");
+   lua_pushcfunction(L,leda_setmetatable);
+   lua_setglobal(L,"__setmetatable");
+   lua_pushcfunction(L,leda_getmetatable);
+   lua_setglobal(L,"__getmetatable");
    lua_pushcfunction(L,leda_gettime);
    lua_setglobal(L,"__gettime");
    lua_pushcfunction(L,instance_wait_for_event);
@@ -335,7 +310,6 @@ void register_debug_api(lua_State * L) {
    lua_setglobal(L,"__peek_event");
    
 }
-
 
 void register_connector_api(lua_State * L) {
    lua_pushcfunction(L,emmit);
@@ -477,7 +451,7 @@ instance instance_aquire(stage_id s) {
    /* load api with assorted functions useful for concurrency*/
    register_debug_api(ret->L);
    register_io_api(ret->L);
-   register_sock_api(ret->L);
+   register_aio_api(ret->L);
    register_mutex_api(ret->L);
    register_marshal_api(ret->L);
      

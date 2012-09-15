@@ -22,7 +22,7 @@ end
 local f3=function(event)
 end
 
-stage1=leda.stage{name="stage1",handler=f,bind=function (o) assert(o.output1) o.output1.type=leda.cohort end}
+stage1=leda.stage{name="stage1",handler=f}
 stage2=leda.stage{name="stage2",handler=f2}
 stage3=leda.stage{name="stage3",handler=f3}
 stage4=leda.stage{name="stage4",handler=f}
@@ -31,7 +31,7 @@ stage6=leda.stage{name="stage6",handler=f3}
 
 local grafo=leda.graph{"Grafo",
 	start=stage1, --opcional
-	stage1:connect('output1',stage2,leda.cohort),
+	stage1:connect('output1',stage2),
 	stage1:connect('output2',stage3),
 	stage2:connect('output1',stage4),
 	stage4:connect('output1',stage5),
@@ -55,13 +55,5 @@ stage1:send("e6")
 
 g=grafo
 
-t=g:part(stage1+stage2+stage3,stage4+stage5+stage6):map('localhost',{'localhost:7777'})
-
---t[1]:set_process()
---t[2]:set_process('localhost',8888)
-
-
---grafo:run()
-
-return grafo
+grafo:run()
 

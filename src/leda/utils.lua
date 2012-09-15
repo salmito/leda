@@ -69,8 +69,7 @@ utils.eval={
 -- param:   '...':   data to be printed
 -----------------------------------------------------------------------------
 utils.print={
-   handler=
-   function (...)
+   handler=function (...)
       print(...)
       leda.send(1,...)
    end
@@ -83,11 +82,10 @@ utils.linear_pipeline=function(...)
    local last_s=nil
 
    for i,v in ipairs(arg) do
-      assert(type(v) or is_stage(v)=="function","Argument #"..tostring(i).." must be a function or a stage")
+      assert(type(v)=="function" or leda.is_stage(v),"Argument #"..tostring(i).." must be a function or a stage")
       local stage=leda.stage(v)
-      print(stage)
-      if last_s then g:add(last_s:connect(stage)) end
-
+      if last_s then g:add(last_s:connect(stage)) 
+      else g.start=stage end
       last_s=stage
    end
    return g

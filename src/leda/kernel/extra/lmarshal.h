@@ -10,6 +10,7 @@
 #define MAR_CHR 1
 #define MAR_I32 4
 #define MAR_I64 8
+#define MAR_PTR sizeof(void *)
 
 #define MAR_MAGIC 0x8e
 #define SEEN_IDX  3

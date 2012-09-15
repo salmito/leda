@@ -191,6 +191,14 @@ int leda_sleep(lua_State * L) {
    return lua_yield(L,args);
 }
 
+int leda_quit(lua_State * L) {
+   int sig=0;
+   if(lua_type(L,1)==LUA_TNUMBER)
+      sig=lua_tointeger(L,1);
+   _DEBUG("Ending process");
+   exit(sig);
+}
+
 
 /* Caller thread has yielded with code EMMIT_COHORT, therefore
  * pass direcly to the aquired instance and put the continuaiton

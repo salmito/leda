@@ -159,7 +159,7 @@ end
 function index.clusters(g)
    local clusters={}
    cl=g.cluster or {}
-   for c in pairs(cl) do
+   for _,c in pairs(cl) do
       clusters[c]=true
    end
    return clusters
@@ -179,7 +179,6 @@ function index.part(g,...)
    local all=leda.cluster()
    g.cluster=nil
    local c={}
-   local res={}
    
    for _,cl in pairs(t) do
       if is_stage(cl) then
@@ -201,23 +200,28 @@ function index.part(g,...)
             end
          end
          all=all+cl
-         c[cl]=true
-         table.insert(res,cl)
+         table.insert(c,cl)
       end
    end
    assert((g:all()-all):size()==0,"Invalid configuration, stages "..tostring(g:all()-all).." must be clustered")
    assert((all-g:all()):size()==0,"Invalid cluster, stages "..tostring(all-g:all()).." are not on the graph")
    g.cluster=c
-   res.map=function(self,...)
-      local args={...}
+   
+   return g
+end
+
+function index.map(g,...)
+   assert(is_graph(g),string.format("Invalid parameter #1 type (graph expected, got %s)",type(g)))
+   assert(g.cluster,"Graph is not partitioned")
+   local args={...}
       for i,t in ipairs(args) do
          if type(t)=='string' then t={t} end
          assert(type(t)=="table",string.format("Invalid parameter #%d type (table expected, got %s)",i,type(t)))
          for j,proc in ipairs(t) do
             if j==1 then
-               self[i]:set_process(proc)
+               g.cluster[i]:set_process(proc)
             else
-               self[i]:add_process(proc)
+               g.cluster[i]:add_process(proc)
             end
          end
       end
@@ -237,8 +241,6 @@ function index.part(g,...)
       end
       return self
    end
-   return res
-end
 
 function index.get_cluster(g,s)
    assert(is_graph(g),string.format("Invalid parameter #1 type (Graph expected, got %s)",type(g)))
@@ -413,7 +415,7 @@ function index.dump(g)
       print(string.format("Cluster: name='%s' serial='%s'",tostring(c),tostring(c:has_serial()==true)))
       if c.process_addr then
          for i,d in ipairs(c.process_addr) do
-            print(string.format("\tDaemon #%d: '%s:%d'",i,d.host,d.port))
+            print(string.format("\tProcess #%d: '%s:%d'",i,d.host,d.port))
          end
       end
    end

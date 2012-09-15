@@ -1,11 +1,11 @@
 local utils=require "leda.utils"
 
-printer=stage{utils.print}
+printer=leda.stage(utils.print)
+
+local g=leda.graph{start=printer}
 
 for i=1,10 do
    printer:send(i)
 end
-
-local g=graph{printer}
 
 g:run()

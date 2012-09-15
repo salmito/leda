@@ -8,9 +8,8 @@
 -----------------------------------------------------------------------------
 local base = _G
 local dbg = leda.debug.get_debug("Controller: Interactive: ")
-local plot=require('leda.utils.plot')
+local plot=pcall(require,'leda.utils.plot')
 local table,leda=table,leda
-local default_thread_pool_size=1
 local print,loadstring,pcall,os,string,pairs,ipairs,tostring,io,assert=
       print,loadstring,pcall,os,string,pairs,ipairs,tostring,io,assert
 local read=io.read
@@ -20,6 +19,7 @@ local prompt="leda-"..leda._VERSION..'> '
 kernel=leda.kernel
 local kernel=kernel
 leda.send=kernel.send
+local default_thread_pool_size=kernel.cpu()
 
 module("leda.controller.interactive")
 
@@ -73,7 +73,9 @@ function get_init(n)
    
    local fn = os.tmpname()
   
-   plot.plot_graph(g,fn..".dot")
+   if plot and leda.utils.plot then
+         leda.utils.plot.plot_graph(g,fn..".dot") 
+   end
 
    local f=assert(io.popen("graph-easy "..fn..".dot --boxart 2>/dev/null","r"))
    gr=assert(f:read('*a'))
@@ -88,11 +90,11 @@ function get_init(n)
             os.exit(0)
          elseif line == '+' then 
             table.insert(th,kernel.new_thread())
-            stderr:write("\027[2J")
+--            stderr:write("\027[2J")
             stderr:write("Thread created...\n")
          elseif line == '-' then 
             kernel.kill_thread() 
-            stderr:write("\027[2J")
+--            stderr:write("\027[2J")
             stderr:write("Thread killed...\n")
          elseif line~="" then
 --            stderr:write("\027[2J")

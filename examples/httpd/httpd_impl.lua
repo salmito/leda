@@ -1,5 +1,5 @@
 function require_socket()
-   require "socket"
+   require "leda.utils.socket"
    url=require "socket.url"
    require "table"
    require "string"
@@ -21,7 +21,6 @@ local server_version="Leda Webserver 1.0"
 
 local function read_method(sock,req)
 	local err
-   leda.socket.wait_io(sock:getfd(),1)
 	req.cmdline, err = sock:receive ()
 	
 	if not req.cmdline then return nil end
@@ -42,12 +41,12 @@ local function parse_url (req)
 	req.relpath = url.unescape (req.parsed_url.path)
 end
 
-local function read_headers (socket,req)
+local function read_headers(sock,req)
 	local headers = {}
 	local prevval, prevname
 	
 	while 1 do
-		local l,err = socket:receive ()
+		local l,err = sock:receive()
 		if (not l or l == "") then
 			req.headers = headers
 			return
@@ -79,7 +78,6 @@ end
 local function make_response (raw_socket,req)
 	local res = {
 		req = req,
-		raw_socket = raw_socket,
 		headers = default_headers (req),
 	}
 	
@@ -91,13 +89,16 @@ local function send_res_headers (res)
 		return
 	end
 	
+	
 --	if xavante.cookies then
 		--xavante.cookies.set_res_cookies (res)
 --	end
     
 	res.statusline = res.statusline or "HTTP/1.1 200 OK"
 
-	local sock=leda.socket.unwrap(res.raw_socket)
+	--print("Sending headers",res.statusline)
+
+	local sock=res.req.raw_socket
 
 	sock:send (res.statusline.."\r\n")
 	for name, value in pairs (res.headers) do
@@ -112,7 +113,6 @@ local function send_res_headers (res)
 	sock:send ("\r\n")
 	
 	res.sent_headers = true
-	leda.socket.wrap(sock)
 end
 
 
@@ -151,17 +151,15 @@ local function send_response (res)
 --			for _,v in ipairs (res.content) do send_res_data (res,v) end
 --		else
 			send_res_headers (res)
-   	   leda.socket.wait_io(res.raw_socket,2)
-         local sock=leda.socket.unwrap(res.raw_socket)
+         local sock=res.req.raw_socket
 		   sock:send(res.content)
-         leda.socket.wrap(sock)
 --		end
 	else
 		send_res_headers(res)
 	end
 	
 	if res.chunked then
-		local sock=leda.socket.unwrap(res.raw_socket)
+		local sock=res.req.raw_socket
 		sock:send ("0\r\n\r\n")
 		sock:close()
 	end
@@ -185,7 +183,7 @@ local function add_res_header (res, h, v)
 end
 
 --[[function send_data (res, data)
---   print("sending",res.statusline)
+--   --print("sending",res.statusline)
 	if not data or data == "" then
 		leda.send("close_connection",res)
 		return
@@ -209,17 +207,17 @@ end--]]
 
 function wait_client(port)
     local server_sock=socket.bind("*",port)
-    print("SERVER: Waiting on port >> ",port)
+    print("SERVER: Started on port >> ",port)
     while true do
-       leda.socket.wait_io(server_sock:getfd(),1)
+--       leda.socket.wait_io(server_sock:getfd(),1)
        local cli_sock,err=server_sock:accept()
        if cli_sock then
           cli_sock:setoption ("tcp-nodelay", true)
           local cli, port = cli_sock:getsockname()
-          local raw_cli=leda.socket.wrap(cli_sock)
-          leda.send("connection",raw_cli)
+--          local raw_cli=leda.socket.wrap(cli_sock)
+          leda.send("connection",cli_sock)
        else
-         print("Error",err)
+         --print("Error",err)
        end
    end
 end
@@ -230,7 +228,7 @@ function wait_client_bind(output)
 end
 
 function handle_connection(raw_cli)
-	local skt=leda.socket.unwrap(raw_cli)
+	local skt=raw_cli--leda.socket.unwrap(raw_cli)
 	local hostname, port = skt:getsockname()
 
 	local req = {
@@ -239,11 +237,14 @@ function handle_connection(raw_cli)
 		port= port,
 	}
 	if read_method (skt,req) then
-	   print("READ_METHOD")
+	   --print("READ_METHOD")
 		read_headers (skt,req)
+      --print("READ_HEADERS")
 		parse_url (req)
+      --print("PARSE_URL")
 		local res = make_response (raw_cli,req)
-		leda.socket.wrap(skt)
+      --print("MAKE_RESPONSE")
+--		leda.socket.wrap(skt)
 		leda.send("handle_request",res)
 	else
 	   skt:close()
@@ -255,9 +256,10 @@ function handle_connection_bind(output)
 end
 
 function handle_request(res)
+   --print("HANDLE_REQUEST")
    local req=res.req
    res.keep_alive=req.headers['connection']
-   print(res.keep_alive)
+   --print(res.keep_alive)
    if req.relpath=="/" then
       req.relpath="/index.html"
    end
@@ -276,12 +278,16 @@ function handle_request_bind(output)
 end
 
 function file_handler(res)
-   print('file handler')
+   --print('file handler')
 	local req=res.req
+	res.send_headers=send_res_headers
 	res.send_data=send_data
-	file_handler(req,res)	
+   
+	file_handler(req,res)
 	
-	if res.statusline then
+	--print("Statusline",res.statusline,res.sent_headers)
+
+	if not res.sent_headers then
 		send_response(res)
 	else
 		leda.send("close_connection",res)
@@ -295,7 +301,7 @@ end
 function get_file_handler_init(webroot_p)
 	return function()
 		xavante={}
-   	require "socket"
+   	require "leda.utils.socket"
 		require "io"
 		require "os"
 		require "xavante.filehandler"
@@ -303,16 +309,17 @@ function get_file_handler_init(webroot_p)
 		file_handler=xavante.filehandler(webroot_p)
 		webroot=webroot_p
 		send_data=function(res,data)
-   	   leda.socket.wait_io(res.raw_socket,2)
-         local sock=leda.socket.unwrap(res.raw_socket)
+		   if not res.sent_headers then
+		      res:send_headers()
+		   end
+         local sock=res.req.raw_socket
 		   sock:send(data)
-         leda.socket.wrap(sock)
 		end
 	end
 end
 
 function cgilua_handler(res)
-   print('CGI handler')
+   --print('CGI handler')
 	local req=res.req
    req.rawskt={}
    req.socket=""
@@ -321,44 +328,46 @@ function cgilua_handler(res)
 	res.send_data=send_data
    req.rawskt.getpeername=function () return "" end
 	cgi_handler(req,res)
-   leda.send("close_connection",req)
+	if not res.sent_headers then
+		send_response(res)
+	else
+		leda.send("close_connection",res)
+	end
 end
 
 function cgilua_handler_bind(output)
    assert(output.close_connection,"Output 'close_connection' field must be connected")
 end
 
-function get_cgilua_handler_init(webroot_p)
+function get_cgilua_handler_init()
 	return function()
 		xavante={}
 		require "io"
 		require "os"
    	require "debug"
-   	require "socket"
+   	require "leda.utils.socket"
 		require "xavante.cgiluahandler"
 		require "xavante.httpd"
 		cgi_handler=xavante.cgiluahandler.makeHandler(webroot_p)
 		webroot=webroot_p
 		send_data=function(res,data)
-   	   leda.socket.wait_io(res.raw_socket,2)
-         local sock=leda.socket.unwrap(res.raw_socket)
+		   if not res.sent_headers then
+		      res:send_headers()
+		   end
+         local sock=res.req.raw_socket
 		   sock:send(data)
-         leda.socket.wrap(sock)
 		end
 	end
 end
 
 function close_connection(res)
-   print(res.keep_alive)
+   --print(res.keep_alive)
    if res.keep_alive=='keep-alive' then
-      leda.socket.flush(res.raw_socket)
-      print("Keeping alive")
-      leda.send("connection",res.raw_socket)
-   else
-      print("closing")
-      local s=leda.socket.unwrap(res.raw_socket)
-      s:close()
+      --print("Keeping alive")
+      leda.aio.flush(res.req.raw_socket:getfd())
+      return leda.send("connection",res.req.raw_socket)
    end
+   leda.aio.flush(res.req.raw_socket:getfd())
 end
 function close_connection_bind(output) 
    assert(output.connection,"Output 'connection' field must be connected") 

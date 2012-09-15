@@ -20,7 +20,10 @@ local stage=leda.stage
 leda.mutex=__mutex
 leda.io=__io
 leda.epoll=__epoll
-leda.socket=__socket
+leda.aio=__aio
+leda.gettime=__gettime
+leda.getmetatable=__getmetatable;
+leda.setmetatable=__setmetatable;
 
 leda.nice=function (...) return coroutine.yield(__yield_code,...) end
 -----------------------------------------------------------------------------
@@ -37,6 +40,7 @@ leda.debug={
 -- Define an easier name for the sleep function
 -----------------------------------------------------------------------------
 leda.sleep=__sleep
+leda.quit=__quit
 
 -----------------------------------------------------------------------------
 -- Function to get the output indexed by 'key'
@@ -44,12 +48,8 @@ leda.sleep=__sleep
 -- if 'key' is not defined, return 'nil' and an error message
 -----------------------------------------------------------------------------
 function leda.get_output(key)
+   key = key or 1
    --try to get the provided key
-   if key and leda.output[key] then 
-      return leda.output[key]
-   end
-   --if not found use the first integer key
-   key=1
    if leda.output[key] then 
       return leda.output[key]
    end
@@ -101,7 +101,7 @@ end
 -----------------------------------------------------------------------------
 --local function handler_str() return stage.__handler end
 local __handler=leda.decode(leda.stage.__handler)
-if not __handler then 
+if not type(__handler)=='function' then 
    error("Error loading handler function for stage")
 end
 -----------------------------------------------------------------------------

@@ -128,6 +128,12 @@ end
 function run(g,localport,maxpar,controller)
    assert(is_graph(g),string.format("Invalid parameter #1 (graph expected, got %s)",type(g)))
    assert(type(localhost)=="string",string.format("Invalid local hostname (string expected, got %s)",type(localhost)))
+   if type(localport)=="table" then
+      local t=localport
+      localport=t.localport
+      maxpar=t.maxpar
+      controller=t.controller
+   end
    l_localport=localport or l_localport
    local d_list={}
    
@@ -155,7 +161,7 @@ function run(g,localport,maxpar,controller)
 end
 
 function init(g,ro_g,host,port,controller,maxpar)
-   io.stderr:write(string.format("Starting graph\n",host,port))
+--   io.stderr:write(string.format("Starting graph\n",host,port))
 --   ro_g:dump()
    maxpar=maxpar or -1
    leda.kernel.run(g,ro_g,controller or default_controller,maxpar,process_socket:getfd())

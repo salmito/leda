@@ -74,6 +74,7 @@ function new_stage(t,init,name,bind,serial)
    if type(t)=="function" then  -- arg1=handler, arg2=init, arg3=name, ...
       s.handler=t
       s.init=init
+      assert(type(s.init)=="function" or type(s.init)=="nil",string.format("Stage's init field must be a function or nil",type(s.init)))
       s.name=name
       s.bind=bind
       s.serial=serial
@@ -81,12 +82,13 @@ function new_stage(t,init,name,bind,serial)
       s.handler=t.handler
       assert(type(s.handler)=="function",string.format("Stage's event handler field must be a function (got %s)",type(s.handler)))
       s.init=t.init
+      assert(type(s.init)=="function" or type(s.init)=="nil",string.format("Stage's init field must be a function or nil",type(s.init)))
       s.name=t.name
       s.bind=t.bind
       s.serial= t.serial
    elseif is_stage(t) then
-      s.handler=t.handler
-      s.init=t.init
+      s.handler=kernel.decode(t.handler)
+      if t.init then s.init=kernel.decode(t.init) end
       s.bind=t.bind
 --      s.name=t.name.."'"
       s.serial=t.serial
@@ -94,10 +96,8 @@ function new_stage(t,init,name,bind,serial)
 
    s=setmetatable(s,stage)
  
-   assert(type(s.init)=="function" or type(s.init)=="nil",string.format("Stage's init field must be a function or nil",type(s.init)))
-
    s.handler=kernel.encode(s.handler)
-   if s.init then s.init=kernel.encode(s.init) end
+   if type(s.init)=="function" then s.init=kernel.encode(s.init) end
    
    s.name=s.name or tostring(s)
    s.pending={}

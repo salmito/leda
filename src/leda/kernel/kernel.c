@@ -32,6 +32,7 @@ THE SOFTWARE.
 #include <lua.h>
 #include <lauxlib.h>
 #include <lualib.h>
+#include <errno.h>
 
 #include "thread.h"
 #include "graph.h"
@@ -135,6 +136,8 @@ int leda_run(lua_State * L) {
          lua_pop(L,2);
       }
       lua_pop(L,1);
+      lua_newtable(L);
+      lua_setfield(L,-1,"pending");
    }
 
    _DEBUG("Kernel: Running Graph '%s'\n",g->name);
@@ -171,7 +174,62 @@ int leda_ready_queue_isempty(lua_State * L) {
    return 1;
 }
 
+int leda_getmetatable(lua_State *L) {
+   if(lua_type(L,1)==LUA_TSTRING) {
+      const char *tname=lua_tostring(L,1);
+      luaL_getmetatable(L,tname);
+   } else {
+      if(!lua_getmetatable (L,1)) {
+         lua_pushnil(L);
+         lua_pushliteral(L,"Metatable not found for the provided value");
+         return 2;
+      }
+   }
+   return 1;
+}
 
+int leda_setmetatable(lua_State *L) {
+   lua_pushvalue(L,2);
+   lua_setmetatable(L,1);
+   lua_pushvalue(L,1);
+   return 1;
+}
+
+
+/* Works on linux and windows
+ * adapted from:
+ * http://stackoverflow.com/questions/4586405/get-number-of-cpus-in-linux-using-c
+ */
+int leda_number_of_cpus(lua_State *L) {
+   long nprocs = -1;
+   long nprocs_max = -1;
+   #ifdef _WIN32
+      #ifndef _SC_NPROCESSORS_ONLN
+         SYSTEM_INFO info;
+         GetSystemInfo(&info);
+         #define sysconf(a) info.dwNumberOfProcessors
+         #define _SC_NPROCESSORS_ONLN
+      #endif
+   #endif
+   #ifdef _SC_NPROCESSORS_ONLN
+      nprocs = sysconf(_SC_NPROCESSORS_ONLN);
+      if (nprocs < 1) {
+         luaL_error(L,"Could not determine number of CPUs online:\n%s\n", 
+            strerror (errno));
+      }
+      nprocs_max = sysconf(_SC_NPROCESSORS_CONF);
+      if (nprocs_max < 1) {
+         luaL_error(L, "Could not determine number of CPUs configured:\n%s\n", 
+            strerror (errno));
+      }
+      lua_pushnumber(L,nprocs);
+      lua_pushnumber(L,nprocs_max);
+      return 2;
+   #else
+      luaL_error(L, "Could not determine number of CPUs");
+      exit (EXIT_FAILURE);
+   #endif
+}
 /* Kernel Lua function to sleep for a time in miliseconds*/
 int leda_sleep_(lua_State * L) {
    lua_Number n=lua_tonumber(L,1);
@@ -246,7 +304,9 @@ int luaopen_leda_kernel (lua_State *L) {
   	   {"gettime", leda_gettime},
  	   {"send", leda_send},
   	   {"build_graph", graph_build},
-  	   
+  	   {"getmetatable", leda_getmetatable},  	   
+ 	   {"setmetatable", leda_setmetatable}, 
+      {"cpu", leda_number_of_cpus},
   	   //functions for controllers
   	   {"new_thread", thread_new},
   	   {"kill_thread", thread_kill},

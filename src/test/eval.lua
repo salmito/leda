@@ -2,18 +2,22 @@ local utils=require "leda.utils"
 
 s1=stage{ name="s1",
    handler=function (i)
-      send(1,string.format("",i))
+      i=0
+      while true do
+         leda.send(1,string.format("print('event %d') leda.send(1,'string')",i))
+         leda.sleep(0)
+         i=i+1
+      end
    end,
-   serial=true,
-   init=function () 
-      mutex=leda.mutex.new()
-   end,
-   output={connector()},
-	bind=function(self)
-		assert(self.output[1],"default output must be connected")
+   init=function() require "string" end,
+	bind=function(output)
+		assert(output[1],"default output must be connected")
 	end
 }
 
-s1.input:send(1)
+eval=stage(utils.eval)
+printer=stage(utils.print)
 
-graph{s1,s2}:run(leda.controller.fixed_thread_pool.get(10))
+s1:send(1)
+
+leda.graph{s1:connect(eval),eval:connect(printer)}:run()

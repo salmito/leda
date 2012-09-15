@@ -76,6 +76,7 @@ void destroy_event(event e) {
          case LUA_TFUNCTION:
          case LUA_TTABLE:
          case LUA_TUSERDATA:
+			case LUA_TLIGHTUSERDATA:
          if(e->payload[i].data.str) 
             free(e->payload[i].data.str);
          }
@@ -227,7 +228,7 @@ bool_t copy_event_element(lua_State *L, size_t i, element e) {
          /* We have to allocate a new memory chunk for the string
          because the garbage collector may destroy the string 's'
          before the event consumption.
-         It will be deallocated in the event_destroy() function */
+         It has to be deallocated in the event_destroy() function */
          e->data.str=malloc(len+1); //space for \0
          e->len=len;
          memcpy(e->data.str,s,len);
@@ -298,10 +299,13 @@ int send_event(lua_State *L) {
    
    lua_pushcfunction(L,mar_encode);
    lua_pushvalue(L,2);
-   lua_call(L,1,1); //propagate error
+   lua_pushnil(L);
+   lua_pushboolean(L,TRUE);
+   lua_call(L,3,1); //propagate error
    luaL_checktype(L,-1,LUA_TSTRING);
    size_t len; const char *payload=lua_tolstring(L,-1,&len); 
 
+	//round robin through possible destination processes
    int next_d=STORE(cur_process[STAGE(s_id)->cluster],
    (READ(cur_process[STAGE(s_id)->cluster])+1)%CLUSTER(STAGE(s_id)->cluster)->n_processes);
    
@@ -416,8 +420,8 @@ int read_event(int fd) {
    int size=read(fd,&type,1);
    if(size!=1) return 1;
    if(type==INIT_TYPE) {
-      size=write(fd,"Deamon has already started\n",27);
-      _DEBUG("Process: Error: Deamon has already started\n");
+      size=write(fd,"Process has already started\n",27);
+      _DEBUG("Process: Error: Process has already started\n");
       close(fd);
    } else if(type!=EVENT_TYPE) return 1;
 
@@ -489,11 +493,10 @@ struct event_epoll_data {
 
 int epfd;
 
+
 void event_wait_io(instance i) {
    struct epoll_event event; 
-   //FIXME CAREFULL, ERRORS ARE UNPROTECTED. IT DOES A LONGJUMP SO
-   //THE THREAD WILL BE OUT OF CONTEXT IF SOMETHING HAPPENS
-   
+
    int fd=-1;
    if (lua_type(i->L,1)==LUA_TNUMBER) {
       fd=lua_tointeger(i->L,1);
@@ -509,6 +512,7 @@ void event_wait_io(instance i) {
        push_ready_queue(i);
        return;
    }
+   
    int mode=-1;
    if (lua_type(i->L,2)==LUA_TNUMBER) {
       mode=lua_tointeger(i->L,2);
@@ -528,8 +532,7 @@ void event_wait_io(instance i) {
    int err;
 
    struct event_epoll_data * ed=malloc(sizeof(struct event_epoll_data));
-   
-   //FIXME DITTO
+
    if(!ed) {
        lua_settop(i->L,0);
        //Get the  main coroutine of the instance's handler
@@ -570,8 +573,8 @@ void event_wait_io(instance i) {
    
 
    if((err = epoll_ctl (epfd, EPOLL_CTL_ADD, ed->fd, &event))) {
-       free(ed);
        close(ed->fd);
+       free(ed);
        lua_settop(i->L,0);
        //Get the  main coroutine of the instance's handler
        lua_getglobal(i->L, "handler");
@@ -589,9 +592,25 @@ void event_wait_io(instance i) {
  
 void event_sleep(instance i) {
    struct epoll_event event; 
-   //FIXME CAREFULL, THIS ERROR IS UNPROTECTED. IT DOES A LONGJUMP SO
-   //THE THREAD WILL BE OUT OF CONTEXT IF IT HAPPENS
-   double time=now_secs()+lua_tonumber(i->L,1);
+   //CAREFULL, ERRORS ARE UNPROTECTED. IT DOES A LONGJUMP SO
+   //THE THREAD WILL BE OUT OF CONTEXT IF IT HAPPENS (PANIC)
+   double time=now_secs();
+   
+   if (lua_type(i->L,1)==LUA_TNUMBER) {
+      time+=lua_tonumber(i->L,1);
+   } else {
+       lua_settop(i->L,0);
+       //Get the  main coroutine of the instance's handler
+       lua_getglobal(i->L, "handler");
+       //Put it on the bottom of the instance's stack
+       lua_pushnil(i->L);
+       lua_pushliteral(i->L,"Invalid argument");
+       //Set the previous number of arguments
+       i->args=2;
+       push_ready_queue(i);
+       return;
+   }
+
    if(time<=0.0) {
        lua_settop(i->L,0);
        //Get the  main coroutine of the instance's handler
@@ -664,8 +683,8 @@ void event_sleep(instance i) {
    event.events = EPOLLIN;   
 
    if((err = epoll_ctl (epfd, EPOLL_CTL_ADD, ed->fd, &event))) {
-       free(ed);
        close(ed->fd);
+       free(ed);
        lua_settop(i->L,0);
        //Get the  main coroutine of the instance's handler
        lua_getglobal(i->L, "handler");
@@ -734,7 +753,7 @@ static THREAD_RETURN_T THREAD_CALLCONV event_main(void *t_val) {
                if(epoll_ctl (epfd, EPOLL_CTL_ADD, client_fd, &event)) {
                   perror("Epoll error");
                }
-            } else if(ed->i==NULL) {
+            } else if(ed->i==NULL) { //Remote event
                struct epoll_event event;
                event.data.fd = ed->fd;
                event.events = EPOLLIN;
@@ -744,7 +763,7 @@ static THREAD_RETURN_T THREAD_CALLCONV event_main(void *t_val) {
                   epoll_ctl (epfd, EPOLL_CTL_DEL, ed->fd, &event);
 //                  free(ed);
                }
-            } else {
+            } else { //Internal event
                lua_settop(ed->i->L,0);
                //Get the  main coroutine of the instance's handler
                lua_getglobal(ed->i->L, "handler");

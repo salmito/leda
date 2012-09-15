@@ -72,4 +72,8 @@ int wait_io(lua_State * L);
 int emmit(lua_State * L);
 int cohort(lua_State * L);
 
+int leda_getmetatable(lua_State *L);
+int leda_setmetatable(lua_State *L);
+int leda_quit(lua_State *L);
+
 #endif //_THREAD_H_

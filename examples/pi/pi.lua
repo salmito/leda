@@ -71,5 +71,5 @@ local pi=leda.graph{
 
 local n,it =tonumber(arg[1]),tonumber(arg[2])
 dispatcher:send(n,it)
-
+pi:plot('graph.png')
 pi:run()

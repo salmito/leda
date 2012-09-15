@@ -24,7 +24,7 @@ local s_handle_request=leda.stage{
 	name="Request handler",
 	handler=handle_request,
 	bind=handle_request_bind,
-	init=function () require "string" end,
+	init=function () require "leda.utils.socket" require "string" end,
 }
 
 local webroot=webroot or './web'
@@ -52,21 +52,22 @@ local s_connection_close=leda.stage{
 
 
 s_wait_client:send(port)
-s_wait_client:send(9090)
 
 local webserver=leda.graph{name="Webserver"}
-webserver:add(leda.connect(s_wait_client,'connection',s_handle_connection))
+webserver:add(leda.connect(s_wait_client,'connection',s_handle_connection,leda.couple))
 --webserver:add(leda.connect(s_send_response,'send_data',s_send_data))
-webserver:add(leda.connect(s_handle_connection,'handle_request',s_handle_request))
-webserver:add(leda.connect(s_handle_request,'file_handler',s_file_handler))
-webserver:add(leda.connect(s_handle_request,'cgilua_handler',s_cgi_handler))
-webserver:add(leda.connect(s_cgi_handler,'close_connection',s_connection_close))
+webserver:add(leda.connect(s_handle_connection,'handle_request',s_handle_request,leda.couple))
+webserver:add(leda.connect(s_handle_request,'file_handler',s_file_handler,leda.couple))
+webserver:add(leda.connect(s_handle_request,'cgilua_handler',s_cgi_handler,leda.couple))
+webserver:add(leda.connect(s_cgi_handler,'close_connection',s_connection_close,leda.couple))
 --leda.connect(s_file_handler,'send_response',s_send_response))
-webserver:add(leda.connect(s_file_handler,'close_connection',s_connection_close))
+webserver:add(leda.connect(s_file_handler,'close_connection',s_connection_close,leda.couple))
 --leda.connect(s_send_data,'close_connection',s_connection_close))
-webserver:add(leda.connect(s_connection_close,'connection',s_handle_connection))
+webserver:add(leda.connect(s_connection_close,'connection',s_handle_connection,leda.couple))
 
 
 --leda.plot_graph(webserver)
+
+webserver:plot('graph.png')
 
 webserver:run()

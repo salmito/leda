@@ -50,7 +50,7 @@ typedef struct mar_Buffer {
     char*  data;
 } mar_Buffer;
 
-static int mar_encode_table(lua_State *L, mar_Buffer *buf, size_t *idx);
+static int mar_encode_table(lua_State *L, mar_Buffer *buf, size_t *idx, int nowrap);
 static int mar_decode_table(lua_State *L, const char* buf, size_t len, size_t *idx);
 
 static void buf_init(lua_State *L, mar_Buffer *buf)
@@ -96,7 +96,7 @@ static const char* buf_read(lua_State *L, mar_Buffer *buf, size_t *len)
     return NULL;
 }
 
-static void mar_encode_value(lua_State *L, mar_Buffer *buf, int val, size_t *idx)
+static void mar_encode_value(lua_State *L, mar_Buffer *buf, int val, size_t *idx, int nowrap)
 {
     size_t l;
     int val_type = lua_type(L, val);
@@ -118,6 +118,14 @@ static void mar_encode_value(lua_State *L, mar_Buffer *buf, int val, size_t *idx
     case LUA_TNUMBER: {
         lua_Number num_val = lua_tonumber(L, -1);
         buf_write(L, (void*)&num_val, MAR_I64, buf);
+        break;
+    }
+    case LUA_TLIGHTUSERDATA: {
+        if(nowrap) 
+           luaL_error(L, "light userdata not permitted");
+        void * ptr_val = lua_touserdata(L, -1);
+        long long v = (long long)ptr_val;
+        buf_write(L, (char*)&v, MAR_I64, buf);
         break;
     }
     case LUA_TTABLE: {
@@ -150,7 +158,7 @@ static void mar_encode_value(lua_State *L, mar_Buffer *buf, int val, size_t *idx
                 lua_rawseti(L, -2, 1);
 
                 buf_init(L, &rec_buf);
-                mar_encode_table(L, &rec_buf, idx);
+                mar_encode_table(L, &rec_buf, idx, nowrap);
 
                 buf_write(L, (void*)&tag, MAR_CHR, buf);
                 buf_write(L, (void*)&rec_buf.head, MAR_I32, buf);
@@ -167,7 +175,7 @@ static void mar_encode_value(lua_State *L, mar_Buffer *buf, int val, size_t *idx
 
                 lua_pushvalue(L, -1);
                 buf_init(L, &rec_buf);
-                mar_encode_table(L, &rec_buf, idx);
+                mar_encode_table(L, &rec_buf, idx, nowrap);
                 lua_pop(L, 1);
 
                 buf_write(L, (void*)&tag, MAR_CHR, buf);
@@ -222,7 +230,7 @@ static void mar_encode_value(lua_State *L, mar_Buffer *buf, int val, size_t *idx
             }
 
             buf_init(L, &rec_buf);
-            mar_encode_table(L, &rec_buf, idx);
+            mar_encode_table(L, &rec_buf, idx, nowrap);
 
             buf_write(L, (void*)&rec_buf.head, MAR_I32, buf);
             buf_write(L, rec_buf.data, rec_buf.head, buf);
@@ -246,7 +254,31 @@ static void mar_encode_value(lua_State *L, mar_Buffer *buf, int val, size_t *idx
         else {
             mar_Buffer rec_buf;
             lua_pop(L, 1); /* pop nil */
-            if (luaL_getmetafield(L, -1, "__persist")) {
+            if (!nowrap && luaL_getmetafield(L, -1, "__wrap")) {
+                tag = MAR_TUSR;
+
+                lua_pushvalue(L, -2);
+                lua_pushinteger(L, (*idx)++);
+                lua_rawset(L, SEEN_IDX);
+
+                lua_pushvalue(L, -2);
+                lua_call(L, 1, 1);
+                if (!lua_isfunction(L, -1)) {
+                    luaL_error(L, "__wrap must return a function");
+                }
+                lua_newtable(L);
+                lua_pushvalue(L, -2);
+                lua_rawseti(L, -2, 1);
+                lua_remove(L, -2);
+
+                buf_init(L, &rec_buf);
+                mar_encode_table(L, &rec_buf, idx, nowrap);
+
+                buf_write(L, (void*)&tag, MAR_CHR, buf);
+                buf_write(L, (void*)&rec_buf.head, MAR_I32, buf);
+		          buf_write(L, rec_buf.data, rec_buf.head, buf);
+		          buf_done(L, &rec_buf);
+            } else if (luaL_getmetafield(L, -1, "__persist")) {
                 tag = MAR_TUSR;
 
                 lua_pushvalue(L, -2);
@@ -264,15 +296,15 @@ static void mar_encode_value(lua_State *L, mar_Buffer *buf, int val, size_t *idx
                 lua_remove(L, -2);
 
                 buf_init(L, &rec_buf);
-                mar_encode_table(L, &rec_buf, idx);
+                mar_encode_table(L, &rec_buf, idx, nowrap);
 
                 buf_write(L, (void*)&tag, MAR_CHR, buf);
                 buf_write(L, (void*)&rec_buf.head, MAR_I32, buf);
-		buf_write(L, rec_buf.data, rec_buf.head, buf);
-		buf_done(L, &rec_buf);
+		          buf_write(L, rec_buf.data, rec_buf.head, buf);
+		          buf_done(L, &rec_buf);
             }
             else {
-                luaL_error(L, "attempt to encode userdata (no __persist hook)");
+                luaL_error(L, "attempt to encode userdata (no __wrap hook - or not permited - and no __persist hook)");
             }
             lua_pop(L, 1);
         }
@@ -285,12 +317,12 @@ static void mar_encode_value(lua_State *L, mar_Buffer *buf, int val, size_t *idx
     lua_pop(L, 1);
 }
 
-static int mar_encode_table(lua_State *L, mar_Buffer *buf, size_t *idx)
+static int mar_encode_table(lua_State *L, mar_Buffer *buf, size_t *idx, int nowrap)
 {
     lua_pushnil(L);
     while (lua_next(L, -2) != 0) {
-        mar_encode_value(L, buf, -2, idx);
-        mar_encode_value(L, buf, -1, idx);
+        mar_encode_value(L, buf, -2, idx, nowrap);
+        mar_encode_value(L, buf, -1, idx, nowrap);
         lua_pop(L, 1);
     }
     return 1;
@@ -318,6 +350,11 @@ static void mar_decode_value
         lua_pushnumber(L, *(lua_Number*)*p);
         mar_incr_ptr(MAR_I64);
         break;
+    case LUA_TLIGHTUSERDATA: {
+        void * ptr=(void*)*(void**)*p;
+        lua_pushlightuserdata(L, ptr);
+        mar_incr_ptr(MAR_I64);
+        } break;
     case LUA_TSTRING:
         mar_next_len(l, uint32_t);
         lua_pushlstring(L, *p, l);
@@ -449,13 +486,21 @@ int mar_encode(lua_State* L)
     if (lua_isnone(L, 1)) {
         lua_pushnil(L);
     }
-    if (lua_isnoneornil(L, 2)) {
+    if (lua_isnone(L, 2)) {
+        lua_pushnil(L);
+    }
+    if (lua_isnil(L, 2)) {
         lua_newtable(L);
+        lua_replace(L,2);
     }
     else if (!lua_istable(L, 2)) {
         luaL_error(L, "bad argument #2 to encode (expected table)");
     }
-
+    int nowrap=0;
+   if(lua_isboolean(L,3)) {
+      nowrap=lua_toboolean(L,3);
+      lua_remove(L,3);
+    }
     len = lua_objlen(L, 2);
     lua_newtable(L);
     for (idx = 1; idx <= len; idx++) {
@@ -468,9 +513,11 @@ int mar_encode(lua_State* L)
 
     buf_init(L, &buf);
     buf_write(L, (void*)&m, 1, &buf);
-
-    mar_encode_value(L, &buf, -1, &idx);
-
+    mar_encode_value(L, &buf, -1, &idx, nowrap);
+    if(nowrap) {
+      lua_pushboolean(L,nowrap);
+      lua_replace(L,3);
+    }
     lua_pop(L, 1);
 
     lua_pushlstring(L, buf.data, buf.head);

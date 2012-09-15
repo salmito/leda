@@ -3,12 +3,15 @@
 -- Author: Tiago Salmito, Noemi Rodriguez, Ana Lucia de Moura
 -----------------------------------------------------------------------------
 
-local kernel = require("leda.kernel")
+require("leda.kernel")
+local kernel=leda.kernel
 local debug= require("leda.debug")
 local leda_stage = require("leda.leda_stage")
 local leda_cluster = require("leda.leda_cluster")
 local leda_graph = require("leda.leda_graph")
 local process = require("leda.process")
+
+local print,pairs=print,pairs
 
 module("leda")
 
@@ -18,8 +21,11 @@ is_graph=leda_graph.is_graph
 is_cluster=leda_graph.is_cluster
 dump_graph=leda_graph.dump
 
+getmetatable=kernel.getmetatable
+setmetatable=kernel.setmetatable
+
 couple=leda_connector.coupled
-cohort=leda_connector.cohort
+--cohort=leda_connector.cohort
 
 --Exporting stage related functions
 stage=leda_stage.new_stage

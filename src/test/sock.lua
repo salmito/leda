@@ -1,4 +1,7 @@
-require "leda.utils"
+require "leda"
+require "leda.controller.fixed_thread_pool"
+
+local stage,graph=leda.stage,leda.graph
 
 wait_client=stage{
    handler=function(port)
@@ -6,19 +9,26 @@ wait_client=stage{
        print("SERVER: Waiting on port >> ",port)
        while true do
           local cli_sock=server_sock:accept()
-          local cli=leda.socket.wrap(cli_sock)
           print("SERVER: Sending client",cli)
-          leda.get_output():send(cli)
+          leda.send('Client socket',cli_sock)
        end
    end, 
-   init=function () require "socket" end,
+   init=function () 
+      require "leda.utils.socket" 
+   end,
+   bind=function (out)
+      assert(out['Client socket'],"'Client socket' port bust be connected")
+      assert(out['Client socket'].type==leda.couple,"Stages '"..
+             tostring(out['Client socket'].producer).."' and '"..tostring(out['Client socket'].consumer)..
+             "' must be coupled")
+   end,
    name="wait client"
 }
 
 read_request=stage{
    handler=function(cli_sock)
       print("SERVER: Serving client",cli_sock)
-      local cli=leda.socket.unwrap(cli_sock)
+      local cli=cli_sock
       cli:send("Welcome stranger\r\n")
       local line = cli:receive()
       local last_line=""
@@ -29,16 +39,16 @@ read_request=stage{
             break 
          end
          last_line=line
-         leda.get_output():send(line)
+         leda.send('Line sent',line)
          i=i+1
-         if i==10 then break end
+--         if i==10 then break end
          line = cli:receive()
       end
    
       print("SERVER: Closing connection")
       cli:close()
    end,
-      init=function () require "socket" end,
+      init=function () require "leda.utils.socket"  end,
    name="read request from client sock"
 }
 
@@ -49,11 +59,12 @@ local_echo=stage{
    name="echo request locally"
 }
 
-read_request:connect(local_echo)
-wait_client:connect(read_request)
+g=graph{read_request:connect("Line sent",local_echo),
+wait_client:connect("Client socket",read_request,leda.couple)
+}
 
-g=graph{wait_client,read_request,local_echo}
+wait_client:send(8888)
 
-
-wait_client:send(9999)
-g:run(leda.controller.fixed_thread_pool.get(10))
+--g:part(wait_client+read_request,local_echo):map("localhost","localhost:7777")
+--g:plot()
+g:run{controller=leda.controller.fixed_thread_pool.get(1)}

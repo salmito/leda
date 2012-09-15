@@ -4,6 +4,5 @@ require "leda.utils.plot"
 local a=stage(utils.print)
 
 local g=utils.linear_pipeline(a,a,a,a,a,a,a,a,a,a)
-a:send()
-g:plot()
-
+g:send("flux")
+g:run()
