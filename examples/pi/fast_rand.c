@@ -1,49 +1,48 @@
-#include <stdio.h>
+#include <stdlib.h>
 #include <lua.h>
 #include <lauxlib.h>
 #include <lualib.h>
+#include <math.h>
 
-typedef unsigned long long u64b;
+unsigned int s=0;
 
-static u64b rng64b(u64b *s)
-{
-	u64b x;
-
-	asm volatile(
-	"mov    $0x6595a395a1ec531b,%%rcx\n"
-	"movl   0xc(%1),%k0\n"
-	"add    %%rcx,(%1)\n"
-	"adc    %%rcx,0x8(%1)\n"
-	"xor	0x8(%1),%0\n"
-	"xor    %1,%0\n" //Remove this line if you are single threaded
-	"imul   %%rcx,%0\n"
-	"mov    %0,%%rdx\n"
-	"shr    $0x20,%0\n"
-	"xor    %%rdx,%0\n"
-	"imul   %%rcx,%0\n"
-	"add    (%1),%0\n"
-	:"=r" (x): "r"(s): "%rcx", "%rdx", "memory", "cc");
-	return x;
+unsigned long long rdtsc(){
+    unsigned int lo,hi;
+    __asm__ __volatile__ ("rdtsc" : "=a" (lo), "=d" (hi));
+    return ((unsigned long long)hi << 32) | lo;
 }
 
-static u64b seed[2];
-#define RAND_MAX_F 10000000000000000LL
-
-/* Sample usage */
 int seed_f(lua_State * L)
 {
 	/* Initialize seed */
-	seed[0] = lua_tointeger(L,1);
-	seed[1] = lua_tointeger(L,2);
+	//s = lua_tointeger(L,1);
+	s = rdtsc();
 	return 0; 
 }
 
 int rand_f(lua_State * L) {
-	u64b result;
-	/* Get a random 64bit integer */
-	result = rng64b(seed);
-	lua_pushnumber(L,(double)(result%RAND_MAX_F)/RAND_MAX_F);
-	return 1;
+lua_Number r = (lua_Number)(rand_r(&s)%RAND_MAX) / (lua_Number)RAND_MAX;
+  switch (lua_gettop(L)) {  /* check number of arguments */
+    case 0: {  /* no arguments */
+      lua_pushnumber(L, r);  /* Number between 0 and 1 */
+      break;
+    }
+    case 1: {  /* only upper limit */
+      int u = luaL_checkint(L, 1);
+      luaL_argcheck(L, 1<=u, 1, "interval is empty");
+      lua_pushnumber(L, floor(r*u)+1);  /* int between 1 and `u' */
+      break;
+    }
+    case 2: {  /* lower and upper limits */
+      int l = luaL_checkint(L, 1);
+      int u = luaL_checkint(L, 2);
+      luaL_argcheck(L, l<=u, 2, "interval is empty");
+      lua_pushnumber(L, floor(r*(u-l+1))+l);  /* int between `l' and `u' */
+      break;
+    }
+    default: return luaL_error(L, "wrong number of arguments");
+  }
+  return 1;
 }
 
 static const luaL_reg R[] =
