@@ -19,7 +19,6 @@ module("leda")
 graph=leda_graph.graph
 is_graph=leda_graph.is_graph
 is_cluster=leda_graph.is_cluster
-dump_graph=leda_graph.dump
 
 getmetatable=kernel.getmetatable
 setmetatable=kernel.setmetatable

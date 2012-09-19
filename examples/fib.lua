@@ -1,5 +1,4 @@
 require "leda"
-require "leda.utils.plot"
 
 local fib=leda.stage{
 	"Fibbonacci",
@@ -37,6 +36,6 @@ fib:connect("loopback",fib)
 
 fib:send(tonumber(arg[1]))
 
-leda.plot_graph(graph,"fib.png")
+graph:plot("fib.png")
 
 graph:run()

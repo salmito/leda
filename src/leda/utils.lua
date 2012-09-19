@@ -3,8 +3,6 @@ require "leda"
 -----------------------------------------------------------------------------
 -- Defining globals for easy access to the leda main API functions
 -----------------------------------------------------------------------------
-stage,connector,graph,cluster=stage or leda.stage,connector or leda.connector,graph or leda.graph, cluster or leda.cluster
-
 leda.utils={}
 local utils=leda.utils
 

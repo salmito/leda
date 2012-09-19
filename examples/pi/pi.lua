@@ -1,6 +1,4 @@
 require "leda"
-require "leda.utils.plot"
-require "socket"
 local fast_rand=require "fast_rand"
 
 local dispatcher=leda.stage{

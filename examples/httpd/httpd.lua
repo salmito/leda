@@ -1,7 +1,6 @@
 require "httpd_impl"
 
 local leda=require "leda"
-require "leda.utils.plot"
 local interactive=require "leda.controller.interactive"
 
 local port=port or 8080
