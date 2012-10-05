@@ -23,7 +23,7 @@ local fib=leda.stage{
 }
 
 local printer=leda.stage{
-  handler=function(...) print(...) end,
+  handler=function(...) print(...) leda.quit() end,
    name="Printer"
 }
 
@@ -35,7 +35,5 @@ fib:connect("loopback",fib)
 }
 
 fib:send(tonumber(arg[1]))
-
-graph:plot("fib.png")
 
 graph:run()

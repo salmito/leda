@@ -344,7 +344,7 @@ int send_event(lua_State *L) {
       lua_pop(L,1);
       close(sockfd);
       lua_pushboolean(L,FALSE);
-      lua_pushfstring(L,"Error sending event to process '%s:%d': %s",PROCESS(dst_id)->host,PROCESS(dst_id)->port,strerror(errno));
+      lua_pushfstring(L,"Error1 sending event to process '%s:%d': %s",PROCESS(dst_id)->host,PROCESS(dst_id)->port,strerror(errno));
    }
 
    size=write(sockfd,&s_id,sizeof(stage_id));
@@ -352,14 +352,14 @@ int send_event(lua_State *L) {
       lua_pop(L,1);
       close(sockfd);
       lua_pushboolean(L,FALSE);
-      lua_pushfstring(L,"Error sending event to process '%s:%d': %s",PROCESS(dst_id)->host,PROCESS(dst_id)->port,strerror(errno));
+      lua_pushfstring(L,"Error2 sending event to process '%s:%d': %s",PROCESS(dst_id)->host,PROCESS(dst_id)->port,strerror(errno));
    }
    size=write(sockfd,&len,sizeof(size_t));
    if(size!=sizeof(size_t)) {
       lua_pop(L,1);
       close(sockfd);   
       lua_pushboolean(L,FALSE);
-      lua_pushfstring(L,"Error sending event to process '%s:%d': %s",PROCESS(dst_id)->host,PROCESS(dst_id)->port,strerror(errno));
+      lua_pushfstring(L,"Error3 sending event to process '%s:%d': %s",PROCESS(dst_id)->host,PROCESS(dst_id)->port,strerror(errno));
    }
    
    int writed=0;
@@ -369,13 +369,13 @@ int send_event(lua_State *L) {
          lua_pop(L,1);
          close(sockfd);      
          lua_pushboolean(L,FALSE);
-         lua_pushfstring(L,"Error sending event to process '%s:%d': %s",PROCESS(dst_id)->host,PROCESS(dst_id)->port,strerror(errno));      
+         lua_pushfstring(L,"Error4 sending event to process '%s:%d': %s",PROCESS(dst_id)->host,PROCESS(dst_id)->port,strerror(errno));      
          return 2;
       } else if(size==0) {
          lua_pop(L,1);
          close(sockfd);
          lua_pushboolean(L,FALSE);
-         lua_pushfstring(L,"Error sending event to process '%s:%d': Process closed connection",PROCESS(dst_id)->host,PROCESS(dst_id)->port);
+         lua_pushfstring(L,"Error5 sending event to process '%s:%d': Process closed connection",PROCESS(dst_id)->host,PROCESS(dst_id)->port);
          return 2;
       }
       writed+=size;
@@ -387,7 +387,7 @@ int send_event(lua_State *L) {
       lua_pop(L,1);
       close(sockfd);
       lua_pushboolean(L,FALSE);
-      lua_pushfstring(L,"Error sending event to process '%s:%d': %s",PROCESS(dst_id)->host,PROCESS(dst_id)->port,strerror(errno));
+      lua_pushfstring(L,"Error6 sending event to process '%s:%d': %s",PROCESS(dst_id)->host,PROCESS(dst_id)->port,strerror(errno));
       return 2;
    }
    if(res==1) {
@@ -404,13 +404,13 @@ int send_event(lua_State *L) {
       lua_pop(L,1);
       close(sockfd);
       lua_pushboolean(L,FALSE);
-      lua_pushfstring(L,"Error sending event to process '%s:%d': %*s",PROCESS(dst_id)->host,PROCESS(dst_id)->port,buf,strerror(errno));
+      lua_pushfstring(L,"Error7 sending event to process '%s:%d': %*s",PROCESS(dst_id)->host,PROCESS(dst_id)->port,buf,strerror(errno));
       return 2;
    }
    lua_pop(L,1);
    close(sockfd);
    lua_pushboolean(L,FALSE);
-   lua_pushfstring(L,"Error sending event to process '%s:%d': %*s",PROCESS(dst_id)->host,PROCESS(dst_id)->port,buf,size);
+   lua_pushfstring(L,"Error8 sending event to process '%s:%d': %*s",PROCESS(dst_id)->host,PROCESS(dst_id)->port,buf,size);
    return 2;
 }
 
@@ -424,7 +424,7 @@ int read_event(int fd) {
       _DEBUG("Process: Error: Process has already started\n");
       close(fd);
    } else if(type!=EVENT_TYPE) return 1;
-
+   _DEBUG("Process: Receiving event\n");
    stage_id id;
    size=read(fd,&id,sizeof(stage_id));
    if(size!=sizeof(stage_id)) return 1;
@@ -450,6 +450,7 @@ int read_event(int fd) {
       free(buf);
       return 1;
    }
+   _DEBUG("Process: Packing event\n");
 
    lua_pushcfunction(dummy,emmit);
    lua_pushinteger(dummy,id);
@@ -464,7 +465,8 @@ int read_event(int fd) {
    int args=lua_gettop(dummy)-begin;
 
    lua_call(dummy,args+2,2);
-   
+  
+   _DEBUG("Process: Event received\n");
    if(lua_toboolean(dummy,-2)==TRUE) {
       char res=TRUE;
       size=write(fd,&res,sizeof(char));
@@ -740,7 +742,9 @@ static THREAD_RETURN_T THREAD_CALLCONV event_main(void *t_val) {
                   _DEBUG("Error accepting connection");
                   continue;
                }
-               
+//               int flags = fcntl(client_fd, F_GETFL, 0);
+//               fcntl(client_fd, F_SETFL, flags | O_NONBLOCK);              
+ 
                struct epoll_event event;
                
                struct event_epoll_data * ned=malloc(sizeof(struct event_epoll_data));
@@ -758,9 +762,9 @@ static THREAD_RETURN_T THREAD_CALLCONV event_main(void *t_val) {
                event.data.fd = ed->fd;
                event.events = EPOLLIN;
                if(read_event(ed->fd)) {
-                  _DEBUG("Process: Client closed the connection\n");
-                  close(ed->fd);
+                  _DEBUG("Process: Client %d closed the connection\n",ed->fd);
                   epoll_ctl (epfd, EPOLL_CTL_DEL, ed->fd, &event);
+                  close(ed->fd);
 //                  free(ed);
                }
             } else { //Internal event

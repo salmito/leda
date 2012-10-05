@@ -15,6 +15,8 @@ local print,pairs=print,pairs
 
 module("leda")
 
+gettime=kernel.gettime
+
 --Exporting graph related functions
 graph=leda_graph.graph
 is_graph=leda_graph.is_graph

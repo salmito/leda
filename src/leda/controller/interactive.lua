@@ -112,14 +112,16 @@ init=get_init(default_thread_pool_size)
 
 function update(fn)
    local ps=kernel.thread_pool_size()
-   local rs=kernel.ready_queue_size()
+   local rs,rsc=0,kernel.ready_queue_size()
+   local ta=0
+   if rsc<0 then rs=0 ta=ps+rsc else ta=ps rs=rsc end
    local rc=kernel.ready_queue_capacity()
    local stats,cstats=kernel.stats()
    stderr:write(gr)
    stderr:write("\n")
    if stats then
    stderr:write(string.format("\nTotal execution time: %.3fs\n",kernel.gettime()-init_time))
-   stderr:write(string.format("Thread_pool_size=%d\tReady_queue_size=%d\tReady_queue_capacity=%d\n",ps,rs,rc))
+   stderr:write(string.format("Thread_pool_size=%d (%d active)\tReady_queue_size=%d\tReady_queue_capacity=%d\n",ps,ta,rs,rc))
    stderr:write("===== Stages =====\n")
    for k,v in ipairs(stats) do 
       if v.events_pushed>0 or v.times_executed>0 then

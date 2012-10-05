@@ -50,6 +50,12 @@ local function is_local(d)
 end
 
 function start(p_port,maxpar,controller,has_graph)
+   if type(p_port)=="table" then
+      local t=p_port
+      p_port=t.port
+      maxpar=t.maxpar
+      controller=t.controller
+   end
    l_localport=p_port or l_localport
    process_socket=assert(socket.bind("*", l_localport))
    local ip, port = process_socket:getsockname()
@@ -73,7 +79,6 @@ function start(p_port,maxpar,controller,has_graph)
       local gr=leda.kernel.decode(g_str)
       leda.leda_graph.restore_metatables(gr)
       dbg("Received graph '%s' from '%s'",tostring(gr),peer_ip)
-
       local ro_gr=kernel.build_graph(gr,localhost,l_localport)
       client:send("ACCEPTED\n")
       client:close()

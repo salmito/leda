@@ -16,4 +16,5 @@ local world=leda.stage{
 
 local g=leda.graph{hello:connect(world)}
 hello:send()
+g:part(hello,world):map('localhost','r1i0n0')
 g:run()

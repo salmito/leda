@@ -112,6 +112,6 @@ local g=leda.graph{
    image_save:connect('finished',dir_scanner)
 }
 
-g:plot()
+--g:plot()
 g:send()
 g:run{controller=leda.controller.interactive.get(5),maxpar=5}
