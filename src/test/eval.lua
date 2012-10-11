@@ -1,6 +1,6 @@
 local utils=require "leda.utils"
 
-s1=stage{ name="s1",
+s1=leda.stage{ name="s1",
    handler=function (i)
       i=0
       while true do
@@ -15,8 +15,8 @@ s1=stage{ name="s1",
 	end
 }
 
-eval=stage(utils.eval)
-printer=stage(utils.print)
+eval=leda.stage(utils.eval)
+printer=leda.stage(utils.print)
 
 s1:send(1)
 

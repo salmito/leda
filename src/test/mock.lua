@@ -1,7 +1,7 @@
 require "leda"
 
 local f=function(event)
-   leda.sleep(1)
+--   leda.sleep(1)
    local s,err=leda.send('output1',event) 
    if not s then
       print("ERROR",leda.stage.name,err)

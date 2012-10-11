@@ -18,9 +18,6 @@ leda.clone=__clone
 leda.stage=__stage
 local stage=leda.stage
 leda.mutex=__mutex
-leda.io=__io
-leda.epoll=__epoll
-leda.aio=__aio
 leda.gettime=__gettime
 leda.getmetatable=__getmetatable;
 leda.setmetatable=__setmetatable;
@@ -87,23 +84,39 @@ end
 -- Load the stage init function
 -----------------------------------------------------------------------------
 if leda.stage.__init and leda.stage.__init~="" then
-local init,err=leda.decode(leda.stage.__init)
-if not init then 
-   error("Error loading init function for stage '"..leda.stage.name.."': "..err)
-else
-   -- Execute init function of the stage
-   local ok,err=pcall(init) 
-   if not ok then error("Error executing init function for stage '"..leda.stage.name.."': "..err) end
+	local init,err=leda.decode(leda.stage.__init)
+	if not init then 
+	   error("Error loading init function for stage '"..leda.stage.name.."': "..err)
+	else
+		if type(init)=="string" then
+			init,err=loadstring(init)
+			if not init then 
+			   error(string.format("Error loading init function for stage '%s': %s", stage.__name,err))
+	   	end
+		end
+	   -- Execute init function of the stage
+	   local ok,err=pcall(init) 
+	   if not ok then error("Error executing init function for stage '"..leda.stage.name.."': ".. err)
+	   end
+	end
 end
-end
+
 -----------------------------------------------------------------------------
 -- Load handler function of the stage 
 -----------------------------------------------------------------------------
 --local function handler_str() return stage.__handler end
 local __handler=leda.decode(leda.stage.__handler)
-if not type(__handler)=='function' then 
+if not (type(__handler)=='function' or type(__handler)=='string') then 
    error("Error loading handler function for stage")
 end
+
+if type(__handler)=="string" then
+	__handler,err=loadstring(__handler)
+	if not __handler then 
+	   error("Error loading handler function for stage "..leda.stage.name.."': "..err)
+	end
+end
+
 -----------------------------------------------------------------------------
 -- Create the main coroutine for the stage handler
 -----------------------------------------------------------------------------
