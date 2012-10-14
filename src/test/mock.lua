@@ -55,5 +55,7 @@ stage1:send("e6")
 
 g=grafo
 
+g:part(stage1,g:all()-stage1):map('localhost:9999','localhost:8888')
+
 grafo:run()
 

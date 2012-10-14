@@ -18,6 +18,7 @@ s1=leda.stage{
          leda.send("line",line)
          line = file:read()
       end
+      leda.quit()
    end,
 	init=function() require "leda.utils.io" end
 }

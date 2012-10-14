@@ -23,30 +23,32 @@ THE SOFTWARE.
 
 ===============================================================================
 */
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <unistd.h>
-
 #include <lua.h>
 #include <lauxlib.h>
 #include <lualib.h>
 
 #include <lualib.h>
+#include <sys/timerfd.h>
 
 #include "event.h"
 #include "instance.h"
 #include "thread.h"
 #include "extra/lmarshal.h"
 
-#include <sys/epoll.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <errno.h>
+#include <event2/event.h>
+#include <event2/thread.h>
+
 #include <sys/types.h>
-#include <sys/socket.h> 
-#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <assert.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <errno.h>
 
 #define MAXN 1024
 
@@ -487,6 +489,268 @@ int leda_gettime(lua_State * L) {
    return 1;
 }
 
+void do_read(evutil_socket_t fd, short events, void *arg) {
+	if(read_event(fd)) {
+		close(fd);
+	}
+}
+
+void do_accept(evutil_socket_t listener, short event, void *arg) {
+   struct event_base *base = arg;
+   struct sockaddr_storage ss;
+   socklen_t slen = sizeof(ss);
+   int fd = accept(listener, (struct sockaddr*)&ss, &slen);
+   if (fd < 0) { // XXXX eagain??
+      perror("accept");
+   } else if (fd > FD_SETSIZE) {
+      close(fd); // XXX replace all closes with EVUTIL_CLOSESOCKET */
+   } else {
+      //evutil_make_socket_nonblocking(fd);
+	   struct event * read_event = event_new(base, fd, EV_READ|EV_PERSIST, do_read, base);
+      event_add(read_event, NULL);
+   }
+}
+
+struct event_base *base;
+
+void io_ready(evutil_socket_t fd, short event, void *arg) {
+	instance i=(instance)arg;
+	lua_settop(i->L,0);
+   //Get the  main coroutine of the instance's handler
+   lua_getglobal(i->L, "handler");
+   //Put it on the bottom of the instance's stack
+   lua_pushboolean(i->L,TRUE);
+   //Set the number of arguments
+ 	i->args=1;
+   push_ready_queue(i);
+}
+
+void timer_ready(evutil_socket_t fd, short event, void *arg) {
+	close(fd);
+	io_ready(fd,event,arg);
+} 
+  
+static THREAD_RETURN_T THREAD_CALLCONV event_main(void *t_val) {
+   int process_fd=*(int*)t_val;
+   free(t_val);
+
+   struct event *listener_event;
+ 	
+// 	evthread_use_pthreads();
+ 	
+   base = event_base_new();
+   if (!base) {
+   	return NULL; //error
+   }
+
+   listener_event = event_new(base, process_fd, EV_READ|EV_PERSIST, do_accept, base);
+   event_add(listener_event, NULL);
+
+   event_base_dispatch(base);
+//	event_base_loop(base,0);
+   
+	return NULL;
+}
+
+
+
+void event_init(int process_fd){
+   int *p=malloc(sizeof(int));
+   *p=process_fd;
+   int i;
+   dummy=new_lua_state(FALSE);
+   sockets=calloc(main_graph->n_d,sizeof(queue));
+   for(i=0;i<main_graph->n_d;i++) sockets[i]=queue_new();
+   cur_process=calloc(main_graph->n_cl,sizeof(atomic));
+   for(i=0;i<main_graph->n_cl;i++) cur_process[i]=atomic_new(0);
+
+   THREAD_CREATE( &event_thread, event_main, p, 0 );
+}
+
+
+void event_wait_io(instance i) {
+   int fd=-1;
+
+   if (lua_type(i->L,1)==LUA_TNUMBER) {
+      fd=lua_tointeger(i->L,1);
+   } else {
+       lua_settop(i->L,0);
+       //Get the  main coroutine of the instance's handler
+       lua_getglobal(i->L, "handler");
+       //Put it on the bottom of the instance's stack
+       lua_pushnil(i->L);
+       lua_pushliteral(i->L,"Invalid argument");
+       //Set the previous number of arguments
+       i->args=2;
+       push_ready_queue(i);
+       return;
+   }
+   
+   int mode=-1;
+   if (lua_type(i->L,2)==LUA_TNUMBER) {
+      mode=lua_tointeger(i->L,2);
+   } else {
+      lua_settop(i->L,0);
+      //Get the  main coroutine of the instance's handler
+      lua_getglobal(i->L, "handler");
+      //Put it on the bottom of the instance's stack
+      lua_pushnil(i->L);
+      lua_pushliteral(i->L,"Invalid argument");
+      //Set the previous number of arguments
+      i->args=2;
+      push_ready_queue(i);
+      return;
+   }
+   int m=0;
+   if(mode==1) 
+      m = EV_READ; // read
+   else if(mode==2)
+         m = EV_WRITE; //write
+   else if(mode==3)
+         m = EV_READ | EV_WRITE; // read & write
+   else {
+       lua_settop(i->L,0);
+       //Get the  main coroutine of the instance's handler
+       lua_getglobal(i->L, "handler");
+       //Put it on the bottom of the instance's stack
+       lua_pushnil(i->L);
+       lua_pushliteral(i->L,"Invalid argument");
+       //Set the previous number of arguments
+       i->args=2;
+       push_ready_queue(i);
+       return;
+   }
+   event_base_once(base, fd, m, io_ready, i, NULL);
+}
+
+void event_sleep(instance i) {
+   double time=now_secs();
+   
+   if (lua_type(i->L,1)==LUA_TNUMBER) {
+      time+=lua_tonumber(i->L,1);
+   } else {
+       lua_settop(i->L,0);
+       //Get the  main coroutine of the instance's handler
+       lua_getglobal(i->L, "handler");
+       //Put it on the bottom of the instance's stack
+       lua_pushnil(i->L);
+       lua_pushliteral(i->L,"Invalid argument");
+       //Set the previous number of arguments
+       i->args=2;
+       push_ready_queue(i);
+       return;
+   }
+
+   if(time<=0.0) {
+       lua_settop(i->L,0);
+       //Get the  main coroutine of the instance's handler
+       lua_getglobal(i->L, "handler");
+       //Put it on the bottom of the instance's stack
+       lua_pushnil(i->L);
+       lua_pushliteral(i->L,"Invalid timer");
+       //Set the previous number of arguments
+       i->args=2;
+       push_ready_queue(i);
+       return;
+   }
+   time_t secs=time;
+   long nsecs=(time-secs)*1000000000L;
+
+	int fd=timerfd_create(CLOCK_REALTIME, 0);
+   if(fd < 0) {
+       lua_settop(i->L,0);
+       //Get the  main coroutine of the instance's handler
+       lua_getglobal(i->L, "handler");
+       //Put it on the bottom of the instance's stack
+       lua_pushnil(i->L);
+       lua_pushfstring(i->L,"Error creating timer: %s",strerror(errno));
+       //Set the previous number of arguments
+       i->args=2;
+       push_ready_queue(i);
+       return;
+   }
+   
+   struct itimerspec t={{0,0L},{0,0L}};
+   t.it_value.tv_sec=secs;
+   t.it_value.tv_nsec=nsecs;
+   
+   if(timerfd_settime(fd, TFD_TIMER_ABSTIME, &t, NULL) < 0) {
+       close(fd);
+       lua_settop(i->L,0);
+       //Get the  main coroutine of the instance's handler
+       lua_getglobal(i->L, "handler");
+       //Put it on the bottom of the instance's stack
+       lua_pushnil(i->L);
+       lua_pushfstring(i->L,"Error setting timer: %s",strerror(errno));
+       //Set the previous number of arguments
+       i->args=2;
+       push_ready_queue(i);
+       return;
+   }
+
+	if(event_base_once(base, fd, EV_READ, timer_ready, i, NULL)) {
+   	 lua_settop(i->L,0);
+       //Get the  main coroutine of the instance's handler
+       lua_getglobal(i->L, "handler");
+       //Put it on the bottom of the instance's stack
+       lua_pushnil(i->L);
+       lua_pushliteral(i->L,"Error setting timer event");
+       //Set the previous number of arguments
+       i->args=2;
+       push_ready_queue(i);
+       return;
+   }
+}
+
+
+/*void event_sleep(instance i) {
+	lua_Number time;
+   if (lua_type(i->L,1)==LUA_TNUMBER) {
+      time=lua_tonumber(i->L,1);
+   } else {
+       lua_settop(i->L,0);
+       //Get the  main coroutine of the instance's handler
+       lua_getglobal(i->L, "handler");
+       //Put it on the bottom of the instance's stack
+       lua_pushnil(i->L);
+       lua_pushliteral(i->L,"Invalid argument type (number expected)");
+       //Set the previous number of arguments
+       i->args=2;
+       push_ready_queue(i);
+       return;
+   }
+
+   if(time<=0.0) {
+       lua_settop(i->L,0);
+       //Get the  main coroutine of the instance's handler
+       lua_getglobal(i->L, "handler");
+       //Put it on the bottom of the instance's stack
+       lua_pushnil(i->L);
+       lua_pushliteral(i->L,"Invalid timer");
+       //Set the previous number of arguments
+       i->args=2;
+       push_ready_queue(i);
+       return;
+   }
+   long int secs=time;
+   long int usecs=(time-secs)*1000000.0;
+   
+   struct timeval timeout={secs,usecs};
+   if(event_base_once(base, -1, EV_READ, io_ready, i, &timeout)) {
+   	 lua_settop(i->L,0);
+       //Get the  main coroutine of the instance's handler
+       lua_getglobal(i->L, "handler");
+       //Put it on the bottom of the instance's stack
+       lua_pushnil(i->L);
+       lua_pushliteral(i->L,"Error setting timer event");
+       //Set the previous number of arguments
+       i->args=2;
+       push_ready_queue(i);
+       return;
+   }
+}
+
+
 struct event_epoll_data {
    int fd;
    instance i;
@@ -552,14 +816,14 @@ void event_wait_io(instance i) {
    ed->i=i;
    ed->timer=0;
 
-   event.data.ptr = ed; /* return the fd to us later */
+   event.data.ptr = ed; // return the fd to us later 
 
    if(mode==1) 
-      event.events = EPOLLIN /*read*/;
+      event.events = EPOLLIN; // read
    else if(mode==2)
-         event.events = EPOLLOUT /*write*/;
+         event.events = EPOLLOUT; //write
    else if(mode==3)
-         event.events = EPOLLIN /*read*/| EPOLLOUT /*write*/;
+         event.events = EPOLLIN | EPOLLOUT; // read & write
    else {
        lua_settop(i->L,0);
        //Get the  main coroutine of the instance's handler
@@ -680,7 +944,7 @@ void event_sleep(instance i) {
    ed->i=i;
    ed->timer=1;
 
-   event.data.ptr = ed; /* return the fd to us later */
+   event.data.ptr = ed;
 
    event.events = EPOLLIN;   
 
@@ -819,3 +1083,4 @@ void event_init(int process_fd){
    
    THREAD_CREATE( &event_thread, event_main, p, 0 );
 }
+*/

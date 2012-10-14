@@ -12,6 +12,11 @@ leda={
 leda.encode=__encode
 leda.decode=__decode
 leda.clone=__clone
+
+leda.io=__io
+leda.epoll=__epoll
+leda.aio=__aio
+
 -----------------------------------------------------------------------------
 -- Define an easier name for the utils libraries
 -----------------------------------------------------------------------------

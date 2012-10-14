@@ -1,9 +1,9 @@
 LUA_INC_FLAGS=/usr/include/lua5.1
 INCFLAGS=-I$(LUA_INC_FLAGS)
 CFLAGS=-fPIC $(INCFLAGS) -Wall -O2 $(DEBUG_FLAGS)
-LDFLAGS_POSIX=-fPIC -Wall -O2 $(DEBUG_FLAGS) $(LD_FLAGS) -ltbb -lpthread
+LDFLAGS_POSIX=-fPIC -Wall -O2 $(DEBUG_FLAGS) $(LD_FLAGS) -ltbb -lpthread -levent
 LDFLAGS_MINGW32=-fPIC -Wall -O2 $(DEBUG_FLAGS) \
-      -L extra/dll -ltbb -lpthread-i386 -llua51    
+      -L extra/dll -ltbb -lpthread-i386 -llua51
       
 LUA=lua
 

@@ -40,24 +40,31 @@ THE SOFTWARE.
 
 int leda_wrap_io(lua_State *L) {  
    FILE ** f=tofile(L,1);
+//   int fd=fileno(*f);
+//   int newfd=dup(fd);
+   lua_pushlightuserdata(L,*f);
+ 	*f=NULL;
+   return 1;
+}
+
+int leda_io_getfd(lua_State *L) {
+   FILE ** f=tofile(L,1);
    int fd=fileno(*f);
-   int newfd=dup(fd);
-   lua_pushinteger(L,newfd);
+   lua_pushinteger(L,fd);
    return 1;
 }
 
 int leda_unwrap_io(lua_State *L) {
-   int fd = luaL_checkint(L, 1);
-   const char * mode="rw";
-   if(lua_type(L,2)==LUA_TSTRING) {
-      mode=lua_tostring(L, 2);
-   }
+	if(!lua_islightuserdata(L,1)) {
+		luaL_error(L,"Invalid parameter #1");
+	}
+
    FILE **f = (FILE **)lua_newuserdata(L, sizeof(FILE *));
-   *f = NULL;
-   luaL_getmetatable(L, LUA_FILEHANDLE);
+	*f=(FILE *) lua_touserdata (L, 1);
+	luaL_getmetatable(L, LUA_FILEHANDLE);
    lua_setmetatable(L, -2);
-   *f = fdopen(fd, mode);
-   return (*f != NULL);   
+	
+   return (*f != NULL);
 }
 
 int socket_flush(lua_State *L) {
