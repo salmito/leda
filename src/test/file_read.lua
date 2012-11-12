@@ -13,11 +13,12 @@ s0=leda.stage{
 s1=leda.stage{
    handler=function(file)
       print("Reading file",file)
-      local line = file:read()
-      while line do
-         leda.send("line",line)
-         line = file:read()
+      local buffer,err = file:aread(100)
+      while buffer do
+         leda.send("line",buffer)
+         buffer,err = file:aread(100)
       end
+      assert(err=="EOF",err)
       leda.quit()
    end,
 	init=function() require "leda.utils.io" end

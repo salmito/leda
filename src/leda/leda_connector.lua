@@ -49,13 +49,13 @@ function is_connector(c)
    return false
 end
 
-coupled="coupled"
+coupled="local"
 cohort="cohort"
 decoupled="decoupled"
 
 
 function index.get_type(c)
-   if c.type=="coupled" or c.type=="decoupled" or c.type=="cohort" then
+   if c.type==coupled or c.type==decoupled or c.type==cohort then
       return c.type
    end
    error("Unkown connector type")

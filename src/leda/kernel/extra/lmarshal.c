@@ -205,6 +205,7 @@ static void mar_encode_value(lua_State *L, mar_Buffer *buf, int val, size_t *idx
 
             lua_pushvalue(L, -1);
             lua_getinfo(L, ">nuS", &ar);
+            //printf("Function name='%s' type='%s' nups=%d\n",ar.namewhat,ar.what,ar.nups);
             if (ar.what[0] != 'L') {
                 luaL_error(L, "attempt to persist a C function '%s'", ar.name);
             }

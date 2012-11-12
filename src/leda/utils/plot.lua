@@ -62,14 +62,14 @@ function plot_graph(leda_graph,out)
       local color=nil
       local style=nil
       local arrowType=nil
-      if c:get_type()=='coupled' then
+      if c:get_type()==leda.coupled then
          color="#FF0000"
          arrowType="dot"
-      elseif c:get_type()=='decoupled' then
+      elseif c:get_type()==leda.decoupled then
          if not c.producer or leda_graph:get_cluster(c.producer) ~= leda_graph:get_cluster(c.consumer) then
             style="dashed"
          end
-      elseif c:get_type()=='cohort' then
+      elseif c:get_type()==leda.cohort then
          color="#0000FF"
          arrowType="invdot"
       end

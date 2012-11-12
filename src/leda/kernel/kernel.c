@@ -42,7 +42,7 @@ THE SOFTWARE.
 #include "extra/lmarshal.h"
 #include "extra/leda-io.h"
 
-#define __VERSION "0.2.0"
+#define __VERSION "0.2.1"
 
 #define CONNECTOR_TIMEOUT 2.0
 
@@ -311,7 +311,7 @@ int luaopen_leda_kernel (lua_State *L) {
   	   {"new_thread", thread_new},
   	   {"kill_thread", thread_kill},
   	   {"stats", leda_get_stats},
-  	   {"stats_reset", stats_reset},
+  	   {"reset_stats", stats_reset},
   	   {"maxpar", instance_set_maxpar},
  	   {"ready_queue_size", leda_ready_queue_size},
  	   
@@ -323,30 +323,25 @@ int luaopen_leda_kernel (lua_State *L) {
 	};
 	
    /* Initialize some debug related variables and the thread subsystem */
-   if(!initialized) {
-      initialized=TRUE;
-      #ifdef DEBUG
-      MUTEX_INIT(&debug_lock);
-      #endif
-      thread_init(-1);
-   } else {
-      return 0;
+   if(initialized) {
+   	return 0;
    }
+   initialized=TRUE;
+   #ifdef DEBUG
+   MUTEX_INIT(&debug_lock);
+   #endif
+   thread_init(-1);
 	
 	/* Load main library functions */
    _DEBUG("Kernel: Loading leda main API\n");
 	REGISTER_LEDA(L, LEDA_NAME, leda_funcs);
-	lua_pop(L,1);
-   lua_pushliteral(L, LEDA_ENV);
-	lua_newtable (L);
-	lua_settable (L, LUA_REGISTRYINDEX);
+
 	set_leda_info (L);
 
- 	/* Create a unique thread metatable */
+ 	/* Create the thread metatable */
    thread_createmetatable(L);
+ 	/* Create the graph metatable */
    graph_createmetatable(L);
-   
-//   luaopen_leda_io (L);
 
    _DEBUG("Kernel: Leda's kernel loaded successfully.\n");
  	return 1;

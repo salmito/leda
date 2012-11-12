@@ -86,6 +86,22 @@ for key,connector in pairs(leda.stage.__output) do
 end
 
 -----------------------------------------------------------------------------
+-- Load handler function of the stage 
+-----------------------------------------------------------------------------
+--local function handler_str() return stage.__handler end
+__handler=leda.decode(leda.stage.__handler)
+if not (type(__handler)=='function' or type(__handler)=='string') then 
+   error("Error loading handler function for stage")
+end
+
+if type(__handler)=="string" then
+	__handler,err=loadstring(__handler)
+	if not __handler then 
+	   error("Error loading handler function for stage "..leda.stage.name.."': "..err)
+	end
+end
+
+-----------------------------------------------------------------------------
 -- Load the stage init function
 -----------------------------------------------------------------------------
 if leda.stage.__init and leda.stage.__init~="" then
@@ -106,21 +122,6 @@ if leda.stage.__init and leda.stage.__init~="" then
 	end
 end
 
------------------------------------------------------------------------------
--- Load handler function of the stage 
------------------------------------------------------------------------------
---local function handler_str() return stage.__handler end
-local __handler=leda.decode(leda.stage.__handler)
-if not (type(__handler)=='function' or type(__handler)=='string') then 
-   error("Error loading handler function for stage")
-end
-
-if type(__handler)=="string" then
-	__handler,err=loadstring(__handler)
-	if not __handler then 
-	   error("Error loading handler function for stage "..leda.stage.name.."': "..err)
-	end
-end
 
 -----------------------------------------------------------------------------
 -- Create the main coroutine for the stage handler

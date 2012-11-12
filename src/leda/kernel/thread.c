@@ -141,6 +141,13 @@ void thread_resume_instance(instance i) {
          event_wait_io(i);
          break;
 
+	 case FILE_IO:
+         lua_remove(i->L,1);
+#ifndef SYNC_IO	 
+         event_do_file_aio(i);
+#endif
+         break;
+
       case SLEEP:
          lua_remove(i->L,1);
          event_sleep(i);
@@ -176,6 +183,14 @@ void emmit_self(instance i) {
 int wait_io(lua_State * L) {
    //Push status code WAIT_IO to the bottom of the stack
    lua_pushinteger(L,WAIT_IO);
+   lua_insert(L,1);
+   int args=lua_gettop(L);
+   //Yield current instance handler
+   return lua_yield(L,args);
+}
+
+int do_file_aio(lua_State * L) {
+   lua_pushinteger(L,FILE_IO);
    lua_insert(L,1);
    int args=lua_gettop(L);
    //Yield current instance handler
@@ -487,6 +502,7 @@ int thread_createmetatable (lua_State *L) {
 	lua_pushliteral (L, "__metatable");
 	lua_pushliteral (L, "You're not allowed to get the metatable of a Thread");
 	lua_settable (L, -3);
+	lua_pop(L,1); //pop metatable
 	
-	return 1;
+	return 0;
 }
