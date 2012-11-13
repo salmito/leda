@@ -76,7 +76,7 @@ static void registerlib(lua_State * L,char const * name, lua_CFunction f) {
 MUTEX_T require_cs;
 
 /* isolate require function from other threads */
-static int new_require(lua_State *L) {
+/*static int new_require(lua_State *L) {
 	int rc, i;
 	int args = lua_gettop( L);
 
@@ -92,15 +92,15 @@ static int new_require(lua_State *L) {
 		lua_error(L);   // error message already at [-1]
 
 	return 1;
-}
+}*/
 
 int serialize_require(lua_State * L) {
-	lua_getglobal( L, "require" );
-	if (lua_isfunction( L, -1 )) {
-		lua_pushcclosure( L, new_require, 1);
-		lua_setglobal( L, "require" );
-	}
-	else lua_pop(L,1);
+//	lua_getglobal( L, "require" );
+//	if (lua_isfunction( L, -1 )) {
+//		lua_pushcclosure( L, new_require, 1);
+//		lua_setglobal( L, "require" );
+//	}
+//	else lua_pop(L,1);
 	return 0;
 }
 
@@ -287,6 +287,13 @@ void register_aio_api(lua_State * L) {
    lua_pushliteral(L,"wait_io");
    lua_pushcfunction(L,wait_io);
    lua_rawset(L,-3);
+	
+#ifndef SYNC_IO
+   lua_pushliteral(L,"do_file_aio");
+   lua_pushcfunction(L,do_file_aio);
+   lua_rawset(L,-3);
+#endif
+
    lua_pushliteral(L,"flush");
    lua_pushcfunction(L,socket_flush);
    lua_rawset(L,-3);   

@@ -29,7 +29,7 @@ local pool_size=default_thread_pool_size
 -----------------------------------------------------------------------------
 
 local function readline(prompt)
-   write(prompt)
+   stderr:write(prompt)
    return read()
 end
 
@@ -84,27 +84,27 @@ function get_init(n)
 --   os.remove(fn..".dot")
 
    local line = readline(prompt)
-      while line do
-         if line == 'quit' then 
-            stderr:write("Quiting...\n")
-            os.exit(0)
-         elseif line == '+' then 
-            table.insert(th,kernel.new_thread())
+   while line do
+      if line == 'quit' then 
+         stderr:write("Quiting...\n")
+         os.exit(0)
+      elseif line == '+' then 
+         table.insert(th,kernel.new_thread())
+--         stderr:write("\027[2J")
+         stderr:write("Thread created...\n")
+      elseif line == '-' then 
+         kernel.kill_thread() 
 --            stderr:write("\027[2J")
-            stderr:write("Thread created...\n")
-         elseif line == '-' then 
-            kernel.kill_thread() 
---            stderr:write("\027[2J")
-            stderr:write("Thread killed...\n")
-         elseif line~="" then
---            stderr:write("\027[2J")
-            eval_lua(line)
-            stderr:write("\n")
-         else
-            update(fn)
-         end
-         stderr:flush()
-         line = readline(prompt)
+         stderr:write("Thread killed...\n")
+      elseif line~="" then
+--          stderr:write("\027[2J")
+         eval_lua(line)
+         stderr:write("\n")
+      else
+         update(fn)
+      end
+      stderr:flush()
+      line = readline(prompt)
       end
    end
 end

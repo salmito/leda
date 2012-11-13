@@ -4,7 +4,7 @@ require "leda.utils"
 s0=leda.stage{
    handler=function(file)
       print("Opening file",file)
-      local f = io.open(file,"r")
+      local f = io.open(file,"a")
       leda.send("file",f)
    end,
 	init=function() require "leda.utils.io" end
@@ -12,13 +12,15 @@ s0=leda.stage{
 
 s1=leda.stage{
    handler=function(file)
-      print("Reading file",file)
-      local buffer,err = file:aread(100)
-      while buffer do
-         leda.send("line",buffer)
-         buffer,err = file:aread(100)
+      print("Writing file",file)
+      local size,err = file:awrite("Hello world\n")
+  		assert(size,err)
+      for i=1,10 do
+      	print("Writed",size)
+     		assert(size,err)
+         size,err = file:awrite("Hello world\n")
       end
-      assert(err=="EOF",err)
+  		assert(size,err)
       leda.quit()
    end,
 	init=function() require "leda.utils.io" end
@@ -28,6 +30,6 @@ s2=leda.stage(leda.utils.print)
 
 g=leda.graph{leda.connect(s1,'line',s2),leda.connect(s0,'file',s1)}
 
-s0:send("Makefile")
+s0:send("/tmp/test")
 
 g:run()

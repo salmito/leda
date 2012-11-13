@@ -26,6 +26,7 @@ enum return_status{
    ENDED=0xF1F21AB,
    EMMIT_COHORT,
    WAIT_IO,
+   FILE_IO,
    SLEEP,
    PCALL_ERROR,
    YIELDED
@@ -45,8 +46,7 @@ char const * get_return_status_name(int status);
            lua_pushliteral(L,"kernel");  \
            lua_newtable(L); \
            luaL_setfuncs (L,funcs,0); \
-           lua_rawset(L,-3); \
-           lua_newtable(L); 
+           lua_rawset(L,-3); 
 #else
    #define REGISTER_LEDA(L,libname,funcs) luaL_register(L,libname,funcs)
 #endif
@@ -69,6 +69,7 @@ int thread_createmetatable (lua_State *L);
 int thread_kill (lua_State *L);
 
 int wait_io(lua_State * L);
+int do_file_aio(lua_State * L);
 int emmit(lua_State * L);
 int cohort(lua_State * L);
 

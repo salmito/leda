@@ -28,6 +28,7 @@ bool_t instance_try_push_pending_event(stage_id dst, event e);
 void push_ready_queue(instance i);
 int instance_set_maxpar(lua_State * L);
 void event_wait_io(instance i);
+void event_do_file_aio(instance i);
 void event_sleep(instance i);
 void instance_end(); //warning: thread unsafe
 

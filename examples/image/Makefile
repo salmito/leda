@@ -23,5 +23,5 @@ limlib2.so: $(OBJS)
 
 .PHONY: clean doc test
 clean:
-	rm -f $(OBJS) $(SOS) *.png core core.* a.out
+	rm -f $(OBJS) $(SOS) *.png a.out v4l.so
 

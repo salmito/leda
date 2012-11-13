@@ -29,6 +29,7 @@ read_request=stage{
    handler=function(cli_sock)
       print("SERVER: Serving client",cli_sock)
       local cli=cli_sock
+--      assert(leda.sleep(1))
       cli:send("Welcome stranger\r\n")
       local line = cli:receive()
       local last_line=""
