@@ -86,6 +86,12 @@ function graph(...)
          local c=v(gr)
          assert(is_connector(c),string.format("Connector constructor returned an invalid value (%s)",type(c)))
          gr:add(c)
+      elseif type(v)=='table' and v~=t then
+      	for _,v2 in ipairs(v) do
+      	 	local c=v2(gr)
+         	assert(is_connector(c),string.format("Connector constructor returned an invalid value (%s)",type(c)))
+         	gr:add(c)
+      	end
       else --ignore other values
          dbg("WARNING: Ignoring parameter of graph '%s' (type %s)\n",gr.name,type(v))
       end

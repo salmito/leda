@@ -29,7 +29,7 @@ local stage = {__index = {}}
 -----------------------------------------------------------------------------
 function stage.__tostring (s) 
    if s.name then 
-      return s.name
+      return string.format("%s (%s)",s.name,kernel.to_pointer(s))
    else
       return string.format("Stage (%s)",kernel.to_pointer(s)) 
    end
@@ -90,11 +90,14 @@ function new_stage(t,init,name,bind,serial)
       s.bind=t.bind
       s.serial= t.serial or t.stateful
    elseif is_stage(t) then
-      s.handler=kernel.decode(t.handler)
-      if t.init then s.init=kernel.decode(t.init) end
+      s.handler=t.handler
+      if t.init then s.init=t.init end
       s.bind=t.bind
---      s.name=t.name.."'"
       s.serial=t.serial
+      s.name=t.name.."'"
+      s.pending={}
+      s=setmetatable(s,stage)
+      return s
    end
 
    s=setmetatable(s,stage)

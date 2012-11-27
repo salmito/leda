@@ -59,8 +59,8 @@ function leda.get_output(key)
 end
 
 function leda.send(key,...)
-   if not leda.get_output(key) then return nil, "Output key not found: "..tostring(key) end
-   return leda.get_output(key):send(...)
+   if not leda.output[key] then return nil, "Output key not found: "..tostring(key) end
+   return leda.output[key]:send(...)
 end
 
 -----------------------------------------------------------------------------
