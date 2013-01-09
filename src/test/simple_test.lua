@@ -1,6 +1,6 @@
 local utils=require "leda.utils"
 
-printer=leda.stage(utils.print)
+printer=leda.stage(function(...) print(...) end)
 
 local g=leda.graph{start=printer}
 

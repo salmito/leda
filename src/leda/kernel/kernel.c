@@ -237,7 +237,7 @@ int leda_sleep_(lua_State * L) {
    return 0;
 }
 
-/* Kernel Lua function to get the pointer of a lua value 
+/* Kernel Lua function to get the pointer of a lua value as a string
  * (used as a unique name for objects)
  */
 int leda_to_pointer(lua_State * L) {

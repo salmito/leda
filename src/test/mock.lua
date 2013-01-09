@@ -66,9 +66,9 @@ local grafo=leda.graph{"Grafo",
 	stage2:connect('output1',stage4,type),
 	stage4:connect('output1',stage5,type),
 	stage4:connect('output2',stage6,type),
---	stage5:connect('output1',stage1)
+	stage5:connect('output1',stage1)
 }
---grafo:plot()
+grafo:plot("graph.svg")
 local a1=leda.cluster(stage1,stage2)
 local a2=leda.cluster(stage3)
 local a3=leda.cluster(stage4)

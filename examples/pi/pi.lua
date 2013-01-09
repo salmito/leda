@@ -1,4 +1,6 @@
 require "leda"
+local fixed=require "leda.controller.fixed_thread_pool"
+
 local fast_rand=require "fast_rand"
 
 local dispatcher=leda.stage{
@@ -48,9 +50,12 @@ local pi_reducer=leda.stage{
    name="pi_reducer"
 }
 
+local init_time=leda.gettime()
+
 local result=leda.stage{
    handler=function(n,iterations,pi)
-     io.stderr:write(string.format("pi_parallel\t%f\t%.12f\t%d\t%d\n",pi,math.abs(math.pi-pi),iterations*n,n))
+     io.stderr:write(string.format("pi_parallel\t%f\t%.12f\t%d\t%d\t%f\n",pi,math.abs(math.pi-pi),iterations*n,n,leda.gettime()-init_time))
+		leda.quit()
    end,
    init=function ()
       require "math"
@@ -69,5 +74,4 @@ local pi=leda.graph{
 
 local n,it =tonumber(arg[1]),tonumber(arg[2])
 dispatcher:send(n,it)
-pi:plot('graph.png')
-pi:run()
+pi:run{controller=fixed.get(4)}

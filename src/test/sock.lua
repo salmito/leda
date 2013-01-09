@@ -64,7 +64,7 @@ g=graph{read_request:connect("Line sent",local_echo),
 wait_client:connect("Client socket",read_request,leda.couple)
 }
 
-wait_client:send(8888)
+wait_client:send(43)
 
 --g:part(wait_client+read_request,local_echo):map("localhost","localhost:7777")
 --g:plot()
