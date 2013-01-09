@@ -3,8 +3,8 @@ local args={...}
 local n=args[1] or 10
 local type=arg[2] or "decoupled"
 local nice=arg[3] or false
-local threads=arg[4]
-local maxpar=arg[5]
+local threads=arg[4] or leda.kernel.cpu()
+local maxpar=arg[5] or 100
 
 local function gen()
 	local init=leda.gettime()
