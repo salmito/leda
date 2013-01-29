@@ -896,6 +896,39 @@ static int image_fromlight(lua_State *L) {
 }
 
 
+static int image_getdata(lua_State *L) {
+  Image *imp = (Image*)luaL_checkudata(L, 1, "imlib2.image");
+  
+  if (imp == NULL)
+  {
+    lua_pushfstring(L, "<imlib2.image> (freed)");
+  }
+  else
+  {
+   Image im = *imp;
+   imlib_context_set_image(im);
+   lua_pushlightuserdata(L,imlib_image_get_data());
+  }
+  return 1;
+}
+
+static int image_getdata_r(lua_State *L) {
+  Image *imp = (Image*)luaL_checkudata(L, 1, "imlib2.image");
+  
+  if (imp == NULL)
+  {
+    lua_pushfstring(L, "<imlib2.image> (freed)");
+  }
+  else
+  {
+   Image im = *imp;
+   imlib_context_set_image(im);
+   lua_pushlightuserdata(L,imlib_image_get_data_for_reading_only());
+  }
+  return 1;
+}
+
+
 static int imagem_tolight(lua_State *L) {
   Image *imp = (Image*)luaL_checkudata(L, 1, "imlib2.image");
   if (imp == NULL)
@@ -1794,6 +1827,8 @@ static const struct luaL_Reg image_m [] = {
   {"__gc", imagem_free},
   {"free", imagem_free},
   {"to_ptr", imagem_tolight},
+  {"get_data", image_getdata},
+  {"get_data_r", image_getdata_r},
   {"get_height", imagem_get_height},
   {"get_width", imagem_get_width},
   {"get_height", imagem_get_height},

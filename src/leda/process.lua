@@ -20,9 +20,11 @@ local process_socket=nil
 local magicbyte='\027'
 local default_controller=require("leda.controller.default")
 
+require('leda.controller.fixed_thread_pool')
+
 module("leda.process")
 
-default_port=default_p
+default_port=l_localport
 
 function get_process(host,port)
    if not host and not port then
