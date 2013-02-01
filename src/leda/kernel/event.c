@@ -28,8 +28,9 @@ THE SOFTWARE.
 #include <lualib.h>
 
 #include <lualib.h>
+#ifndef ANDROID
 #include <sys/timerfd.h>
-
+#endif
 #include "event.h"
 #include "instance.h"
 #include "thread.h"
@@ -39,10 +40,15 @@ THE SOFTWARE.
 #include <event2/event.h>
 
 #include <sys/types.h>
-#include <sys/socket.h>
 #include <assert.h>
+#ifndef _WIN32
+#include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#else
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#endif
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -319,7 +325,14 @@ int send_event(lua_State *L) {
       int len_inet;
       adr_inet.sin_family = AF_INET;  
       adr_inet.sin_port = htons(PROCESS(dst_id)->port); 
-      if (!inet_aton(PROCESS(dst_id)->host,&adr_inet.sin_addr) ) {
+		long res=0;
+		#ifndef _WIN32
+			res=inet_aton(PROCESS(dst_id)->host,&adr_inet.sin_addr);
+		#else
+			res=inet_addr(PROCESS(dst_id)->host);
+			adr_inet.sin_addr.s_addr=res;
+		#endif
+      if (!res ) {
         lua_pop(L,1);
         lua_pushboolean(L,FALSE);
         lua_pushfstring(L,"Bad address '%s'",PROCESS(dst_id)->host);
@@ -776,6 +789,7 @@ void event_wait_io(instance i) {
 
 
 void event_sleep(instance i) {
+   #ifndef ANDROID
    double time=now_secs();
    
    if (lua_type(i->L,1)==LUA_TNUMBER) {
@@ -852,10 +866,14 @@ void event_sleep(instance i) {
        push_ready_queue(i);
        return;
    }
+	#else
+		lua_pushliteral(i->L,"not implemented");
+		lua_error(i->L);
+	#endif
 }
 
 
-void event_init(int process_fd) {
+void event_init_t(int process_fd) {
    int *p=malloc(sizeof(int));
    *p=process_fd;
    int i;

@@ -49,6 +49,11 @@ THE SOFTWARE.
 #define LEDA_NAME          "leda.kernel"
 #define LEDA_ENV           "leda kernel environment"
 
+#ifdef _WIN32
+#define sleep(a) Sleep(a * 1000)
+#endif
+
+
 /* initialized flag, 'true' if already initialized */
 bool_t initialized=FALSE;
 
@@ -95,7 +100,7 @@ int leda_run(lua_State * L) {
    #ifndef STATS_OFF
       stats_init(g->n_s,g->n_c);
    #endif
-   event_init(process_fd);
+   event_init_t(process_fd);
    
    //first, iterate through the stages
    //to push pending sends.
@@ -152,7 +157,7 @@ int leda_run(lua_State * L) {
    }
 
    while(1) { //sleep forever
-      sleep(10000000);
+      sleep(10000);
    }   
 
    return 0;

@@ -1,0 +1,1 @@
+make CC=i586-mingw32msvc-cc G_PLUS_PLUS=i586-mingw32msvc-g++ CFLAGS="-fPIC -DANDROID -DSYNC_IO -I/usr/include/lua5.1 -Wall -O2 -Ipath-to-libevent/include/" LDFLAGS="path-to-libevent/.libs/libevent.a -fPIC -Wall -O2 -L extra/dll -ltbb -lpthread-i386 -llua51 -lws2_32" _SO=.dll

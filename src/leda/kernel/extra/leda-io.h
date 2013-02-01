@@ -17,10 +17,10 @@ typedef unsigned long aio_context_t;
 
 #if defined(__LITTLE_ENDIAN)
 #define PADDED(x,y)	x, y
-#elif defined(__BIG_ENDIAN)
+#else //if defined(__BIG_ENDIAN)
 #define PADDED(x,y)	y, x
-#else
-#error edit for your odd byteorder.
+//#else
+//#error edit for your odd byteorder.
 #endif
 
 enum {

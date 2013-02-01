@@ -65,7 +65,7 @@ tbb_atomic.o: tbb_atomic.cpp $(HEADERS) Makefile
 	$(LUA) extra/bin2c.lua $< -o $@
 
 $(MODULE): $(OBJ)
-	$(CC) -shared $^ -o $@ $(LDFLAGS)
+	$(G_PLUS_PLUS) -shared $^ -o $@ $(LDFLAGS)
 
 clean:
 	rm -f *.o extra/*.o instance.lo

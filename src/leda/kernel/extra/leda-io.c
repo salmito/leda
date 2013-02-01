@@ -28,7 +28,10 @@ THE SOFTWARE.
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
+#ifndef _WIN32
 #include <sys/socket.h>
+#endif
 
 #include <lua.h>
 #include <lauxlib.h>
@@ -68,10 +71,15 @@ int leda_unwrap_io(lua_State *L) {
 }
 
 int socket_flush(lua_State *L) {
+	#ifndef _WIN32
    int fd=lua_tointeger(L,1);
    int nfd=dup(fd);
    shutdown(nfd,SHUT_RDWR);
    close(nfd);
+	#else
+		lua_pushliteral(L,"Not implemented");
+		lua_error(L);
+	#endif
    return 0;
 }
 
@@ -81,7 +89,7 @@ int socket_flush(lua_State *L) {
 
 #include <sys/syscall.h>
 #include <sys/eventfd.h>
-#include <sys/signal.h>
+//#include <sys/signal.h>
 #include <sys/time.h>
 #include <sys/uio.h>
 

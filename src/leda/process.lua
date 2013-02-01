@@ -12,7 +12,7 @@ local socket=require("socket")
 local dbg = leda.debug.get_debug("Process: ")
 local default_p=9999
 local localhost=localhost or "127.0.0.1"
-localhost=socket.dns.toip(localhost)
+localhost=socket.dns.toip(localhost) or localhost
 local l_localport=localport or default_p
 l_localport=tonumber(l_localport)
 local processes={}
@@ -33,7 +33,7 @@ function get_process(host,port)
    end
    port=tonumber(port)
    assert(type(host)=="string",string.format("Invalid hostname (string expected, got %s)",type(host)))
-   local ip=socket.dns.toip(host)
+   local ip=socket.dns.toip(host) or host
    for _,d in ipairs(processes) do
       if d.host==ip and d.port==port then
          return d
@@ -65,7 +65,7 @@ function start(p_port,maxpar,controller,has_graph)
       io.stderr:write(string.format("Waiting for graph on port '%s'\n",tostring(port)))
       local client=process_socket:accept()
       local peer_ip,peer_port=client:getpeername()
-      client:settimeout(10)
+--      client:settimeout(10)
       -- receive the line
       local magicnumber=assert(client:receive(1))
       if magicnumber~=magicbyte then
