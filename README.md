@@ -7,7 +7,9 @@ Leda is compatible with Lua version 5.1 and Luajit-2.0.0, experimental support f
 Leda requires Threading Building Blocks (TBB), Libevent and luasocket libraries to work properly.
 
 For more information on the TBB library: http://threadingbuildingblocks.org/
+
 For more information on the Libevent library: http://libevent.org/
+
 For more information on the Luasocket library: http://w3.impa.br/~diego/software/luasocket/
 
 To install all dependencies on a Debian like linux (Ubuntu, mint, etc) do: 
