@@ -42,7 +42,7 @@ THE SOFTWARE.
 #include "extra/lmarshal.h"
 #include "extra/leda-io.h"
 
-#define __VERSION "0.2.2"
+#define __VERSION "0.2.3"
 
 #define CONNECTOR_TIMEOUT 2.0
 
