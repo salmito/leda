@@ -48,21 +48,22 @@
 
 <p>Leda requires Threading Building Blocks (TBB), Libevent and Luasocket libraries to work properly.</p>
 
-<p>For more information about the TBB library: <a href="http://threadingbuildingblocks.org/">http://threadingbuildingblocks.org/</a></p>
+<p>For more information about the TBB library: <br /><a href="http://threadingbuildingblocks.org/">http://threadingbuildingblocks.org/</a></p>
 
-<p>For more information about the Libevent library: <a href="http://libevent.org/">http://libevent.org/</a></p>
+<p>For more information about the Libevent library: <br /><a href="http://libevent.org/">http://libevent.org/</a></p>
 
-<p>For more information about the Luasocket library: <a href="http://w3.impa.br/~diego/software/luasocket/">http://w3.impa.br/~diego/software/luasocket/</a></p>
+<p>For more information about the Luasocket library: <br /><a href="http://w3.impa.br/~diego/software/luasocket/">http://w3.impa.br/~diego/software/luasocket/</a></p>
 
 <p>To install all dependencies on a Debian like linux (Ubuntu, mint, etc) do:</p>
 
-<pre><code>sudo apt-get install libtbb-dev libevent-dev lua5.1-dev lua5.1 lua-socket
+<pre><code>   sudo apt-get install libtbb-dev libevent-dev
+   sudo apt-get install lua5.1-dev lua5.1 lua-socket
 </code></pre>
 
 <p>Optional: Leda uses luagraph to plot stage graphs, to install it, do:</p>
 
-<pre><code>sudo apt-get install graphviz graphviz-dev libgraph-easy-perl luarocks
-sudo luarocks install luagraph
+<pre><code>   sudo apt-get install graphviz graphviz-dev libgraph-easy-perl luarocks
+   sudo luarocks install luagraph
 </code></pre>
 
 <p>To build and install Leda for Lua 5.1:</p>
