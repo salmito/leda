@@ -365,7 +365,7 @@ instance instance_aquire(stage_id s) {
       STAGE(s)->name,READ(number_of_instances[s]),READ(recycle_queue_limits[s]));
       return NULL;//No more instances allowed for this stage
    }
-   
+   STATS_ACTIVE(s);
    //Lock protected add
    ADD(number_of_instances[s],1);
    //create a new instance and returns it
@@ -468,7 +468,7 @@ instance instance_aquire(stage_id s) {
    _DEBUG("Instance created for stage '%d' name='%s'\n",(int)s,STAGE(s)->name);
 
    ret->init_time=now_secs();
-   STATS_ACTIVE(ret->stage);
+
    return ret; //created instance
 }
 

@@ -10,7 +10,7 @@
   #define PLATFORM_POCKETPC
 #elif (defined _WIN32)
   #define PLATFORM_WIN32
-	#warning USING WINDOWS
+	#warning USING WINDOWS API
 //  #define PLATFORM_LINUX
 #elif (defined __linux__)
   #define PLATFORM_LINUX

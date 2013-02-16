@@ -18,7 +18,7 @@ local stderr=io.stderr
 local prompt="leda-"..leda._VERSION..'> '
 kernel=leda.kernel
 local kernel=kernel
-leda.send=kernel.send
+leda.rawsend=kernel.send
 local default_thread_pool_size=kernel.cpu()
 
 module("leda.controller.interactive")
@@ -71,17 +71,19 @@ function get_init(n)
       dbg("Thread %d created",i)
    end
    
-   local fn = os.tmpname()
+
   
    if plot and leda.utils.plot then
+         local fn = os.tmpname()
          leda.utils.plot.plot_graph(g,fn..".dot") 
+   
+
+         local f=assert(io.popen("graph-easy "..fn..".dot --boxart 2>/dev/null","r"))
+         gr=assert(f:read('*a'))
+         f:close()
+         os.remove(fn)
    end
 
-   local f=assert(io.popen("graph-easy "..fn..".dot --boxart 2>/dev/null","r"))
-   gr=assert(f:read('*a'))
-   f:close()
-   os.remove(fn)
---   os.remove(fn..".dot")
 
    local line = readline(prompt)
    while line do
@@ -117,8 +119,10 @@ function update(fn)
    if rsc<0 then rs=0 ta=ps+rsc else ta=ps rs=rsc end
    local rc=kernel.ready_queue_capacity()
    local stats,cstats=kernel.stats()
-   stderr:write(gr)
-   stderr:write("\n")
+   if gr then
+      stderr:write(gr)
+      stderr:write("\n")
+   end
    if stats then
    stderr:write(string.format("\nTotal execution time: %.3fs\n",kernel.gettime()-init_time))
    stderr:write(string.format("Thread_pool_size=%d (%d active)\tReady_queue_size=%d\tReady_queue_capacity=%d\n",ps,ta,rs,rc))
@@ -129,8 +133,9 @@ function update(fn)
          last_t[k]={v.events_pushed,kernel.gettime()}
          local l_e=v.events_pushed-last[1]
          local l_t=kernel.gettime()-last[2]
-         stderr:write(string.format("%d: name='%s' ready=%d maxpar=%d events=%d queue_size=%d executed=%d errors=%d latency=%.3fms throughput=%.1fev/s\n",
-         k-1,tostring(v.name), v.active, v.maxpar, v.events_pushed, v.event_queue_size, v.times_executed, v.errors, v.average_latency/1000, l_e/l_t))
+         local t_e=1
+         stderr:write(string.format("%d: name='%s' ready=%d maxpar=%d events=%d queue_size=%d executed=%d errors=%d latency=%.6fs throughput=%.1fev/s\n",
+         k-1,tostring(v.name), v.active, v.maxpar, v.events_pushed, v.event_queue_size, v.times_executed, v.errors, v.average_latency, l_e/l_t))
       end
    end
    stderr:write("===== Connectors =====\n")
@@ -140,10 +145,13 @@ function update(fn)
          last_t2[k]={v.events_pushed,kernel.gettime()}
          local l_e=v.events_pushed-last[1]
          local l_t=kernel.gettime()-last[2]
-         stderr:write(string.format("%d: name='%s.%s -> %s' events=%d latency=%.3fms throughput=%.1fev/s\n",k-1, tostring(v.producer), tostring(v.key), tostring(v.consumer) ,v.events_pushed,v.average_latency/1000,l_e/l_t))
+         stderr:write(string.format("%d: name='%s.%s -> %s' events=%d latency=%.3fms throughput=%.1fev/s\n",k-1, tostring(v.producer), tostring(v.key), tostring(v.consumer) ,v.events_pushed,v.average_latency*1000,l_e/l_t))
       end
    end
    end
+--   kernel.stats_latency_reset()
+--   last_t={}
+--   last_t2={}
 end
 
 function get(n)

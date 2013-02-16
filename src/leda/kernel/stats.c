@@ -32,9 +32,13 @@ THE SOFTWARE.
 #include "instance.h"
 #include "stats.h"
 
+#include <event2/event.h>
+extern struct event_base *kernel_event_base;
+
 typedef struct __s_stats {
    atomic avg;
    atomic n;
+   atomic executed;
    atomic events;
    atomic error;
    atomic active;
@@ -43,6 +47,7 @@ typedef struct __s_stats {
 typedef struct __c_stats {
    atomic communication_time;
    atomic n;
+   atomic events;
 } * c_stats;
 
 s_stats sstats;
@@ -50,23 +55,62 @@ c_stats cstats;
 static int nstages;
 static int nconnectors;
 
-void stats_update_time(int id, long int t) {
-   ADD(sstats[id].avg,(t-READ(sstats[id].avg))/(ADD(sstats[id].n,1)+1));
+int stats_latency_reset(lua_State* L) {
+   int i;
+   for(i=0;i<nstages;i++) {
+      STORE(sstats[i].avg,0);
+      STORE(sstats[i].n,0);
+   }
+   for(i=0;i<nconnectors;i++) {
+      STORE(cstats[i].communication_time,0);
+      STORE(cstats[i].n,0);
+   }
+   return 0;
 }
 
-void stats_update_events(int id, int e) {
+void stats_update_time(int id, long int t) {
+   ADD(sstats[id].avg,t);
+   ADD(sstats[id].n,1);
+   if(has_release_cb) {
+      struct kernel_event_t * arg=malloc(sizeof(struct kernel_event_t));
+      arg->id=id;
+      arg->time=t;
+      struct event *listener_event = event_new(kernel_event_base, -1, 0, kernel_release_event, arg);
+      event_add(listener_event, NULL);
+      event_active(listener_event,0,0);
+   }
+}
+
+void stats_update_events(int id, int e,int c_id, long int t) {
    ADD(sstats[id].events,e);
+   ADD(cstats[c_id].communication_time,t);
+   ADD(cstats[c_id].n,1);
+   ADD(cstats[c_id].events,1);
+   
+   if(has_event_cb) {
+      struct kernel_event_t * arg=malloc(sizeof(struct kernel_event_t));
+      arg->id=id;
+      arg->ev=READ(sstats[id].events);
+      arg->c_id=c_id;
+      arg->c_ev=READ(cstats[c_id].n);
+      arg->time=t;
+      struct event *listener_event = event_new(kernel_event_base, -1, 0, kernel_event_event, arg);
+      event_add(listener_event, NULL);
+      event_active(listener_event,0,0);
+   }
 }
 
 void stats_update_error(int id, int e) {
    ADD(sstats[id].error,e);
-}
-
-void stats_update_connector(int id, long int t) {
-   ADD(cstats[id].communication_time,(t-READ(cstats[id].communication_time))/(ADD(cstats[id].n,1)+1));
+   if(has_error_cb) {
+      struct event *listener_event = event_new(kernel_event_base, -1, 0, kernel_error_event, (void *)(long unsigned int)id);
+      event_add(listener_event, NULL);
+      event_active(listener_event,0,0);
+   }
 }
 
 void stats_active_instance(int id) {
+   ADD(sstats[id].executed,1);
    ADD(sstats[id].active,1);
 }
 
@@ -80,20 +124,27 @@ int stats_reset(lua_State * L) {
    for(i=0;i<nstages;i++) {
       STORE(sstats[i].avg,0);
       STORE(sstats[i].n,0);
+      STORE(sstats[i].executed,0);
       STORE(sstats[i].events,0);
       STORE(sstats[i].error,0);
    }
    for(i=0;i<nconnectors;i++) {
       STORE(cstats[i].communication_time,0);
       STORE(cstats[i].n,0);
+      STORE(cstats[i].events,0);
    }
    return 0;
 }
 
 void stats_push(lua_State * L) {
-   int i;
+   int i=0;
+   int n_s=nstages;
+   if(lua_type(L,1)==LUA_TNUMBER) {
+      i=lua_tointeger(L,1)-1;
+      n_s=lua_tointeger(L,1)-1;
+   }
    lua_newtable(L);
-   for(i=0;i<nstages;i++) {
+   for(i=0;i<n_s;i++) {
       lua_newtable(L);
       lua_pushstring(L,STAGE(i)->name);
       lua_setfield(L,-2,"name");
@@ -105,9 +156,11 @@ void stats_push(lua_State * L) {
       lua_setfield(L,-2,"event_queue_size");
       lua_pushnumber(L,event_queue_capacity(i));
       lua_setfield(L,-2,"event_queue_capacity");
-      lua_pushnumber(L,READ(sstats[i].avg));
+      long int nn=READ(sstats[i].n);
+      if(nn<=0) nn=1;
+      lua_pushnumber(L,((double)READ(sstats[i].avg))/(100000*nn));
       lua_setfield(L,-2,"average_latency");
-      lua_pushnumber(L,READ(sstats[i].n));
+      lua_pushnumber(L,READ(sstats[i].executed));
       lua_setfield(L,-2,"times_executed");
       lua_pushnumber(L,READ(sstats[i].events));
       lua_setfield(L,-2,"events_pushed");
@@ -116,19 +169,23 @@ void stats_push(lua_State * L) {
       lua_rawseti(L,-2,i+1);
    }
    lua_newtable(L);
-   for(i=0;i<nconnectors;i++) {
-      lua_newtable(L);
-      lua_pushstring(L,CONNECTOR(i)->name);
-      lua_setfield(L,-2,"key");
-      lua_pushstring(L,STAGE(CONNECTOR(i)->p)->name);
-      lua_setfield(L,-2,"producer");
-      lua_pushstring(L,STAGE(CONNECTOR(i)->c)->name);
-      lua_setfield(L,-2,"consumer");
-      lua_pushnumber(L,READ(cstats[i].communication_time));
-      lua_setfield(L,-2,"average_latency");
-      lua_pushnumber(L,READ(cstats[i].n));
-      lua_setfield(L,-2,"events_pushed");
-      lua_rawseti(L,-2,i+1);
+   if(lua_type(L,1)!=LUA_TNUMBER) {
+      for(i=0;i<nconnectors;i++) {
+         lua_newtable(L);
+         lua_pushstring(L,CONNECTOR(i)->name);
+         lua_setfield(L,-2,"key");
+         lua_pushstring(L,STAGE(CONNECTOR(i)->p)->name);
+         lua_setfield(L,-2,"producer");
+         lua_pushstring(L,STAGE(CONNECTOR(i)->c)->name);
+         lua_setfield(L,-2,"consumer");
+         long int nn=READ(cstats[i].n);
+         if(nn<=0) nn=1;
+         lua_pushnumber(L,((double)READ(cstats[i].communication_time))/(1000000*nn));
+         lua_setfield(L,-2,"average_latency");
+         lua_pushnumber(L,READ(cstats[i].events));
+         lua_setfield(L,-2,"events_pushed");
+         lua_rawseti(L,-2,i+1);
+      }
    }
 }
 
@@ -142,12 +199,14 @@ void stats_init(int ns, int nc) {
       sstats[i].n=atomic_new(0);
       sstats[i].active=atomic_new(0);
       sstats[i].events=atomic_new(0);
+      sstats[i].executed=atomic_new(0);
       sstats[i].error=atomic_new(0);
    }
    cstats=calloc(nc,sizeof(struct __c_stats));
    for(i=0;i<nc;i++) {
       cstats[i].communication_time=atomic_new(0);
       cstats[i].n=atomic_new(0);
+      cstats[i].events=atomic_new(0);
    }
 }
 
@@ -158,12 +217,14 @@ void stats_free() {
       atomic_free(sstats[i].n);
       atomic_free(sstats[i].active);
       atomic_free(sstats[i].events);
+      atomic_free(sstats[i].executed);
       atomic_free(sstats[i].error);
    }
    nstages=0;
    for(i=0;i<nconnectors;i++) {
       atomic_free(cstats[i].communication_time);
       atomic_free(cstats[i].n);
+      atomic_free(cstats[i].events);
    }
    nconnectors=0;
    

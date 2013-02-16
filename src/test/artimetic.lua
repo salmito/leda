@@ -39,6 +39,6 @@ local g=graph{"Producer-consumer",
 }
 
 
-prod:send(os.time(),0.5)
+prod:send(os.time(),0.1)
 
 g:run()

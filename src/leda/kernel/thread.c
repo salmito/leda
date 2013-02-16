@@ -273,9 +273,8 @@ void emmit_cohort(instance caller) {
    _DEBUG("Thread: Emmited self, passing the thread to the stage '%s'.\n",
       main_graph->s[dst_id]->name);
    if(con_id>=0) {
-      STATS_UPDATE_EVENTS(caller->stage,1);
       time_d ct=now_secs()-comunication_time;
-      STATS_UPDATE_CONNECTOR(con_id,ct*1000000);
+      STATS_UPDATE_EVENTS(caller->stage,1,con_id,ct*1000000);
    }
    thread_resume_instance(callee);
 }
@@ -311,9 +310,8 @@ int emmit(lua_State * L) {
       if(lua_isnil(L,-1)) {
          lua_pop(L,1);
          if(con_id>=0) {
-            STATS_UPDATE_EVENTS(CONNECTOR(con_id)->p,1);
             time_d ct=now_secs()-comunication_time;
-            STATS_UPDATE_CONNECTOR(con_id,ct*1000000);
+            STATS_UPDATE_EVENTS(CONNECTOR(con_id)->p,1,con_id,ct*1000000);
          }
          return 1;
       }
@@ -339,9 +337,8 @@ int emmit(lua_State * L) {
       _DEBUG("Thread: Event emmited for stage '%s'\n",STAGE(dst_id)->name);
       lua_pushboolean(L,TRUE);
      if(con_id>=0) {
-            STATS_UPDATE_EVENTS(CONNECTOR(con_id)->p,1);
             time_d ct=now_secs()-comunication_time;
-            STATS_UPDATE_CONNECTOR(con_id,ct*1000000);
+            STATS_UPDATE_EVENTS(CONNECTOR(con_id)->p,1,con_id,ct*1000000);
       }
       return 1;
    }
@@ -357,9 +354,8 @@ int emmit(lua_State * L) {
    push_ready_queue(dst);
    lua_pushboolean(L,TRUE);
    if(con_id>=0) {
-           STATS_UPDATE_EVENTS(CONNECTOR(con_id)->p,1);
-            time_d ct=now_secs()-comunication_time;
-            STATS_UPDATE_CONNECTOR(con_id,ct*1000000);
+      time_d ct=now_secs()-comunication_time;
+      STATS_UPDATE_EVENTS(CONNECTOR(con_id)->p,1,con_id,ct*1000000);
    }
    return 1;
 }

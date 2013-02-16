@@ -42,7 +42,9 @@ THE SOFTWARE.
 #include "extra/lmarshal.h"
 #include "extra/leda-io.h"
 
-#define __VERSION "0.2.3"
+#include <event2/event.h>
+
+#define __VERSION "0.2.4"
 
 #define CONNECTOR_TIMEOUT 2.0
 
@@ -53,7 +55,13 @@ THE SOFTWARE.
 #define sleep(a) Sleep(a * 1000)
 #endif
 
-
+struct event_base *kernel_event_base;
+char has_error_cb=0,
+     has_event_cb=0,
+     has_release_cb=0,
+     has_destroy_cb=0,
+     has_create_cb=0,
+     has_active_cb=0;
 /* initialized flag, 'true' if already initialized */
 bool_t initialized=FALSE;
 
@@ -79,6 +87,87 @@ int leda_send(lua_State *L) {
    return 2;
 }
 
+/**
+ * Event system callbacks using libvevent
+ */
+ lua_State * L_main;
+ 
+ #include <event2/thread.h>
+ 
+void kernel_error_event(evutil_socket_t fd, short events, void *arg) {
+   lua_getfield(L_main, 3,"on_error");
+   if(lua_type(L_main,-1)==LUA_TFUNCTION) {
+      lua_pushinteger(L_main,((unsigned long int)arg)+1);
+      lua_call(L_main,1,0);
+   } else {
+      _DEBUG("Lost on_error callback\n");
+      lua_pop(L_main,1);
+   }
+ }
+ 
+ void kernel_event_event(evutil_socket_t fd, short events, void *arg) {
+   lua_getfield(L_main, 3,"on_event");
+   if(lua_type(L_main,-1)==LUA_TFUNCTION) {
+      struct kernel_event_t * ev=arg;
+      lua_pushinteger(L_main,ev->id+1);
+      lua_pushinteger(L_main,ev->ev);
+      lua_pushinteger(L_main,ev->c_id+1);
+      lua_pushinteger(L_main,ev->c_ev);
+      lua_pushnumber(L_main,ev->time);
+      free(ev);
+      lua_call(L_main,5,0);
+   } else {
+      _DEBUG("Lost on_event callback\n");
+      lua_pop(L_main,1);
+   }
+ }
+
+void kernel_release_event(evutil_socket_t fd, short events, void *arg){
+  lua_getfield(L_main, 3,"on_release");
+   if(lua_type(L_main,-1)==LUA_TFUNCTION) {
+      struct kernel_event_t * ev=arg;
+      lua_pushinteger(L_main,ev->id+1);
+      lua_pushnumber(L_main,ev->time);
+      free(ev);
+      lua_call(L_main,2,0);
+   } else {
+      _DEBUG("Lost on_release callback\n");
+      lua_pop(L_main,1);
+   }
+}
+
+//void kernel_destroy_event(evutil_socket_t fd, short events, void *arg);
+//void kernel_create_event(evutil_socket_t fd, short events, void *arg);
+//void kernel_active_event(evutil_socket_t fd, short events, void *arg);
+
+ void kernel_null_event(evutil_socket_t fd, short events, void *arg) {
+//    printf("NULL OCCURED\n");
+ }
+
+void kernel_timer_event(evutil_socket_t fd, short events, void *arg) {
+   lua_getfield(L_main, 3,"on_timer");
+   //printf("on_timer\n");
+   if(lua_type(L_main,-1)==LUA_TFUNCTION) {
+      lua_pushinteger(L_main,((long int)arg));
+      lua_call(L_main,1,0);
+   } else {
+      _DEBUG("Lost on_timer callback\n");
+      lua_pop(L_main,1);
+   }
+ }
+
+int add_timer(lua_State * L) {
+   double t;
+   int n;
+   t = lua_tonumber(L,1);
+   n = lua_tointeger(L,2);
+   
+   struct event *listener_event = event_new(kernel_event_base, -1, EV_READ|EV_PERSIST, kernel_timer_event, (void *)(long int)n);
+   struct timeval to={t,(t-((int) t))*1000000L};
+   event_add(listener_event, &to);
+   return 0;
+}
+
 /*
 * Run a graph defined by the lua declaration
 *
@@ -86,13 +175,20 @@ int leda_send(lua_State *L) {
 *          'nil' in case of error, with an error message
 */
 int leda_run(lua_State * L) {
+   evthread_use_pthreads();
+   kernel_event_base = event_base_new();
+   if (!kernel_event_base) {
+   	luaL_error(L,"Error opening a new event_base for the kernel"); //error
+   }
+   
+   //Create graph internal representation
    graph g=to_graph(L,2);
-   //Destroy graph internal representation
+   
    main_graph=g;
-   //second parameter must be a table for controller
+   //parameter must be a table for controller
    luaL_checktype(L,3, LUA_TTABLE);
-   //third parameter must be a socket descriptor for the process   
    int default_maxpar=lua_tointeger(L,4);
+   //parameter must be a socket descriptor for the process   
    int process_fd=lua_tointeger(L,5);
    //initiate instances for the graph
    //queues are initially unbounded (-1 limit)
@@ -144,22 +240,73 @@ int leda_run(lua_State * L) {
       lua_newtable(L);
       lua_setfield(L,-1,"pending");
    }
+   
+   lua_getfield(L, 3,"on_error");
+   if(lua_type(L,-1)==LUA_TFUNCTION) {
+      _DEBUG("Kernel: Controller has an error callback\n");
+      has_error_cb=1;
+   }
+   lua_pop(L,1);
 
-   _DEBUG("Kernel: Running Graph '%s'\n",g->name);
+   lua_getfield(L, 3,"on_event");
+   if(lua_type(L,-1)==LUA_TFUNCTION) {
+      _DEBUG("Kernel: Controller has an event callback\n");
+      has_event_cb=1;
+   }
+   lua_pop(L,1);
+
+   lua_getfield(L, 3,"on_release");
+   if(lua_type(L,-1)==LUA_TFUNCTION) {
+      _DEBUG("Kernel: Controller has an release callback\n");
+      has_release_cb=1;
+   }
+   lua_pop(L,1);
+
+   lua_getfield(L, 3,"on_destroy");
+   if(lua_type(L,-1)==LUA_TFUNCTION) {
+      _DEBUG("Kernel: Controller has an destroy callback\n");
+      has_destroy_cb=1;
+   }
+   lua_pop(L,1);
+
+   lua_getfield(L, 3,"on_create");
+   if(lua_type(L,-1)==LUA_TFUNCTION) {
+      _DEBUG("Kernel: Controller has an create callback\n");
+      has_create_cb=1;
+   }
+   lua_pop(L,1);
+
+   lua_getfield(L, 3,"on_active");
+   if(lua_type(L,-1)==LUA_TFUNCTION) {
+      _DEBUG("Kernel: Controller has an active callback\n");
+      has_active_cb=1;
+   }
+   lua_pop(L,1);
+
+
    //call the init function of a controller, if defined
    lua_getfield(L, 3,"init");
    lua_pushvalue(L,1);
-   if(lua_type(L,-2)==LUA_TFUNCTION)
+   if(lua_type(L,-2)==LUA_TFUNCTION) {
+      _DEBUG("Kernel: Calling controller init function\n");
       lua_call(L,1,0);
-   else {
+   } else {
       lua_pop(L,2);
       luaL_error(L,"Controller does not defined an init method");
    }
+    _DEBUG("Kernel: Running Graph '%s'\n",g->name);
 
-   while(1) { //sleep forever
-      sleep(10000);
-   }   
+   #ifndef STATS_OFF
 
+   L_main=L;
+   
+   struct event *listener_event = event_new(kernel_event_base, -1, EV_READ|EV_PERSIST, kernel_null_event, NULL);
+   event_add(listener_event, NULL);
+    
+   event_base_dispatch(kernel_event_base);
+   #else
+      while(1) sleep(1000);
+   #endif
    return 0;
 }
 
@@ -313,17 +460,18 @@ int luaopen_leda_kernel (lua_State *L) {
  	   {"setmetatable", leda_setmetatable}, 
       {"cpu", leda_number_of_cpus},
   	   //functions for controllers
+  	   {"add_timer", add_timer},
   	   {"new_thread", thread_new},
   	   {"kill_thread", thread_kill},
   	   {"stats", leda_get_stats},
   	   {"reset_stats", stats_reset},
+  	   {"stats_latency_reset", stats_latency_reset},
   	   {"maxpar", instance_set_maxpar},
  	   {"ready_queue_size", leda_ready_queue_size},
- 	   
+ 	   {"sleep",leda_sleep_},
   	   {"set_capacity", leda_set_capacity},
  	   {"ready_queue_capacity", leda_ready_queue_capacity},
   	   {"thread_pool_size", leda_get_thread_pool_size},
-
 		{NULL, NULL},
 	};
 	

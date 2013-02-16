@@ -322,7 +322,6 @@ int send_event(lua_State *L) {
    if(!TRY_POP(sockets[dst_id],sockfd)) {
       _DEBUG("Process: Connecting to process '%s:%d'\n",PROCESS(dst_id)->host,PROCESS(dst_id)->port);
       struct sockaddr_in adr_inet;
-      int len_inet;
       adr_inet.sin_family = AF_INET;  
       adr_inet.sin_port = htons(PROCESS(dst_id)->port); 
 		long res=0;
@@ -338,7 +337,6 @@ int send_event(lua_State *L) {
         lua_pushfstring(L,"Bad address '%s'",PROCESS(dst_id)->host);
         return 2;
       }
-      len_inet = sizeof adr_inet; 
       if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         lua_pop(L,1);
         lua_pushboolean(L,FALSE);

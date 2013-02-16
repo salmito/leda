@@ -12,13 +12,13 @@ local utils=leda.utils
 --          '...':   data to be sent
 -----------------------------------------------------------------------------
 utils.switch={
-   handler=function (...)
+   handler=function (output_key,...)
       local args={...}
-      local out=leda.get_output(args[1])
+      local out=leda.get_output(output_key)
       if out then 
-         out:send(select(2,...)) 
+         out:send(...) 
        else
-         error(string.format("Output '%s' does not exist",tostring(args[1])))
+         error(string.format("Output '%s' does not exist",tostring(output_key)))
       end
    end
 }
@@ -64,9 +64,8 @@ utils.roundrobbin={
 -- param:   '...':   parameters passed when calling chunk
 -----------------------------------------------------------------------------
 utils.eval={
-   handler=function (...)
-      local args={...}
-      loadstring(args[1])(select(2,...))
+   handler=function (chunk,...)
+      assert(loadstring(chunk))(...)
    end,
 }
 
@@ -108,13 +107,17 @@ end
 -- param:   'n':     number of copies to push
 -----------------------------------------------------------------------------
 utils.get_copy_stage=function (n,cpy_func)
-	assert(type(n)=="number","param #1 must be a number")
+	assert(type(n)=="number" and n>=1,"param #1 must be a number greater than one")
 	return leda.stage{
    		handler=function (...)
-      		for i=1,n do
-      			if cpy_func then leda.send(1,cpy_func(...))
+      		for i=2,n do
+        			if cpy_func then leda.send(1,cpy_func(...))
       			else leda.send(1,...) end
       		end
+   		   if n >= 1 then
+               leda.send(1,...)
+   		   end
+
 		end,
    		bind=function(self) 
       		assert(self[1],"Copy must have an output at [1]") 
@@ -155,8 +158,7 @@ utils.event_replayer=function(file,timed,key,tail)
 			local dec=assert(leda.decode(buf))	
 			assert(leda.send(key,unpack(dec)))
 			local when=dec.timestamp+init_time
-			local now=leda.gettime()
-			local delay=when-now
+			local delay=when-leda.gettime()
 			--print('RELATIVE',dec.timestamp,delay)
 			if delay > epsilon and timed then
 				--print('SLEEPING',delay,now,when,dec.timestamp)

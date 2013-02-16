@@ -20,7 +20,9 @@ local process_socket=nil
 local magicbyte='\027'
 local default_controller=require("leda.controller.default")
 
+--preload some controllers
 require('leda.controller.fixed_thread_pool')
+require('leda.controller.profiler')
 
 module("leda.process")
 
