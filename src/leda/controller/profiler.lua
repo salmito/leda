@@ -13,8 +13,8 @@ local print,loadstring,pcall,os,string,pairs,ipairs,tostring,io,assert,table=
       print,loadstring,pcall,os,string,pairs,ipairs,tostring,io,assert,table
 local output=io.stderr
 local default_thread_pool_size=kernel.cpu()
-local init_time=kernel.gettime()
-local pool_size=pool_size or default_thread_pool_size
+local init_time=nil
+local pool_size=thread_pool_size or default_thread_pool_size
 local t={}
 local th={}
 local last_t={}
@@ -25,7 +25,7 @@ local testcase=testcase or 'default'
 -----------------------------------------------------------------------------
 -- Controller init function
 -----------------------------------------------------------------------------
-local resolution=tonumber(profiler_resolution) or 0.1
+local resolution=profiler_resolution or 0.1
 local stages,connectors=nil,nil
 
 function t.init()
@@ -37,11 +37,12 @@ function t.init()
       dbg("Thread %d created",i)
    end
    if profile_output then
-      output=io.open(profile_output,"w")
+      output=io.open(profile_output,"a")
    end
    stages,connectors=kernel.stats()
-   output:write('testcase\ttype\ttime\tid\tname\tready\tthreads\tmax_par\tevents\tqueue_size\texecuted\terrors\tlatency\tthroughput\n')
+   output:write('testcase\ttype\ttime\tid\tname\tready\tthreads\tmax_par\tevents\tqueue_size\texecuted\terrors\tlatency\tthroughput\tactive_threads\n')
    kernel.add_timer(profiler_resolution,1)
+   init_time=kernel.gettime()
 end
 
 local out_temp={}
@@ -61,7 +62,7 @@ function t.on_timer(id)
          local l_e=v.events_pushed-last[1]
          local l_t=kernel.gettime()-last[2]
          table.insert(out,
-            string.format("%s\tstage\t%.6f\t%d\t%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%.6f\t%.6f\n",
+            string.format("%s\tstage\t%.0f\t%d\t%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%.6f\t%.6f\t%d\n",
             testcase,
             now,
             k-1,
@@ -74,7 +75,8 @@ function t.on_timer(id)
             v.times_executed, 
             v.errors, 
             v.average_latency, 
-            l_e/l_t))
+            l_e/l_t,ta
+            ))
       end
    end
    for k,v in ipairs(cstats) do
@@ -84,7 +86,7 @@ function t.on_timer(id)
          local l_e=v.events_pushed-last[1]
          local l_t=kernel.gettime()-last[2]
          table.insert(out,
-         string.format("%s\tconnector\t%.6f\t%d\t%s.%s->%s\t0\t%d\t0\t%d\t0\t0\t0\t%.6f\t%.6f\n",
+         string.format("%s\tconnector\t%.0f\t%d\t%s.%s->%s\t0\t%d\t0\t%d\t0\t0\t0\t%.6f\t%.6f\t%d\n",
          testcase,
          now,
          k-1, 
@@ -94,15 +96,17 @@ function t.on_timer(id)
          ps,
          v.events_pushed,
          v.average_latency,
-         l_e/l_t))
+         l_e/l_t,
+         ta
+         ))
       end
    end
    table.insert(out_temp,table.concat(out))
    if #out_temp >= 10 then
 	   output:write(table.concat(out_temp))
       kernel.stats_latency_reset()
-      last_t={}
-      last_t2={}
+--      last_t={}
+--      last_t2={}
 	   out_temp={}
    end
 end

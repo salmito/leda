@@ -875,7 +875,11 @@ void event_init_t(int process_fd) {
    int *p=malloc(sizeof(int));
    *p=process_fd;
    int i;
-   dummy=new_lua_state(FALSE);
+   dummy=new_lua_state(TRUE);
+   lua_newtable(dummy);
+   lua_pushcfunction(dummy,leda_getmetatable);
+   lua_setfield(dummy,-2,"getmetatable");
+   lua_setglobal(dummy,"leda");
    sockets=calloc(main_graph->n_d,sizeof(queue));
    for(i=0;i<main_graph->n_d;i++) sockets[i]=queue_new();
    cur_process=calloc(main_graph->n_cl,sizeof(atomic));

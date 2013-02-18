@@ -4,8 +4,9 @@
 -----------------------------------------------------------------------------
 
 local string,table,leda,kernel,io = string,table,leda,leda.kernel,io
-local getmetatable,setmetatable,type,tostring,assert,print,pairs,ipairs,tonumber,error=
-      getmetatable,setmetatable,type,tostring,assert,print,pairs,ipairs,tonumber,error
+
+local getmetatable,setmetatable,type,tostring,assert,print,pairs,ipairs,tonumber,error,unpack=
+      getmetatable,setmetatable,type,tostring,assert,print,pairs,ipairs,tonumber,error,unpack
 local is_graph=leda.leda_graph.is_graph
 
 local socket=require("socket")
@@ -94,9 +95,10 @@ end
 local function prepare_graph(g,process)
    local t={}
    for s in pairs(g:stages()) do
-      t[s]={handler=s.handler,init=s.init,pending=s.pending,bind=s.bind}
+      t[s]={handler=s.handler,init=s.init,pending=s.pending,bind=s.bind,autostart=s.autostart}
       s.bind=nil  --no need to transfer bind function for stage
       s.pending={}
+      s.autostart=nil
       local cl=g:get_cluster(s)
       if not cl:is_local(process.host,process.port) then
          s.handler=""
@@ -112,6 +114,7 @@ local function restore_graph(g,t)
       s.pending=r.pending
       s.handler=r.handler
       s.init=r.init
+      s.autostart=r.autostart
    end
 end
 
@@ -173,5 +176,16 @@ function init(g,ro_g,host,port,controller,maxpar)
 --   io.stderr:write(string.format("Starting graph\n",host,port))
 --   ro_g:dump()
    maxpar=maxpar or -1
+   
+   for stage in pairs(g:stages()) do
+      if stage.autostart then
+         if type(stage.autostart)=='table' then
+            stage:send(unpack(stage.autostart))
+         else
+            stage:send(stage.autostart)
+         end
+      end
+   end
+   
    leda.kernel.run(g,ro_g,controller or default_controller,maxpar,process_socket:getfd())
 end

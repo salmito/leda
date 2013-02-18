@@ -12,6 +12,7 @@ local utils=leda.utils
 --          '...':   data to be sent
 -----------------------------------------------------------------------------
 utils.switch={
+   name="Switch",
    handler=function (output_key,...)
       local args={...}
       local out=leda.get_output(output_key)
@@ -28,6 +29,7 @@ utils.switch={
 -- param:   '...': data to be broadcasted
 -----------------------------------------------------------------------------
 utils.broadcast={
+   name="Broadcast",
    handler=function (...)
    for _,connector in pairs(leda.output) do
            connector:send(...)
@@ -40,6 +42,7 @@ utils.broadcast={
 -- param:   '...': data to be sent
 -----------------------------------------------------------------------------
 utils.roundrobbin={
+   name="RoundRobbin",
    handler=function(...)
       coroutine.resume(c,...)
    end,
@@ -64,6 +67,7 @@ utils.roundrobbin={
 -- param:   '...':   parameters passed when calling chunk
 -----------------------------------------------------------------------------
 utils.eval={
+   name="Eval",
    handler=function (chunk,...)
       assert(loadstring(chunk))(...)
    end,
@@ -74,6 +78,7 @@ utils.eval={
 -- param:   '...':   data to be printed
 -----------------------------------------------------------------------------
 utils.print={
+   name="Print",
    handler=function (...)
       print(...)
       leda.send(1,...)
@@ -81,6 +86,32 @@ utils.print={
 }
 
 
+utils.deflate={
+   name='Lossless compressor',
+   handler=function(str,...)
+      local stream = zlib.deflate()
+      local compressed_str,eof,bytes_in,bytes_out=stream(str,'full')
+      leda.send('data',compressed_str,...)
+   end,
+   init="require 'zlib'"
+}
+
+utils.inflate={
+   name='Lossless decompressor',
+   handler=function(str,...)
+      local stream = zlib.inflate()
+      local decompressed_str,eof,bytes_in,bytes_out=stream(str);
+      leda.send('data',decompressed_str,...)
+   end,
+   init="require 'zlib'"
+}
+
+utils.quit={
+   name='Process term',
+   handler=function ()
+       leda.quit()
+   end
+}
 
 --Graph builders
 

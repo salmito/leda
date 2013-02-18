@@ -158,7 +158,7 @@ void stats_push(lua_State * L) {
       lua_setfield(L,-2,"event_queue_capacity");
       long int nn=READ(sstats[i].n);
       if(nn<=0) nn=1;
-      lua_pushnumber(L,((double)READ(sstats[i].avg))/(100000*nn));
+      lua_pushnumber(L,((double)READ(sstats[i].avg))/(1000000*nn));
       lua_setfield(L,-2,"average_latency");
       lua_pushnumber(L,READ(sstats[i].executed));
       lua_setfield(L,-2,"times_executed");

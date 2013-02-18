@@ -27,7 +27,7 @@ function cluster_metatable.__tostring(c)
    local sep = ""
    for e in pairs(c) do
       if is_stage(e) then
-         s = s .. sep .. tostring(e)
+         s = s .. sep .. tostring(e.name)
          sep = ", "
       end
    end

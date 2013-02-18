@@ -16,7 +16,7 @@ function plot_graph(leda_graph,out)
       textwrap="auto",    
       rankdir = "LR",
    }
-   g.label=tostring(leda_graph)
+   g.label=tostring(leda_graph.name or tostring(leda_graph))
    local start_node=nil
    local nodes={}
    if leda_graph.start then
@@ -26,18 +26,18 @@ function plot_graph(leda_graph,out)
    local clusters={}
    
    for s in pairs(leda_graph:stages()) do
-      local sname=tostring(s)
+      local sname=tostring(s.name)
       if s.serial then
          sname="["..sname.."]"
       end
       local s_cl=leda_graph:get_cluster(s)
       if s_cl then
 --         if #s_cl.process_addr==0 then         
-            clusters[s]=clusters[s] or g:cluster{tostring(s_cl)}
+            clusters[s]=clusters[s] or g:cluster{tostring(s_cl.name or s_cl)}
             cl=clusters[s]
-            clusters[s].label=tostring(s_cl)
+            clusters[s].label=tostring(s_cl.name or s_cl)
             if s_cl:has_serial() then
-               clusters[s].label="["..tostring(s_cl).."]"
+               clusters[s].label="["..tostring(s_cl.name or s_cl).."]"
             end
             if s_cl.process_addr then
             for _,proc in ipairs(s_cl.process_addr) do

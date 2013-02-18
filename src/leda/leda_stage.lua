@@ -88,13 +88,15 @@ function new_stage(t,init,name,bind,serial)
       assert(type(s.init)=="function" or type(s.init)=='string' or type(s.init)=="nil",string.format("Stage's init field must be a function or nil",type(s.init)))
       s.name=t.name
       s.bind=t.bind
-      s.serial= t.serial or t.stateful
+      s.serial=t.serial or t.stateful
+      s.autostart=t.autostart
    elseif is_stage(t) then
       s.handler=t.handler
       if t.init then s.init=t.init end
       s.bind=t.bind
       s.serial=t.serial
       s.name=t.name.."'"
+      s.autostart=t.autostart
       s.pending={}
       s=setmetatable(s,stage)
       return s

@@ -16,7 +16,7 @@ local new_connector=leda.leda_connector.new_connector
 local is_stage=leda.leda_stage.is_stage
 local is_cluster=leda.leda_cluster.is_cluster
 local leda=leda
-
+local localhost = localhost or 'localhost'
 module("leda.leda_graph")
 
 ----------------------------------------------------------------------------
@@ -393,7 +393,7 @@ end
 function index.run(g,...)
    assert(is_graph(g),string.format("Invalid parameter #1 (graph expected, got '%s')",type(g)))
    if not g.cluster then
-      g:part(g:all()):map("localhost")
+      g:part(g:all()):map(localhost)
    end
    local flag,err=g:verify()
    if flag then
