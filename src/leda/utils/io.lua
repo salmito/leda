@@ -7,8 +7,12 @@ if file_mt then
    file_mt.__wrap=function(file)
       local filefd=leda.io.wrap(file)
       return function()
+	 require 'leda.utils.io'
          return leda.io.unwrap(filefd)
       end
+   end
+   file_mt.__persist=function(file)
+      error('Unable to send file "'..tostring(file)..'" to other processes')
    end
    if not block then
    	if type(leda.aio.do_file_aio)=='function' then

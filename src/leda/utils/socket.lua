@@ -9,6 +9,7 @@ if tcp_client_mt then
       sock:setfd(-1) --do not collect on local instance
       sock:close()
       return function()
+	require 'leda.utils.socket'
          local client_mt,err=leda.getmetatable("tcp{client}")
          if err then
             return nil,err
@@ -18,6 +19,11 @@ if tcp_client_mt then
          return leda.setmetatable(container_sock,client_mt)     
       end
    end
+
+   tcp_client_mt.__persist=function(sock)
+      error('Unable to send socket "'..tostring(sock)..'" to other processes')
+   end
+
 
    if not block then
       local old_send=tcp_client_mt.__index.send
