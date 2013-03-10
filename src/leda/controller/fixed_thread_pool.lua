@@ -13,15 +13,18 @@ local table,ipairs,pairs,print=table,ipairs,pairs,print
 local default_thread_pool_size=10
 
 
-module("leda.controller.fixed_thread_pool")
+--module("leda.controller.fixed_thread_pool")
+
+local t={}
 
 local pool_size=default_thread_pool_size
 local th={}
+
 -----------------------------------------------------------------------------
 -- Controller init function
 -----------------------------------------------------------------------------
 
-function get_init(n)
+local function get_init(n)
    return   function()
                pool_size=n
                for i=1,n do
@@ -30,7 +33,7 @@ function get_init(n)
                end
             end
 end
-init=get_init(default_thread_pool_size)
+t.init=get_init(default_thread_pool_size)
 
 --[[function event_pushed(timedout,stats)
    local ps=kernel.thread_pool_size()
@@ -48,13 +51,15 @@ init=get_init(default_thread_pool_size)
    end
 end--]]
 
-function get(n)
+function t.get(n)
    return {init=get_init(n),event_pushed=event_pushed,finish=finish}
 end
 
-function finish()
+function t.finish()
    for i=1,#th do
       th[i]:kill()
    end
    dbg "Controller finished"
 end
+
+return t

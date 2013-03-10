@@ -2,14 +2,17 @@ local tostring = tostring
 local pcall = pcall
 local antgr=graph
 graph=nil
-module ("leda.utils.plot", package.seeall)
+--module ("leda.utils.plot", package.seeall)
+
+local t={}
+
 local gr = require "graph"
 graph=antgr
 
 local node, edge, subgraph, cluster, digraph, strictdigraph =
   gr.node, gr.edge, gr.subgraph, gr.cluster, gr.digraph, gr.strictdigraph
 
-function plot_graph(leda_graph,out)
+function t.plot_graph(leda_graph,out)
    local g = strictdigraph{
       tostring(leda_graph),
       compound = "1",
@@ -88,4 +91,6 @@ function plot_graph(leda_graph,out)
    end
    g:close()
 end
+
 leda.plot_graph=plot_graph
+return t

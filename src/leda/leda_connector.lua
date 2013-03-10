@@ -12,9 +12,12 @@ local getmetatable,setmetatable,type,tostring,assert,io,error=
 
 local dbg = leda.debug.get_debug("Connector: ")
 local dump = string.dump
+
 local leda=leda
 
-module("leda.leda_connector")
+--module("leda.leda_connector")
+
+local t={}
 
 -----------------------------------------------------------------------------
 -- Connector metatable
@@ -33,7 +36,7 @@ function connector.__tostring(c)
    end
 end
 
-function metatable()
+function t.metatable()
    return connector
 end
 
@@ -44,7 +47,7 @@ end
 -- returns:       'true' if 'c' is a connector
 --                'false' if not
 -----------------------------------------------------------------------------
-function is_connector(c)
+function t.is_connector(c)
    if getmetatable(c)==connector then return true end
    return false
 end
@@ -65,7 +68,7 @@ end
 -- Creates a new connector and returns it
 -- param:   'c': table used to hold the connector representation
 -----------------------------------------------------------------------------    
-function new_connector(prod,port,cons,ctype)
+function t.new_connector(prod,port,cons,ctype)
    assert(leda.leda_stage.is_stage(prod) or prod==nil,string.format("Parameter #1 must be a stage (got %s)",type(prod)))
    assert(type(port)=="string" or type(port)=="number",string.format("Parameter #2 must be a string or number (got %s)",type(port)))
    assert(leda.leda_stage.is_stage(cons),string.format("Parameter #3 must be a stage (got %s)",type(cons)))
@@ -84,3 +87,5 @@ function new_connector(prod,port,cons,ctype)
    dbg("Created connector '%s'",tostring(c))
    return c
 end
+
+return t

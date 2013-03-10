@@ -7,7 +7,9 @@ local string,table,leda,kernel,io = string,table,leda,leda.kernel,io
 
 local getmetatable,setmetatable,type,tostring,assert,print,pairs,ipairs,tonumber,error,unpack=
       getmetatable,setmetatable,type,tostring,assert,print,pairs,ipairs,tonumber,error,unpack
-local is_graph=leda.leda_graph.is_graph
+      
+local leda_graph=require 'leda.leda_graph'
+local is_graph=leda_graph.is_graph
 
 local socket=require("socket")
 local dbg = leda.debug.get_debug("Process: ")
@@ -25,11 +27,12 @@ local default_controller=require("leda.controller.default")
 require('leda.controller.fixed_thread_pool')
 require('leda.controller.profiler')
 
-module("leda.process")
+--module("leda.process")
+local t={}
 
-default_port=l_localport
+t.default_port=l_localport
 
-function get_process(host,port)
+function t.get_process(host,port)
    if not host and not port then
       host=localhost
       port=l_localport
@@ -54,7 +57,7 @@ local function is_local(d)
    return false
 end
 
-function start(p_port,maxpar,controller,has_graph)
+local function start(p_port,maxpar,controller,has_graph)
    if type(p_port)=="table" then
       local t=p_port
       p_port=t.port
@@ -90,7 +93,7 @@ function start(p_port,maxpar,controller,has_graph)
       init(gr,ro_gr,localhost,l_localport,controller,maxpar)
    end
 end
-
+t.start=start
 
 local function prepare_graph(g,process)
    local t={}
@@ -137,7 +140,26 @@ local function send_graph(g,d)
    client:close()
 end
 
-function run(g,localport,maxpar,controller)
+local function init(g,ro_g,host,port,controller,maxpar)
+--   io.stderr:write(string.format("Starting graph\n",host,port))
+--   ro_g:dump()
+   maxpar=maxpar or -1
+   
+   for stage in pairs(g:stages()) do
+      if stage.autostart then
+         if type(stage.autostart)=='table' then
+            stage:send(unpack(stage.autostart))
+         else
+            stage:send(stage.autostart)
+         end
+      end
+   end
+   
+   leda.kernel.run(g,ro_g,controller or default_controller,maxpar,process_socket:getfd())
+end
+t.init=init
+
+function t.run(g,localport,maxpar,controller)
    assert(is_graph(g),string.format("Invalid parameter #1 (graph expected, got %s)",type(g)))
    assert(type(localhost)=="string",string.format("Invalid local hostname (string expected, got %s)",type(localhost)))
    if type(localport)=="table" then
@@ -172,20 +194,6 @@ function run(g,localport,maxpar,controller)
    init(g,ro_graph,localhost,l_localport,controller,maxpar)
 end
 
-function init(g,ro_g,host,port,controller,maxpar)
---   io.stderr:write(string.format("Starting graph\n",host,port))
---   ro_g:dump()
-   maxpar=maxpar or -1
-   
-   for stage in pairs(g:stages()) do
-      if stage.autostart then
-         if type(stage.autostart)=='table' then
-            stage:send(unpack(stage.autostart))
-         else
-            stage:send(stage.autostart)
-         end
-      end
-   end
-   
-   leda.kernel.run(g,ro_g,controller or default_controller,maxpar,process_socket:getfd())
-end
+
+
+return t

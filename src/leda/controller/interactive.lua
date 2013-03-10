@@ -8,7 +8,7 @@
 -----------------------------------------------------------------------------
 local base = _G
 local dbg = leda.debug.get_debug("Controller: Interactive: ")
-local plot=pcall(require,'leda.utils.plot')
+local has_plot,plot=pcall(require,'leda.utils.plot')
 local table,leda=table,leda
 local print,loadstring,pcall,os,string,pairs,ipairs,tostring,io,assert=
       print,loadstring,pcall,os,string,pairs,ipairs,tostring,io,assert
@@ -21,7 +21,9 @@ local kernel=kernel
 leda.rawsend=kernel.send
 local default_thread_pool_size=kernel.cpu()
 
-module("leda.controller.interactive")
+--module("leda.controller.interactive")
+
+local t={}
 
 local pool_size=default_thread_pool_size
 -----------------------------------------------------------------------------
@@ -61,58 +63,7 @@ local init_time=kernel.gettime()
 local gr=""
 local th={}
 
-function get_init(n)
-   return function (g)
---   stderr:write("\027[2J")
-   pool_size=n or pool_size
-   init_time=kernel.gettime()
-   for i=1,n do
-      table.insert(th,kernel.new_thread())
-      dbg("Thread %d created",i)
-   end
-   
-
-  
-   if plot and leda.utils.plot then
-         local fn = os.tmpname()
-         leda.utils.plot.plot_graph(g,fn..".dot") 
-   
-
-         local f=assert(io.popen("graph-easy "..fn..".dot --boxart 2>/dev/null","r"))
-         gr=assert(f:read('*a'))
-         f:close()
-         os.remove(fn)
-   end
-
-
-   local line = readline(prompt)
-   while line do
-      if line == 'quit' then 
-         stderr:write("Quiting...\n")
-         os.exit(0)
-      elseif line == '+' then 
-         table.insert(th,kernel.new_thread())
---         stderr:write("\027[2J")
-         stderr:write("Thread created...\n")
-      elseif line == '-' then 
-         kernel.kill_thread() 
---            stderr:write("\027[2J")
-         stderr:write("Thread killed...\n")
-      elseif line~="" then
---          stderr:write("\027[2J")
-         eval_lua(line)
-         stderr:write("\n")
-      else
-         update(fn)
-      end
-      stderr:flush()
-      line = readline(prompt)
-      end
-   end
-end
-init=get_init(default_thread_pool_size)
-
-function update(fn)
+local function update(fn)
    local ps=kernel.thread_pool_size()
    local rs,rsc=0,kernel.ready_queue_size()
    local ta=0
@@ -154,6 +105,60 @@ function update(fn)
 --   last_t2={}
 end
 
-function get(n)
+
+local function get_init(n)
+   return function (g)
+--   stderr:write("\027[2J")
+   pool_size=n or pool_size
+   init_time=kernel.gettime()
+   for i=1,n do
+      table.insert(th,kernel.new_thread())
+      dbg("Thread %d created",i)
+   end
+   
+
+  
+   if has_plot then
+         local fn = os.tmpname()
+         plot.plot_graph(g,fn..".dot") 
+
+         local f=assert(io.popen("graph-easy "..fn..".dot --boxart 2>/dev/null","r"))
+         gr=assert(f:read('*a'))
+         f:close()
+         os.remove(fn)
+   end
+
+
+   local line = readline(prompt)
+   while line do
+      if line == 'quit' then 
+         stderr:write("Quiting...\n")
+         os.exit(0)
+      elseif line == '+' then 
+         table.insert(th,kernel.new_thread())
+--         stderr:write("\027[2J")
+         stderr:write("Thread created...\n")
+      elseif line == '-' then 
+         kernel.kill_thread() 
+--            stderr:write("\027[2J")
+         stderr:write("Thread killed...\n")
+      elseif line~="" then
+--          stderr:write("\027[2J")
+         eval_lua(line)
+         stderr:write("\n")
+      else
+         update(fn)
+      end
+      stderr:flush()
+      line = readline(prompt)
+      end
+   end
+end
+
+t.init=get_init(default_thread_pool_size)
+
+function t.get(n)
    return {init=get_init(n),event_pushed=event_pushed,finish=finish}
 end
+
+return t

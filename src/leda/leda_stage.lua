@@ -11,13 +11,14 @@ local type,pairs,assert,tostring,setmetatable,getmetatable,error,io,print,loadst
       type,pairs,assert,tostring,setmetatable,getmetatable,error,io,print,loadstring
 local string,table,kernel= string,table,leda.kernel
 local leda_connector = require("leda.leda_connector")
-local is_connector=leda.leda_connector.is_connector
-local new_connector=leda.leda_connector.new_connector
+local is_connector=leda_connector.is_connector
+local new_connector=leda_connector.new_connector
 local dbg = leda.debug.get_debug("Stage: ")
 local dump = string.dump
 local leda=leda
 
-module("leda.leda_stage")
+--module("leda.leda_stage")
+local t={}
 
 ----------------------------------------------------------------------------
 -- Stage metatable
@@ -41,6 +42,19 @@ end
 local index=stage.__index
 
 -----------------------------------------------------------------------------
+-- Verify if parameter 's' is a stage
+-- (i.e. has the stage metatable)
+--
+-- returns:       'true' if 's' is a stage
+--                'false' if not
+-----------------------------------------------------------------------------
+local function is_stage(s)
+   if getmetatable(s)==stage then return true end
+   return false
+end
+t.is_stage = is_stage
+
+-----------------------------------------------------------------------------
 -- Add pending data to the stage
 -----------------------------------------------------------------------------    
 function index.send(self,...)
@@ -59,9 +73,9 @@ end
 function index.connect(head,key,tail,method)
    return function (g) return g:connect(head,key,tail,method) end
 end
-leda.connect=index.connect
+t.connect=index.connect
 
-function metatable()
+function t.metatable()
    return stage
 end
 
@@ -69,7 +83,7 @@ end
 -- Creates a new stage and returns it
 -- param:   't': table used to hold the stage representation
 -----------------------------------------------------------------------------
-function new_stage(t,init,name,bind,serial)
+function t.new_stage(t,init,name,bind,serial)
    local s={}
    if type(t)=="function" then  -- arg1=handler, arg2=init, arg3=name, ...
       s.handler=t
@@ -112,14 +126,5 @@ function new_stage(t,init,name,bind,serial)
    return s
 end
 
------------------------------------------------------------------------------
--- Verify if parameter 's' is a stage
--- (i.e. has the stage metatable)
---
--- returns:       'true' if 's' is a stage
---                'false' if not
------------------------------------------------------------------------------
-function is_stage(s)
-   if getmetatable(s)==stage then return true end
-   return false
-end
+
+return t

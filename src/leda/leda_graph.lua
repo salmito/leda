@@ -11,13 +11,18 @@ local tostring,type,assert,pairs,setmetatable,getmetatable,print,error,ipairs,un
       tostring,type,assert,pairs,setmetatable,getmetatable,print,error,ipairs,unpack
 local string,table,kernel,io=string,table,leda.kernel,io
 local dbg = leda.debug.get_debug("Graph: ")
-local is_connector=leda.leda_connector.is_connector
-local new_connector=leda.leda_connector.new_connector
-local is_stage=leda.leda_stage.is_stage
-local is_cluster=leda.leda_cluster.is_cluster
+local leda_connector = require("leda.leda_connector")
+local is_connector=leda_connector.is_connector
+local new_connector=leda_connector.new_connector
+local leda_stage = require("leda.leda_stage")
+local is_stage=leda_stage.is_stage
+local leda_cluster = require("leda.leda_cluster")
+local is_cluster=leda_cluster.is_cluster
 local leda=leda
 local localhost = localhost or 'localhost'
-module("leda.leda_graph")
+--module("leda.leda_graph")
+
+local t={}
 
 ----------------------------------------------------------------------------
 -- Graph metatable
@@ -36,6 +41,21 @@ function graph_metatable.__tostring(g)
       return string.format("Graph (%s)",kernel.to_pointer(g)) 
    end
 end
+
+
+-----------------------------------------------------------------------------
+-- Verify if parameter 'g' is a graph
+-- (i.e. has the graph metatable)
+--
+-- returns:       'true' if 'g' is a graph
+--                'false' if not
+-----------------------------------------------------------------------------
+function t.is_graph(g) 
+  if getmetatable(g)==graph_metatable then return true end
+  return false
+end
+
+local is_graph=t.is_graph
 
 -----------------------------------------------------------------------------
 -- Graph __index metamethod
@@ -58,11 +78,12 @@ function index.add(self,c)
 end
 index.add_connector=add
 
+
 -----------------------------------------------------------------------------
 -- Create a new graph and returns it
 -- param:   't': table used to hold the graph representation
 -----------------------------------------------------------------------------  
-function graph(...)
+function t.graph(...)
    local t={...}
    if type(t[1]=='table') and not is_graph(t[1]) then
       t=t[1]
@@ -106,17 +127,9 @@ function graph(...)
    return gr
 end
 
------------------------------------------------------------------------------
--- Verify if parameter 'g' is a graph
--- (i.e. has the graph metatable)
---
--- returns:       'true' if 'g' is a graph
---                'false' if not
------------------------------------------------------------------------------
-function is_graph(g) 
-  if getmetatable(g)==graph_metatable then return true end
-  return false
-end
+
+
+
 index.is_graph=is_graph
 
 function index.set_start(g,s)
@@ -315,10 +328,8 @@ function index.send(g,...)
 end
 
 function index.plot(g,out)
-   if leda.plot_graph then 
-      return leda.plot_graph(g,out)
-   end
-   error("Module 'leda.utils.plot' must be loaded.'")
+   local res=require 'leda.utils.plot'
+   return res.plot_graph(g,out)
 end
 
 -----------------------------------------------------------------------------
@@ -429,7 +440,7 @@ function index.dump(g)
    dbg('========')
 end
 
-function restore_metatables(g)
+function t.restore_metatables(g)
    setmetatable(g,graph_metatable)
    for c in pairs(g.conns) do
       setmetatable(c,leda.leda_connector.metatable())
@@ -442,3 +453,5 @@ function restore_metatables(g)
    end
    return g
 end
+
+return t

@@ -8,13 +8,16 @@ local tostring,type,assert,pairs,setmetatable,getmetatable,print,error,ipairs,to
       tostring,type,assert,pairs,setmetatable,getmetatable,print,error,ipairs,tonumber
 local string,table,kernel,io=string,table,leda.kernel,io
 local dbg = leda.debug.get_debug("Graph: ")
-local is_connector=leda.leda_connector.is_connector
-local is_stage=leda.leda_stage.is_stage
-local stage_meta=leda.leda_stage.metatable
+local leda_connector = require("leda.leda_connector")
+local is_connector=leda_connector.is_connector
+local leda_stage = require("leda.leda_stage")
+local is_stage=leda_stage.is_stage
+local stage_meta=leda_stage.metatable
 
 local leda=leda
 
-module("leda.leda_cluster")
+--module("leda.leda_cluster")
+local t={}
 
 local cluster_metatable = { 
    __index={}
@@ -37,7 +40,7 @@ end
 
 local index=cluster_metatable.__index
 
-function new_cluster(...)
+local function new_cluster(...)
    local t={...}
    if type(t[1])=='table' and not is_stage(t[1]) then
       t=t[1]
@@ -54,11 +57,14 @@ function new_cluster(...)
    
    return cluster
 end
+t.new_cluster=new_cluster
 
-function is_cluster(c) 
+
+function t.is_cluster(c) 
   if getmetatable(c)==cluster_metatable then return true end
   return false
 end
+local is_cluster=t.is_cluster
 
 function index.contains(cluster,stage)
    return cluster[stage]==true
@@ -137,12 +143,14 @@ function index.intersection (c1,c2)
    return res
 end
 
+local sm=stage_meta()
 cluster_metatable.__add = index.union
-stage_meta().__add = index.union
+sm.__add = index.union
 cluster_metatable.__sub = index.sub
-stage_meta().__sub= index.sub
+sm.__sub= index.sub
 cluster_metatable.__mul = index.intersection
-stage_meta().__mul= index.mul
+sm.__mul= index.mul
+sm=nil
 
 function index.has_serial(cluster)
    assert(is_cluster(cluster),string.format("Invalid parameter #1 (Cluster expected, got %s)",type(cluster)))
@@ -189,3 +197,4 @@ function index.add_process(cluster,host,port)
    table.insert(cluster.process_addr,leda.process.get_process(host,port))
 end
 
+return t

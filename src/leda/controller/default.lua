@@ -7,12 +7,14 @@
 -- Declare module and import dependencies
 -----------------------------------------------------------------------------
 local interactive=require("leda.controller.interactive")
+local fixed=require("leda.controller.singlethread")
 
-module("leda.controller.default")
+--module("leda.controller.default")
+local t={}
 
 -----------------------------------------------------------------------------
 -- Controller init function
 -----------------------------------------------------------------------------
 
-init=interactive.init
-
+t.init=fixed.init
+return t
