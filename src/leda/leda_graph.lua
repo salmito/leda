@@ -189,7 +189,7 @@ function index.part(g,...)
 
    for s in pairs(g:stages()) do
       if type(s.bind)=="function" then
-         s.bind(g:get_output_ports(s))
+         s.bind(g:get_output_ports(s),s)
       end
    end
 
