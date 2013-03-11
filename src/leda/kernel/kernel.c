@@ -286,12 +286,13 @@ int leda_run(lua_State * L) {
 
    //call the init function of a controller, if defined
    lua_getfield(L, 3,"init");
-   lua_pushvalue(L,1);
-   if(lua_type(L,-2)==LUA_TFUNCTION) {
+  if(lua_type(L,-1)==LUA_TFUNCTION) {
+      lua_pushvalue(L,1);
+      lua_pushvalue(L,2);
       _DEBUG("Kernel: Calling controller init function\n");
-      lua_call(L,1,0);
+      lua_call(L,2,0);
    } else {
-      lua_pop(L,2);
+      lua_pop(L,1);
       luaL_error(L,"Controller does not defined an init method");
    }
     _DEBUG("Kernel: Running Graph '%s'\n",g->name);
@@ -461,8 +462,9 @@ int luaopen_leda_kernel (lua_State *L) {
       {"cpu", leda_number_of_cpus},
   	   //functions for controllers
   	   {"add_timer", add_timer},
-  	   {"new_thread", thread_new},
-  	   {"kill_thread", thread_kill},
+  	   {"thread_new", thread_new},
+  	   {"thread_kill", thread_kill},
+  	   {"thread_rawkill", thread_rawkill},
   	   {"stats", leda_get_stats},
   	   {"reset_stats", stats_reset},
   	   {"stats_latency_reset", stats_latency_reset},

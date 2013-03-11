@@ -70,11 +70,12 @@ function index.add(self,c)
    if type(c)=='function' then
       c=c(self)
    end
-   if self:contains(c) then return end
    assert(is_graph(self),string.format("Invalid parameter #1 ('graph' expected, got '%s')",type(self)))
    assert(is_connector(c),string.format("Invalid parameter #2 ('connector' expected, got '%s')",type(c)))
+   if self:contains(c) then return c end
    dbg("Adding connector '%s' to graph '%s'",tostring(c),tostring(self))
    self.conns[c]=true
+   return c
 end
 index.add_connector=add
 
@@ -99,31 +100,26 @@ function t.graph(...)
    gr.outputs={}
    gr.name=gr.name or tostring(gr)
 
+
    for i, v in pairs(gr) do
       --if value is a connector, add it to graph
-      if is_connector(v) then
+      if i=='start' then
+         assert(is_stage(gr.start),string.format("Graph 'start' field must be a stage (got %s)",type(gr.start)))
+         local c=new_connector(nil,'start',gr.start)
+         gr:add(c)
+         assert(gr:contains(gr.start),"Graph start field is not a stage in the graph")
+      elseif is_connector(v) then
          gr:add(v)
       elseif type(v)=='function' then
          local c=v(gr)
          assert(is_connector(c),string.format("Connector constructor returned an invalid value (%s)",type(c)))
+         gr[i]=c
          gr:add(c)
-      elseif type(v)=='table' and v~=t then
-      	for _,v2 in ipairs(v) do
-      	 	local c=v2(gr)
-         	assert(is_connector(c),string.format("Connector constructor returned an invalid value (%s)",type(c)))
-         	gr:add(c)
-      	end
       else --ignore other values
          dbg("WARNING: Ignoring parameter of graph '%s' (type %s)\n",gr.name,type(v))
       end
    end
    
-   if gr.start then
-      assert(is_stage(gr.start),string.format("Graph 'start' field must be a stage (got %s)",type(gr.start)))
-      local c=new_connector(nil,'start',gr.start)
-      gr:add(c)
-      assert(gr:contains(gr.start),"Graph start field is not a stage in the graph")
-   end
    return gr
 end
 
@@ -412,6 +408,16 @@ function index.run(g,...)
    end
    error(err)
 end
+-----------------------------------------------------------------------------
+-- Get the unique id of a stage
+-----------------------------------------------------------------------------
+function index.getid(g,s)
+   assert(is_graph(g),string.format("Invalid parameter #1 (graph expected, got '%s')",type(g)))
+   assert(g.stagesid,"Graph not running")
+   assert(is_stage(s),string.format("Invalid parameter #2 (stage expected, got '%s')",type(s)))
+   return g.stagesid[s]
+end
+
 
 -----------------------------------------------------------------------------
 -- Dump a graph

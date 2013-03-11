@@ -408,15 +408,29 @@ int thread_tostring (lua_State *L) {
   return 1;
 }
 
+/* Force kill a thread from Lua, even if they're executing*/
+int thread_rawkill (lua_State *L) {
+   thread t=thread_get(L,1);
+   if(t) {
+      THREAD_KILL(&t->thread);
+      ADD(pool_size,-1);
+      t->destroy=1;
+   }
+   return 0;
+}
+
 /* Kill a thread from Lua*/
 int thread_destroy (lua_State *L) {
    thread t=thread_get(L,1);
-   if(t->status != DONE) {
-      luaL_error(L,"Tried to destroy an ongoing Thread.");
+   if(t->status != DONE || t->status != CANCELLED) {
+      lua_pushnil(L);
+      lua_pushliteral(L,"Tried to destroy an ongoing Thread.");
+      return 2;
    }
    if(t->destroy)
       free(t);
-   return 0;
+   lua_pushboolean(L,1);
+   return 1;
 }
 
 /* create a new thread and execute it (and returns a descriptor to the
@@ -457,6 +471,8 @@ int thread_kill (lua_State *L) {
    push_ready_queue(NULL);
    return 0;
 }
+
+
 
 /* Deallocate the thread handle pointer */
 int thread_gc (lua_State *L) {

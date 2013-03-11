@@ -28,7 +28,7 @@ local function get_init(n)
    return   function()
                pool_size=n
                for i=1,n do
-                  table.insert(th,kernel.new_thread())
+                  table.insert(th,kernel.thread_new())
                   dbg("Thread %d created",i)
                end
             end

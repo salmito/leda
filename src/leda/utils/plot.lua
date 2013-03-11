@@ -13,6 +13,15 @@ local node, edge, subgraph, cluster, digraph, strictdigraph =
   gr.node, gr.edge, gr.subgraph, gr.cluster, gr.digraph, gr.strictdigraph
 
 function t.plot_graph(leda_graph,out)
+   if out=='ascii' then
+       local fn = os.tmpname()
+         t.plot_graph(leda_graph,fn..".dot") 
+         local f=assert(io.popen("graph-easy "..fn..".dot --boxart 2>/dev/null","r"))
+         gr=assert(f:read('*a'))
+         f:close()
+         os.remove(fn)
+         return gr
+   end
    local g = strictdigraph{
       tostring(leda_graph),
       compound = "1",
@@ -81,7 +90,7 @@ function t.plot_graph(leda_graph,out)
    if not out then
       g:show()
    elseif type(out)=="string" then
-      ext=out:reverse():gmatch("[^\.]*")():reverse()
+--      ext=out:reverse():gmatch('[^\.]*')():reverse()
       if ext then
          g:layout()
          g:render(ext, out)

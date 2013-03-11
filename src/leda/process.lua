@@ -50,11 +50,19 @@ function t.get_process(host,port)
    return d
 end
 
-local function is_local(d)
+function is_local(d)
    if d.host==localhost and (d.port==l_localport or d.port==nil) then
       return true
    end
    return false
+end
+
+function t.get_localhost()
+   return localhost
+end
+
+function t.get_localport()
+   return l_localport
 end
 
 local function init(g,ro_g,host,port,controller,maxpar)
@@ -124,6 +132,9 @@ local function prepare_graph(g,process)
       end
       s.name=t[s].name
       s.pending={}
+      s.stagesid=t[s].stagesid
+      s.connectorsid=t[s].connectorsid
+      s.clustersid=t[s].clustersid
       local cl=g:get_cluster(s)
       if cl:is_local(process.host,process.port) then
          s.handler=t[s].handler

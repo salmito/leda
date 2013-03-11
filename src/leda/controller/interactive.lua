@@ -112,7 +112,7 @@ local function get_init(n)
    pool_size=n or pool_size
    init_time=kernel.gettime()
    for i=1,n do
-      table.insert(th,kernel.new_thread())
+      table.insert(th,kernel.thread_new())
       dbg("Thread %d created",i)
    end
    
@@ -135,7 +135,7 @@ local function get_init(n)
          stderr:write("Quiting...\n")
          os.exit(0)
       elseif line == '+' then 
-         table.insert(th,kernel.new_thread())
+         table.insert(th,kernel.thread_new())
 --         stderr:write("\027[2J")
          stderr:write("Thread created...\n")
       elseif line == '-' then 
