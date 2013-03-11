@@ -3,16 +3,20 @@ require 'leda'
 local stage={}
 
 function stage.handler(file,...)
-   local f = assert(io.open(file,"r"))
+   local f,err = io.open(file,"r")
+   if f==nil then
+      leda.send("error",err)
+      error(err)
+   end
 	local buf,err=f:aread(4096)
-	local i=1
+	local i=0
 	local t={}
 	while buf do
       for k,v in string.gmatch(buf,"([^\n]*)([\n]?)") do
+         i=i+1
          if v=='\n' then
             table.insert(t,k)
-            leda.send("line",table.concat(t),i,file,...)
-            i=i+1
+            leda.send("line",table.concat(t),i,file,...)            
             t={}
       	   elseif k~='' then
          	   table.insert(t,k)
@@ -21,7 +25,8 @@ function stage.handler(file,...)
       buf,err=f:aread(4096)
    end
    f:close()
-   leda.send("EOF",'EOF',file,...)
+   --Send EOF signal including the number of lines read and the filename
+   leda.send("EOF",'EOF',i-1,file,...)
 end
 
 function stage.init()

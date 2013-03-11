@@ -443,13 +443,13 @@ end
 function t.restore_metatables(g)
    setmetatable(g,graph_metatable)
    for c in pairs(g.conns) do
-      setmetatable(c,leda.leda_connector.metatable())
+      setmetatable(c,leda_connector.metatable())
    end
    for s in pairs(g:stages()) do
-      setmetatable(s,leda.leda_stage.metatable())
+      setmetatable(s,leda_stage.metatable())
    end
    for cl in pairs(g:clusters()) do
-      setmetatable(cl,leda.leda_cluster.metatable())
+      setmetatable(cl,leda_cluster.metatable())
    end
    return g
 end

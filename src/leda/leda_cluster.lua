@@ -23,7 +23,7 @@ local cluster_metatable = {
    __index={}
 }
 
-function metatable() return cluster_metatable end
+function t.metatable() return cluster_metatable end
 
 function cluster_metatable.__tostring(c) 
    local s = "{"

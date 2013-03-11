@@ -116,6 +116,8 @@ function t.new_stage(t,init,name,bind,serial)
       return s
    end
 
+   assert(type(s.handler)=="function" or type(s.handler)=="string","Invalid handler type (string or function expected)")
+
    s=setmetatable(s,stage)
  
    s.handler=kernel.encode(s.handler)

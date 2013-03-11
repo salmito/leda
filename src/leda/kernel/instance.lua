@@ -91,13 +91,13 @@ end
 --local function handler_str() return stage.__handler end
 __handler=leda.decode(leda.stage.__handler)
 if not (type(__handler)=='function' or type(__handler)=='string') then 
-   error("Error loading handler function for stage")
+   error("Error loading handler function for stage: "..tostring(leda.stage.name).." type:"..type(__handler))
 end
 
 if type(__handler)=="string" then
 	__handler,err=loadstring(__handler)
 	if not __handler then 
-	   error("Error loading handler function for stage "..leda.stage.name.."': "..err)
+	   error("Error loading handler function for stage "..tostring(leda.stage.name).."': "..tostring(err))
 	end
 end
 
