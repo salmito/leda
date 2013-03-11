@@ -45,5 +45,5 @@ local g=graph{"Producer-consumer",
 
 prod:send(os.time(),0.1)
 
-g:run{maxpar=10}
---g:run{controller=leda.controller.profiler,maxpar=10}
+--g:run{maxpar=10}
+g:run{controller=leda.controller.profiler,maxpar=10}
