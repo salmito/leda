@@ -25,6 +25,7 @@ typedef struct thread_data {
 enum return_status{ 
    ENDED=0xF1F21AB,
    EMMIT_COHORT,
+   EMMIT_REMOTE,
    WAIT_IO,
    FILE_IO,
    SLEEP,
@@ -73,6 +74,7 @@ int wait_io(lua_State * L);
 int do_file_aio(lua_State * L);
 int emmit(lua_State * L);
 int cohort(lua_State * L);
+void emmit_remote(instance caller);
 
 int leda_getmetatable(lua_State *L);
 int leda_setmetatable(lua_State *L);

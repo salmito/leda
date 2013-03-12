@@ -30,6 +30,7 @@ THE SOFTWARE.
 #include <stdlib.h>
 
 #include "instance.h"
+#include "event.h"
 #include "thread.h"
 #include "queue.h"
 #include "mutex.h"

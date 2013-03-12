@@ -5,6 +5,8 @@
 #include <lauxlib.h>
 #include <lualib.h>
 
+#include "instance.h"
+
 typedef struct _element* element;
 
 typedef struct event_data {
@@ -18,7 +20,7 @@ int restore_event_to_lua_state(lua_State * L, event *e);
 void dump_event(lua_State *L, event e);
 void destroy_event(event e);
 void event_init_t(int process_fd);
-int send_event(lua_State *L);
+int send_event(instance i, stage_id s_id, size_t len, const char * payload);
 int leda_gettime(lua_State *L);
 
 #endif //_EVENT_H_

@@ -31,6 +31,7 @@ THE SOFTWARE.
 #include <lualib.h>
 
 #include "thread.h"
+#include "extra/lmarshal.h"
 #include "queue.h"
 #include "instance.h"
 #include "event.h"
@@ -134,6 +135,11 @@ void thread_resume_instance(instance i) {
       case EMMIT_COHORT:
          lua_remove(i->L,1);
          emmit_cohort(i);
+         break;
+
+      case EMMIT_REMOTE:
+         lua_remove(i->L,1);
+         emmit_remote(i);
          break;
 
       case WAIT_IO:
@@ -279,6 +285,44 @@ void emmit_cohort(instance caller) {
    thread_resume_instance(callee);
 }
 
+/* Emmit an event to a remote stage and continue the execution of the caller instance
+ * Note: This will block the caller instance but not the thread.
+ *
+ * Arguments:  instance 'caller'
+ *             Instance of the continuation of the current stage (caller)
+ *             Note: any other argument is poped and copyied to 
+ *             the aquired instance 
+ */
+void emmit_remote(instance caller) {
+   lua_State * L=caller->L;
+   //time_d comunication_time=now_secs(); //TODO
+   stage_id dst_id=lua_tointeger(L,1);
+   //int con_id=lua_tointeger(L,2);
+   lua_remove(L,2);
+   int const args=lua_gettop(L)-1;
+   int i;  
+   lua_pushcfunction(L,mar_encode);
+   lua_newtable(L);
+   for(i=1;i<=args;i++) {
+      lua_pushvalue(L,i+1);
+      lua_rawseti(L,-2,i);
+   }
+   lua_pushnil(L);
+   lua_pushboolean(L,TRUE);
+   lua_call(L,3,1); //propagate error
+   if(lua_type(L,-1)!=LUA_TSTRING) {     
+      lua_settop(L,0);
+      lua_getglobal(L, "handler");
+      lua_pushboolean(L,FALSE);
+      lua_pushliteral(L,"Error serializing event");
+      caller->args=2;
+      return push_ready_queue(caller);
+   }
+   size_t len; const char *payload=lua_tolstring(L,-1,&len); 
+   lua_pop(L,1);    
+   send_event(caller,dst_id,len,payload);
+}
+
 /* Emmit an event to a stage and continue the execution of the caller instance
  * Note: This will not block the caller instance.
  *
@@ -293,18 +337,39 @@ int emmit(lua_State * L) {
    time_d comunication_time=now_secs();
    stage_id dst_id=lua_tointeger(L,1);
    int con_id=lua_tointeger(L,2);
-   lua_remove(L,2);
-   int const args=lua_gettop(L)-1;
+//   lua_remove(L,2);
 
    if(!CLUSTER(STAGE(dst_id)->cluster)->local) {
-      int i;
-      lua_pushcfunction(L,send_event);
-      lua_pushvalue(L,1);
+       //Push status code EMMIT_COHORT to the bottom of the stack
+      lua_pushinteger(L,EMMIT_REMOTE);
+      lua_insert(L,1);
+      int args_full=lua_gettop(L);
+      //Yield current instance handler
+      return lua_yield(L,args_full);
+ /*     int i;  
+      lua_pushcfunction(L,mar_encode);
       lua_newtable(L);
       for(i=1;i<=args;i++) {
          lua_pushvalue(L,i+1);
          lua_rawseti(L,-2,i);
       }
+      lua_pushnil(L);
+      lua_pushboolean(L,TRUE);
+      lua_call(L,3,1); //propagate error
+      if(lua_type(L,-1)!=LUA_TSTRING) {     
+         lua_pop(L,1);
+         lua_pushnil(L);
+         lua_pushliteral(L,"Error serializing event");
+         return 2;
+      }
+      size_t len; const char *payload=lua_tolstring(L,-1,&len); 
+      
+      int ret=send_event(s_id,len,payload);
+      lua_pop(L,1);
+*/      
+/*      lua_pushcfunction(L,send_event);
+      lua_pushvalue(L,1);
+ 
 //      dump_stack(L);
       lua_call(L,2,2);
       if(lua_isnil(L,-1)) {
@@ -315,9 +380,11 @@ int emmit(lua_State * L) {
          }
          return 1;
       }
-      return 2;
+      return 2;*/
    }
 
+   lua_remove(L,2);
+   int const args=lua_gettop(L)-1;
    
    _DEBUG("Thread: Emmiting event to stage '%s' top=%d\n",STAGE(dst_id)->name,lua_gettop(L));
    instance dst=instance_aquire(dst_id);
@@ -349,7 +416,6 @@ int emmit(lua_State * L) {
    lua_getglobal(dst->L, "handler");
    //push arguments to instance
    copy_values_directly(dst->L, L, 2, args);
-   
    dst->args=args;
    push_ready_queue(dst);
    lua_pushboolean(L,TRUE);

@@ -37,6 +37,7 @@ THE SOFTWARE.
 #include "thread.h"
 #include "graph.h"
 #include "queue.h"
+#include "event.h"
 #include "instance.h"
 #include "stats.h"
 #include "extra/lmarshal.h"
