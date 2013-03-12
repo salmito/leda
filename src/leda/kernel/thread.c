@@ -300,9 +300,9 @@ void emmit_cohort(instance caller) {
  *             the aquired instance 
  */
 void emmit_remote(instance caller) {
-   //time_d comunication_time=now_secs(); //TODO
+   time_d communication_time=now_secs(); //TODO
    stage_id dst_id=lua_tointeger(caller->L,1);
-   //int con_id=lua_tointeger(L,2);
+   int con_id=lua_tointeger(caller->L,2);
    lua_remove(caller->L,2);
    int const args=lua_gettop(caller->L)-1;
    int i;
@@ -325,10 +325,11 @@ void emmit_remote(instance caller) {
    }
    size_t len; const char *payload=lua_tolstring(caller->L,-1,&len); 
    lua_pop(caller->L,1);    
-   send_event(caller,dst_id,len,payload);
+   send_event(caller,dst_id,con_id,communication_time,len,payload);
 }
 
-int emmit_directly(lua_State * L) {
+int emmit_directly(lua_State * L) { //TODO send event synchronously
+   return 0;
 }
 
 /* Emmit an event to a stage and continue the execution of the caller instance
@@ -346,7 +347,7 @@ int emmit(lua_State * L) {
    stage_id dst_id=lua_tointeger(L,1);
    int con_id=lua_tointeger(L,2);
 //   lua_remove(L,2);
-   printf("Event Emmit to local cluster? %d\n",CLUSTER(STAGE(dst_id)->cluster)->local);
+   _DEBUG("Event Emmit to local cluster? %d\n",CLUSTER(STAGE(dst_id)->cluster)->local);
    if(CLUSTER(STAGE(dst_id)->cluster)->local) {
  /*     int i;  
       lua_pushcfunction(L,mar_encode);

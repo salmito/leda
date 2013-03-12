@@ -32,6 +32,7 @@ THE SOFTWARE.
 #include <sys/timerfd.h>
 #endif
 #include "event.h"
+#include "stats.h"
 #include "instance.h"
 #include "thread.h"
 #include "extra/lmarshal.h"
@@ -305,8 +306,7 @@ struct event_base *base;
 void do_read_ack(evutil_socket_t fd, short events, void *arg) {
    _DEBUG("Event: Read ACK\n");
    instance i=arg;
-   stage_id dst_id=lua_tointeger(i->L,-1);
-   lua_pop(i->L,1);
+   process_id dst_id=i->last_proc;
    char buf[1024];
    size_t size=read(fd,buf,1024);
    if(size<=0) {
@@ -319,13 +319,17 @@ void do_read_ack(evutil_socket_t fd, short events, void *arg) {
       return push_ready_queue(i);
    }
    if(size==1&&buf[0]==1) {
-      printf("Event: Recicling socket %d %p\n",dst_id,sockets[dst_id]);
+      _DEBUG("Event: Recicling socket %d %p %d\n",dst_id,sockets[dst_id],fd);
       if(!TRY_PUSH(sockets[dst_id],fd)) close(fd);
       lua_settop(i->L,0);
       lua_getglobal(i->L, "handler");
       lua_pushboolean(i->L,TRUE);
       i->args=1;
       _DEBUG("Process: Sent remote event\n");
+      if(i->con_id>=0) {
+         time_d ct=now_secs()-i->communication_time;
+         STATS_UPDATE_EVENTS(i->stage,1,i->con_id,ct*1000000);
+      }
       return push_ready_queue(i);
    }
    lua_settop(i->L,0);
@@ -338,7 +342,7 @@ void do_read_ack(evutil_socket_t fd, short events, void *arg) {
 }
 
 /* send an event through the network */
-int send_event(instance i, stage_id s_id, size_t len ,const char * payload) {
+int send_event(instance i, stage_id s_id, int con_id, time_d communication_time, size_t len ,const char * payload) {
    	//round robin through possible destination processes
    int next_d=STORE(cur_process[STAGE(s_id)->cluster],
    (READ(cur_process[STAGE(s_id)->cluster])+1)%CLUSTER(STAGE(s_id)->cluster)->n_processes);
@@ -400,22 +404,27 @@ int send_event(instance i, stage_id s_id, size_t len ,const char * payload) {
       offset+=size;
    }
    free(buffer);
-   lua_pushinteger(i->L,s_id);
-//   event_base_once(base, sockfd, EV_READ, do_read_ack, i, NULL);
-   struct event * ack_event = event_new(base, sockfd, EV_READ | EV_PERSIST, do_read_ack, i);
-   event_add(ack_event, NULL);
+   i->last_proc=dst_id;
+   i->con_id=con_id;
+   i->communication_time=communication_time;
+   event_base_once(base, sockfd, EV_READ, do_read_ack, i, NULL);
+//   struct event * ack_event = event_new(base, sockfd, EV_READ | EV_PERSIST, do_read_ack, i);
+//   event_add(ack_event, NULL);
    return 0;
 }
 
 /* read an event from a socket ready for reading */
 int read_event(int fd) {
-   evutil_make_socket_nonblocking(fd);
+   //evutil_make_socket_nonblocking(fd);
    static size_t h_size=sizeof(stage_id)+sizeof(size_t)+1;
    char header[h_size];
    size_t received=read(fd,header,h_size);
-   _DEBUG("Event: Received %d",received);
-   if(received!=h_size)
+   _DEBUG("Event: Received %d bytes\n",received);
+   if(received<=0) {
+      _DEBUG("Error receiving event: %s\n",strerror(errno));
       return -1;
+   }
+   _DEBUG("Event: Received event header: %d bytes\n",received);
    if(header[0]==INIT_TYPE) {
       size_t s=write(fd,"Process has already started\n",27);
       _DEBUG("Event: Error: Received init event but the process has already started\n");
@@ -445,6 +454,7 @@ int read_event(int fd) {
    while(readed<len) {
       size_t size=read(fd,buf+readed,len-readed);
       if(size<=0) {
+         _DEBUG("Event: Error receiving event (size=%d bytes): %s\n",len,strerror(errno));
          free(buf);
          return -1;
       }
