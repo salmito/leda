@@ -63,10 +63,9 @@ struct _element {
    int type; //Type of element
    union  {
       lua_Number n;
-      char * str;
-    	bool_t b;
-   	void * ptr;
-//   	element table; TODO
+      char * str; //for strings
+    	bool_t b; //bor booleans
+   	void * ptr; //for pointers
    } data;
    size_t len; //Size of data (if type is 'string' it holds the size of string)
 };
@@ -79,6 +78,11 @@ static THREAD_T event_thread;
  */
 void destroy_event(event e) {
    size_t i;
+   if(e->packed) {
+      free(e->data);
+      free(e);
+      return;
+   }
    for(i=0;i<e->n;i++) {
       switch(e->payload[i].type) {
          case LUA_TSTRING:
@@ -126,6 +130,17 @@ void dump_event(lua_State *L, event e) {
 int restore_event_to_lua_state(lua_State * L, event *e_t) {
    size_t i;
    event e=*e_t;
+   
+   if(e->packed) {
+      int begin=lua_gettop(L);
+      lua_getglobal(L,"unpack"); //Push unpack function
+      lua_pushcfunction(L,mar_decode);
+      lua_pushlstring(L,e->data,e->data_len);
+      destroy_event(e);
+      lua_call(L,1,1); //decode event
+      lua_call(L,1,LUA_MULTRET); //Unpack event
+      return lua_gettop(L)-begin;
+   }
    
    for(i=0;i<e->n;i++) {
       switch ( e->payload[i].type ) {
@@ -267,6 +282,17 @@ bool_t copy_event_element(lua_State *L, size_t i, element e) {
    return TRUE;
 }
 
+//Create a packed event
+event event_new_packed_event(char * data,size_t len) {
+   event e=malloc(sizeof(struct event_data));
+   if(!e) return NULL;
+   
+	e->packed=1; //this event is packed
+	e->data=data;
+	e->data_len=len;
+	return e;
+}
+
 /* extract a event from a lua stack of length 'args' from the stack 
  * index 'from' (inclusive).
  */
@@ -275,6 +301,7 @@ event extract_event_from_lua_state(lua_State *L, int from, int args) {
    bool_t ok=TRUE;
 
 	event e=malloc(sizeof(struct event_data));
+	e->packed=0; //this event is not packed
    e->n=args; //number of elements of the payload to be copyed
 	
 	e->payload=calloc(e->n,sizeof(struct _element));
@@ -299,7 +326,7 @@ event extract_event_from_lua_state(lua_State *L, int from, int args) {
 
 queue * sockets;
 atomic * cur_process;
-lua_State * dummy;
+//lua_State * dummy;
 //Event system base
 struct event_base *base;
 
@@ -314,7 +341,11 @@ void do_read_ack(evutil_socket_t fd, short events, void *arg) {
       lua_settop(i->L,0);
       lua_getglobal(i->L, "handler");
       lua_pushboolean(i->L,FALSE);
-      lua_pushfstring(i->L,"Error sending event to process: %s",strerror(errno));
+      if(size==0) {
+       lua_pushfstring(i->L,"Error sending event to process: Process '%s:%d' closed the connection",PROCESS(dst_id)->host,PROCESS(dst_id)->port);
+      } else {
+         lua_pushfstring(i->L,"Error sending event to process: %s",strerror(errno));
+      }
       i->args=2;
       return push_ready_queue(i);
    }
@@ -336,7 +367,7 @@ void do_read_ack(evutil_socket_t fd, short events, void *arg) {
    close(fd);
    lua_getglobal(i->L, "handler");
    lua_pushboolean(i->L,FALSE);
-   lua_pushfstring(i->L,"Error sending event to process '%s:%d': %*s",PROCESS(dst_id)->host,PROCESS(dst_id)->port,buf+1,size-1);
+   lua_pushfstring(i->L,"Error sending event to process '%s:%d': Event queue is full",PROCESS(dst_id)->host,PROCESS(dst_id)->port);
    i->args=2;
    return push_ready_queue(i);
 }
@@ -415,7 +446,6 @@ int send_event(instance i, stage_id s_id, int con_id, time_d communication_time,
 
 /* read an event from a socket ready for reading */
 int read_event(int fd) {
-   //evutil_make_socket_nonblocking(fd);
    static size_t h_size=sizeof(stage_id)+sizeof(size_t)+1;
    char header[h_size];
    size_t received=read(fd,header,h_size);
@@ -445,53 +475,42 @@ int read_event(int fd) {
    memcpy(&len,header+offset,sizeof(size_t));
    offset+=sizeof(size_t);
 
-   if(len<=0) return -1;
+   if((int)len<=0) {
+      return -1;
+   }
    _DEBUG("Event: Receiving event (size=%d bytes)\n",len);
    char * buf=malloc(len);
    if(!buf) return -1;
    
    int readed=0;
    while(readed<len) {
-      size_t size=read(fd,buf+readed,len-readed);
-      if(size<=0) {
+      int size=read(fd,buf+readed,len-readed);
+      if(size<0) {
+          if(errno==EAGAIN) continue; //Read socket again
          _DEBUG("Event: Error receiving event (size=%d bytes): %s\n",len,strerror(errno));
          free(buf);
          return -1;
       }
-      readed+=size;
+      if(size > 0) {
+         readed+=size;
+      } else break;
    }
    
    if(readed!=len) {
       free(buf);
       return 1;
    }
-   _DEBUG("Event: Packing event %d bytes\n",readed);
-   lua_pushcfunction(dummy,emmit);
-   lua_pushinteger(dummy,s_id);
-   lua_pushinteger(dummy,-1); //connector id not known
-   int begin=lua_gettop(dummy);
-   lua_getglobal(dummy,"unpack"); //Push unpack function
-   lua_pushcfunction(dummy,mar_decode);
-   lua_pushlstring(dummy,buf,len);
-   free(buf);
-   lua_call(dummy,1,1); //decode event
-   lua_call(dummy,1,LUA_MULTRET); //Unpack event
-   int args=lua_gettop(dummy)-begin;
-
-   lua_call(dummy,args+2,2);
   
    _DEBUG("Event: Event received\n");
-   if(lua_toboolean(dummy,-2)==TRUE) {
+   int res=emmit_packed_event(s_id,buf,len);
+   if(res==0) {
       char res=TRUE;
       size_t size=write(fd,&res,1);
-      if(size!=sizeof(char)) return 1;
+      if(size!=1) return 1;
    } else {
       char res=FALSE;
       size_t size=write(fd,&res,1);
-      if(size!=sizeof(char)) return 1;
-      const char * b=lua_tolstring(dummy,-1,&len);
-      size=write(fd,b,len);
-      return 1;
+      if(size!=1) return 1;
    }
    return 0;
 }
@@ -517,7 +536,7 @@ void do_accept(evutil_socket_t listener, short event, void *arg) {
    } else if (fd > FD_SETSIZE) {
       close(fd); // XXX replace all closes with EVUTIL_CLOSESOCKET */
    } else {
-      //evutil_make_socket_nonblocking(fd);
+      evutil_make_socket_nonblocking(fd);
 	   struct event * read_event = event_new(base, fd, EV_READ|EV_PERSIST, do_read, base);
       event_add(read_event, NULL);
    }
@@ -876,11 +895,6 @@ void event_init_t(int process_fd) {
    int *p=malloc(sizeof(int));
    *p=process_fd;
    int i;
-   dummy=new_lua_state(TRUE);
-   lua_newtable(dummy);
-   lua_pushcfunction(dummy,leda_getmetatable);
-   lua_setfield(dummy,-2,"getmetatable");
-   lua_setglobal(dummy,"leda");
    sockets=calloc(main_graph->n_d,sizeof(queue));
    for(i=0;i<main_graph->n_d;i++) sockets[i]=queue_new();
    cur_process=calloc(main_graph->n_cl,sizeof(atomic));

@@ -110,6 +110,13 @@ void thread_resume_instance(instance i) {
    _DEBUG("Thread: CALLING STAGE '%s' instance=%d args=%d\n",
          main_graph->s[i->stage]->name,i->instance_number,(int)i->args);
    
+   if(i->packed) {
+      _DEBUG("Thread: Unpacking event for stage '%s'\n",main_graph->s[i->stage]->name);
+      lua_getglobal(i->L, "handler");
+      i->packed=0;
+      i->args=restore_event_to_lua_state(i->L,&i->packed_event);
+   }
+   
    //resume main instance coroutine
    int status=0;
    if(lua_pcall(i->L,i->args,LUA_MULTRET,0)) {
@@ -332,6 +339,25 @@ int emmit_directly(lua_State * L) { //TODO send event synchronously
    return 0;
 }
 
+/* Emmit an packed event to a local stage 
+ * Note: This will not block the thread of caller instance.
+ */
+int emmit_packed_event(stage_id dst_id,char * data,size_t len) {
+   event e=event_new_packed_event(data,len);
+   instance dst=instance_aquire(dst_id);
+
+   if(!dst) { //Put on event queue
+      if(!instance_try_push_pending_event(dst_id,e)) {
+         return -1;
+      }
+      return 0;
+   }
+   dst->packed=1;
+   dst->packed_event=e;
+   push_ready_queue(dst);
+   return 0;
+}
+
 /* Emmit an event to a stage and continue the execution of the caller instance
  * Note: This will not block the caller instance.
  *
@@ -348,43 +374,14 @@ int emmit(lua_State * L) {
    int con_id=lua_tointeger(L,2);
 //   lua_remove(L,2);
    _DEBUG("Event Emmit to local cluster? %d\n",CLUSTER(STAGE(dst_id)->cluster)->local);
-   if(CLUSTER(STAGE(dst_id)->cluster)->local) {
- /*     int i;  
-      lua_pushcfunction(L,mar_encode);
-      lua_newtable(L);
-      for(i=1;i<=args;i++) {
-         lua_pushvalue(L,i+1);
-         lua_rawseti(L,-2,i);
-      }
-      lua_pushnil(L);
-      lua_pushboolean(L,TRUE);
-      lua_call(L,3,1); //propagate error
-      if(lua_type(L,-1)!=LUA_TSTRING) {     
-         lua_pop(L,1);
-         lua_pushnil(L);
-         lua_pushliteral(L,"Error serializing event");
-         return 2;
-      }
-      size_t len; const char *payload=lua_tolstring(L,-1,&len); 
-      
-      int ret=send_event(s_id,len,payload);
-      lua_pop(L,1);
-*/      
-/*      lua_pushcfunction(L,send_event);
-      lua_pushvalue(L,1);
- 
-//      dump_stack(L);
-      lua_call(L,2,2);
-      if(lua_isnil(L,-1)) {
-         lua_pop(L,1);
-         if(con_id>=0) {
-            time_d ct=now_secs()-comunication_time;
-            STATS_UPDATE_EVENTS(CONNECTOR(con_id)->p,1,con_id,ct*1000000);
-         }
-         return 1;
-      }
-      return 2;*/
-
+   if(!CLUSTER(STAGE(dst_id)->cluster)->local) {
+      lua_pushinteger(L,EMMIT_REMOTE);
+      lua_insert(L,1);
+      int args_full=lua_gettop(L);
+      //Yield current instance handler
+      _DEBUG("Thread: Yielding to emmit a remote event\n");
+      return lua_yield(L,args_full);
+   }
    lua_remove(L,2);
    int const args=lua_gettop(L)-1;
    
@@ -426,15 +423,6 @@ int emmit(lua_State * L) {
       STATS_UPDATE_EVENTS(CONNECTOR(con_id)->p,1,con_id,ct*1000000);
    }
    return 1;
-   }
-        //Push status code EMMIT_COHORT to the bottom of the stack
-   lua_pushinteger(L,EMMIT_REMOTE);
-   lua_insert(L,1);
-   int args_full=lua_gettop(L);
-   //Yield current instance handler
-   _DEBUG("Thread: Yielding to emmit a remote event\n");
-   dump_stack(L);
-   return lua_yield(L,args_full);
 }
 
 
@@ -460,7 +448,7 @@ static THREAD_RETURN_T THREAD_CALLCONV thread_main(void *t_val) {
       if(i==NULL) { //Thread kill request
          break; //exit the main loop
       }
-      t->status=RUNNING; //change status to RUNNING      
+      t->status=RUNNING; //change status to RUNNING   
       thread_resume_instance(i); //call continuation
       t->status=WAITING; //change status to WAITING
    }

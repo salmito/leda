@@ -14,6 +14,8 @@ typedef struct instance_data {
    int instance_number;
    time_d init_time;
    int con_id;
+   char packed;
+   struct event_data * packed_event;
    time_d communication_time;
    process_id last_proc;
 //   long int recycled; //count the number of time this instance was recycled

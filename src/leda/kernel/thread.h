@@ -74,6 +74,7 @@ int wait_io(lua_State * L);
 int do_file_aio(lua_State * L);
 int emmit(lua_State * L);
 int emmit_directly(lua_State * L);
+int emmit_packed_event(stage_id dst_id,char * data,size_t len);
 int cohort(lua_State * L);
 
 int leda_getmetatable(lua_State *L);
