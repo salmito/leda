@@ -303,6 +303,7 @@ lua_State * dummy;
 struct event_base *base;
 
 void do_read_ack(evutil_socket_t fd, short events, void *arg) {
+   _DEBUG("Event: Read ACK\n");
    instance i=arg;
    stage_id dst_id=lua_tointeger(i->L,-1);
    lua_pop(i->L,1);
@@ -311,29 +312,32 @@ void do_read_ack(evutil_socket_t fd, short events, void *arg) {
    if(size<=0) {
       close(fd);
       lua_settop(i->L,0);
+      lua_getglobal(i->L, "handler");
       lua_pushboolean(i->L,FALSE);
       lua_pushfstring(i->L,"Error sending event to process: %s",strerror(errno));
       i->args=2;
       return push_ready_queue(i);
    }
-   if(buf[0]==1) {
-      if(!TRY_PUSH(sockets[dst_id],fd)) 
-         close(fd);
+   if(size==1&&buf[0]==1) {
+      printf("Event: Recicling socket %d %p\n",dst_id,sockets[dst_id]);
+      if(!TRY_PUSH(sockets[dst_id],fd)) close(fd);
       lua_settop(i->L,0);
+      lua_getglobal(i->L, "handler");
       lua_pushboolean(i->L,TRUE);
-      i->args=1;      
+      i->args=1;
       _DEBUG("Process: Sent remote event\n");
       return push_ready_queue(i);
    }
    lua_settop(i->L,0);
    close(fd);
+   lua_getglobal(i->L, "handler");
    lua_pushboolean(i->L,FALSE);
    lua_pushfstring(i->L,"Error sending event to process '%s:%d': %*s",PROCESS(dst_id)->host,PROCESS(dst_id)->port,buf+1,size-1);
    i->args=2;
    return push_ready_queue(i);
 }
 
-
+/* send an event through the network */
 int send_event(instance i, stage_id s_id, size_t len ,const char * payload) {
    	//round robin through possible destination processes
    int next_d=STORE(cur_process[STAGE(s_id)->cluster],
@@ -342,7 +346,7 @@ int send_event(instance i, stage_id s_id, size_t len ,const char * payload) {
    process_id dst_id=CLUSTER(STAGE(s_id)->cluster)->processes[next_d];
    int sockfd;
    if(!TRY_POP(sockets[dst_id],sockfd)) {
-      _DEBUG("Process: Connecting to process '%s:%d'\n",PROCESS(dst_id)->host,PROCESS(dst_id)->port);
+      _DEBUG("Event: Connecting to process '%s:%d'\n",PROCESS(dst_id)->host,PROCESS(dst_id)->port);
       struct sockaddr_in adr_inet;
       adr_inet.sin_family = AF_INET;  
       adr_inet.sin_port = htons(PROCESS(dst_id)->port); 
@@ -371,7 +375,7 @@ int send_event(instance i, stage_id s_id, size_t len ,const char * payload) {
         lua_pushfstring(i->L,"Could not establish connection with process '%s:%d'",PROCESS(dst_id)->host,PROCESS(dst_id)->port);
         return 2;
       }
-      _DEBUG("Process: Connected to process '%s:%d'\n",PROCESS(dst_id)->host,PROCESS(dst_id)->port);
+      _DEBUG("Event: Connected to process '%s:%d'\n",PROCESS(dst_id)->host,PROCESS(dst_id)->port);
    }
    evutil_make_socket_nonblocking(sockfd);
    size_t header_size=sizeof(stage_id)+sizeof(size_t)+1;
@@ -380,138 +384,28 @@ int send_event(instance i, stage_id s_id, size_t len ,const char * payload) {
    size_t h_offset=1;
    memcpy(buffer+h_offset,&s_id,sizeof(stage_id));
    h_offset+=sizeof(stage_id);
-   memcpy(buffer+h_offset,&s_id,sizeof(size_t));
+   memcpy(buffer+h_offset,&len,sizeof(size_t));
    h_offset+=sizeof(size_t);
    memcpy(buffer+h_offset,payload,len);
    size_t offset=0;
+   _DEBUG("Event: Sending event '%d'\n",len+h_offset);
    while(offset<len+h_offset) {
+      _DEBUG("Event: Sending packet %d %p %d\n",sockfd,buffer+offset,len+h_offset-offset);
       size_t size=write(sockfd,buffer+offset,len+h_offset-offset);
       if(size<=0) {
          close(sockfd); 
          return size;
       }
+      _DEBUG("Event: sent %d\n",size);
       offset+=size;
    }
    free(buffer);
    lua_pushinteger(i->L,s_id);
-   struct event * ack_event = event_new(base, sockfd, EV_READ, do_read_ack, i);
+//   event_base_once(base, sockfd, EV_READ, do_read_ack, i, NULL);
+   struct event * ack_event = event_new(base, sockfd, EV_READ | EV_PERSIST, do_read_ack, i);
    event_add(ack_event, NULL);
    return 0;
 }
-
-/* send an event through the network */
-/*int send_event(lua_State *L) {
-   stage_id s_id=lua_tointeger(L,1);
-   luaL_checktype(L,2,LUA_TTABLE);
-   
-   lua_pushcfunction(L,mar_encode);
-   lua_pushvalue(L,2);
-   lua_pushnil(L);
-   lua_pushboolean(L,TRUE);
-   lua_call(L,3,1); //propagate error
-   luaL_checktype(L,-1,LUA_TSTRING);
-   size_t len; const char *payload=lua_tolstring(L,-1,&len); 
-
-	//round robin through possible destination processes
-   int next_d=STORE(cur_process[STAGE(s_id)->cluster],
-   (READ(cur_process[STAGE(s_id)->cluster])+1)%CLUSTER(STAGE(s_id)->cluster)->n_processes);
-   
-   process_id dst_id=CLUSTER(STAGE(s_id)->cluster)->processes[next_d];
-   int sockfd;
-   if(!TRY_POP(sockets[dst_id],sockfd)) {
-      _DEBUG("Process: Connecting to process '%s:%d'\n",PROCESS(dst_id)->host,PROCESS(dst_id)->port);
-      struct sockaddr_in adr_inet;
-      adr_inet.sin_family = AF_INET;  
-      adr_inet.sin_port = htons(PROCESS(dst_id)->port); 
-		long res=0;
-		#ifndef _WIN32
-			res=inet_aton(PROCESS(dst_id)->host,&adr_inet.sin_addr);
-		#else
-			res=inet_addr(PROCESS(dst_id)->host);
-			adr_inet.sin_addr.s_addr=res;
-		#endif
-      if (!res ) {
-        lua_pop(L,1);
-        lua_pushboolean(L,FALSE);
-        lua_pushfstring(L,"Bad address '%s'",PROCESS(dst_id)->host);
-        return 2;
-      }
-      if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-        lua_pop(L,1);
-        lua_pushboolean(L,FALSE);
-        lua_pushliteral(L,"Could not create socket");
-        return 2;
-      }
-      if(connect(sockfd, (struct sockaddr *)&adr_inet, sizeof(adr_inet)) < 0) {
-        lua_pop(L,1);
-        lua_pushboolean(L,FALSE);
-        lua_pushfstring(L,"Could not establish connection with process '%s:%d'",PROCESS(dst_id)->host,PROCESS(dst_id)->port);
-        return 2;
-      }
-      _DEBUG("Process: Connected to process '%s:%d'\n",PROCESS(dst_id)->host,PROCESS(dst_id)->port);
-   }
-//   char c=EVENT_TYPE;
-   
-   char * buffer=malloc(len);
-
-   buffer[0]=EVENT_TYPE;
-   int offset=1;
-   memcopy(buffer+offset,&s_id,sizeof(stage_id));
-   offset+=sizeof(stage_id);
-   memcopy(buffer+offset,&len,sizeof(size_t));
-   offset+=sizeof(size_t);
-   
-   int writed=0;
-   while(writed<len+offset) {
-      size=write(sockfd,payload+writed,len-writed);
-      if(size<0) {
-         lua_pop(L,1);
-         close(sockfd);      
-         lua_pushboolean(L,FALSE);
-         lua_pushfstring(L,"Error4 sending event to process '%s:%d': %s",PROCESS(dst_id)->host,PROCESS(dst_id)->port,strerror(errno));      
-         return 2;
-      } else if(size==0) {
-         lua_pop(L,1);
-         close(sockfd);
-         lua_pushboolean(L,FALSE);
-         lua_pushfstring(L,"Error5 sending event to process '%s:%d': Process closed connection",PROCESS(dst_id)->host,PROCESS(dst_id)->port);
-         return 2;
-      }
-      writed+=size;
-   }
-   char res=0;
-   
-   size=read(sockfd,&res,sizeof(char));
-   if(size!=sizeof(char)) {
-      lua_pop(L,1);
-      close(sockfd);
-      lua_pushboolean(L,FALSE);
-      lua_pushfstring(L,"Error6 sending event to process '%s:%d': %s",PROCESS(dst_id)->host,PROCESS(dst_id)->port,strerror(errno));
-      return 2;
-   }
-   if(res==1) {
-      lua_pop(L,1);
-      if(!TRY_PUSH(sockets[dst_id],sockfd)) 
-         close(sockfd);
-      lua_pushboolean(L,TRUE);
-      _DEBUG("Process: Sent remote event\n");
-      return 1;
-   } 
-   char buf[2048];
-   size=read(sockfd,buf,1000);
-   if(size<=0) {
-      lua_pop(L,1);
-      close(sockfd);
-      lua_pushboolean(L,FALSE);
-      lua_pushfstring(L,"Error7 sending event to process '%s:%d': %*s",PROCESS(dst_id)->host,PROCESS(dst_id)->port,buf,strerror(errno));
-      return 2;
-   }
-   lua_pop(L,1);
-   close(sockfd);
-   lua_pushboolean(L,FALSE);
-   lua_pushfstring(L,"Error8 sending event to process '%s:%d': %*s",PROCESS(dst_id)->host,PROCESS(dst_id)->port,buf,size);
-   return 2;
-}*/
 
 /* read an event from a socket ready for reading */
 int read_event(int fd) {
@@ -519,16 +413,17 @@ int read_event(int fd) {
    static size_t h_size=sizeof(stage_id)+sizeof(size_t)+1;
    char header[h_size];
    size_t received=read(fd,header,h_size);
+   _DEBUG("Event: Received %d",received);
    if(received!=h_size)
       return -1;
    if(header[0]==INIT_TYPE) {
       size_t s=write(fd,"Process has already started\n",27);
-      _DEBUG("Process: Error: Received init event but the process has already started\n");
+      _DEBUG("Event: Error: Received init event but the process has already started\n");
       if(s<=0) return -2;
       return -1;
    } else if(header[0]!=EVENT_TYPE) {
        size_t s=write(fd,"Malformed data\n",15);
-      _DEBUG("Process: Error: Data is not an event\n");
+      _DEBUG("Event: Error: Data is not an event\n");
       if(s<=0) return -2;
       return -1;
    }
@@ -536,12 +431,13 @@ int read_event(int fd) {
    size_t len;
    size_t offset=1;
    memcpy(&s_id,header+offset,sizeof(stage_id));
+   _DEBUG("Event: Stage id %d\n",s_id);
    offset+=sizeof(stage_id);
    memcpy(&len,header+offset,sizeof(size_t));
    offset+=sizeof(size_t);
 
    if(len<=0) return -1;
-   
+   _DEBUG("Event: Receiving event (size=%d bytes)\n",len);
    char * buf=malloc(len);
    if(!buf) return -1;
    
@@ -559,8 +455,7 @@ int read_event(int fd) {
       free(buf);
       return 1;
    }
-   _DEBUG("Process: Packing event\n");
-   
+   _DEBUG("Event: Packing event %d bytes\n",readed);
    lua_pushcfunction(dummy,emmit);
    lua_pushinteger(dummy,s_id);
    lua_pushinteger(dummy,-1); //connector id not known
@@ -575,7 +470,7 @@ int read_event(int fd) {
 
    lua_call(dummy,args+2,2);
   
-   _DEBUG("Process: Event received\n");
+   _DEBUG("Event: Event received\n");
    if(lua_toboolean(dummy,-2)==TRUE) {
       char res=TRUE;
       size_t size=write(fd,&res,1);
@@ -590,73 +485,6 @@ int read_event(int fd) {
    }
    return 0;
 }
-/*int read_event(int fd) {
-   char type=0;
-   
-   int size=read(fd,&type,1);
-   if(size!=1) return 1;
-   if(type==INIT_TYPE) {
-      size=write(fd,"Process has already started\n",27);
-      _DEBUG("Process: Error: Process has already started\n");
-      close(fd);
-   } else if(type!=EVENT_TYPE) return 1;
-   _DEBUG("Process: Receiving event\n");
-   stage_id id;
-   size=read(fd,&id,sizeof(stage_id));
-   if(size!=sizeof(stage_id)) return 1;
-
-   size_t len=0;
-   size=read(fd,&len,sizeof(size_t));
-   if(size!=sizeof(size_t)) return 1;
-
-   int readed=0;
-   if(len<=0) return 1;
-   char * buf=malloc(len);
-   if(!buf) return 1;
-
-   while(readed<len) {
-      size=read(fd,buf+readed,len-readed);
-      if(size<=0) {
-         free(buf);
-         return 1;
-      }
-      readed+=size;
-   }
-   if(readed!=len) {
-      free(buf);
-      return 1;
-   }
-   _DEBUG("Process: Packing event\n");
-
-   lua_pushcfunction(dummy,emmit);
-   lua_pushinteger(dummy,id);
-   lua_pushinteger(dummy,-1); //connector id not known
-   int begin=lua_gettop(dummy);
-   lua_getglobal(dummy,"unpack"); //Push unpack function
-   lua_pushcfunction(dummy,mar_decode);
-   lua_pushlstring(dummy,buf,len);
-   free(buf);
-   lua_call(dummy,1,1); //decode event
-   lua_call(dummy,1,LUA_MULTRET); //Unpack event
-   int args=lua_gettop(dummy)-begin;
-
-   lua_call(dummy,args+2,2);
-  
-   _DEBUG("Process: Event received\n");
-   if(lua_toboolean(dummy,-2)==TRUE) {
-      char res=TRUE;
-      size=write(fd,&res,sizeof(char));
-      if(size!=sizeof(char)) return 1;
-   } else {
-      char res=FALSE;
-      size=write(fd,&res,sizeof(char));
-      if(size!=sizeof(char)) return 1;
-      const char * b=lua_tolstring(dummy,-1,&len);
-      size=write(fd,b,len);
-      return 1;
-   }
-   return 0;
-}*/
 
 int leda_gettime(lua_State * L) {
    lua_pushnumber(L,now_secs());
@@ -818,7 +646,7 @@ void event_aio_op_ready(evutil_socket_t afd, short libev_event, void *arg) {
 		   	//Set the number of arguments
 		 		inst->args=1;
 		   	push_ready_queue(inst);
-//				printf("Event: Res=%d Bytes=%u offset=%d %p\n",res,(unsigned int)cb->aio_nbytes,(int)cb->aio_offset,inst);
+//				_DEBUG("Event: Res=%d Bytes=%u offset=%d %p\n",res,(unsigned int)cb->aio_nbytes,(int)cb->aio_offset,inst);
 			} else { //if(res==0) {	
 				lua_settop(inst->L,0);
 		   	//Get the  main coroutine of the instance's handler
@@ -827,7 +655,7 @@ void event_aio_op_ready(evutil_socket_t afd, short libev_event, void *arg) {
 				lua_pushliteral(inst->L,"EOF");
 		 		inst->args=2;
 		   	push_ready_queue(inst);
-//			printf("Event: Res=%d Bytes=%u offset=%d %p\n",res,(unsigned int)cb->aio_nbytes,(int)cb->aio_offset,inst);
+//			_DEBUG("Event: Res=%d Bytes=%u offset=%d %p\n",res,(unsigned int)cb->aio_nbytes,(int)cb->aio_offset,inst);
 			}
 		} else if(cb->aio_lio_opcode == IOCB_CMD_PWRITE) {
 			if(res>0) {
@@ -841,7 +669,7 @@ void event_aio_op_ready(evutil_socket_t afd, short libev_event, void *arg) {
 		   	//Set the number of arguments
 		 		inst->args=1;
 		   	push_ready_queue(inst);
-//				printf("Event: Res=%d Bytes=%u offset=%d %p\n",res,(unsigned int)cb->aio_nbytes,(int)cb->aio_offset,inst);
+//				_DEBUG("Event: Res=%d Bytes=%u offset=%d %p\n",res,(unsigned int)cb->aio_nbytes,(int)cb->aio_offset,inst);
 			} else { //if(res==0) {	
 				lua_settop(inst->L,0);
 		   	//Get the  main coroutine of the instance's handler
@@ -850,7 +678,7 @@ void event_aio_op_ready(evutil_socket_t afd, short libev_event, void *arg) {
 				lua_pushliteral(inst->L,"Write error");
 		 		inst->args=2;
 		   	push_ready_queue(inst);
-//			printf("Event: Res=%d Bytes=%u offset=%d %p\n",res,(unsigned int)cb->aio_nbytes,(int)cb->aio_offset,inst);
+//			_DEBUG("Event: Res=%d Bytes=%u offset=%d %p\n",res,(unsigned int)cb->aio_nbytes,(int)cb->aio_offset,inst);
 			}
 		}
 

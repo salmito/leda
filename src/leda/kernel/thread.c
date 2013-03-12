@@ -44,6 +44,7 @@ extern queue ready_queue;
 /* Thread subsystem internal functions */
 void emmit_cohort(instance caller);
 void emmit_self(instance i);
+void emmit_remote(instance i);
 
 /* Returns the current size of the ready queue */
 bool_t thread_ready_queue_isempty() {
@@ -95,6 +96,8 @@ char const * get_return_status_name(int status) {
          return "EMMIT_COHORT";
       case PCALL_ERROR:
          return "PCALL_ERROR";
+      case EMMIT_REMOTE:
+         return "EMMIT_REMOTE";
       case YIELDED:
       default:
          return "YIELDED";
@@ -192,6 +195,7 @@ int wait_io(lua_State * L) {
    lua_insert(L,1);
    int args=lua_gettop(L);
    //Yield current instance handler
+   _DEBUG("Thread: Yielding to wait for a socket IO\n");
    return lua_yield(L,args);
 }
 
@@ -200,6 +204,7 @@ int do_file_aio(lua_State * L) {
    lua_insert(L,1);
    int args=lua_gettop(L);
    //Yield current instance handler
+   _DEBUG("Thread: Yielding to wait for a file IO\n");
    return lua_yield(L,args);
 }
 
@@ -209,6 +214,7 @@ int leda_sleep(lua_State * L) {
    lua_insert(L,1);
    int args=lua_gettop(L);
    //Yield current instance handler
+   _DEBUG("Thread: Yielding to sleep\n");
    return lua_yield(L,args);
 }
 
@@ -294,33 +300,35 @@ void emmit_cohort(instance caller) {
  *             the aquired instance 
  */
 void emmit_remote(instance caller) {
-   lua_State * L=caller->L;
    //time_d comunication_time=now_secs(); //TODO
-   stage_id dst_id=lua_tointeger(L,1);
+   stage_id dst_id=lua_tointeger(caller->L,1);
    //int con_id=lua_tointeger(L,2);
-   lua_remove(L,2);
-   int const args=lua_gettop(L)-1;
-   int i;  
-   lua_pushcfunction(L,mar_encode);
-   lua_newtable(L);
+   lua_remove(caller->L,2);
+   int const args=lua_gettop(caller->L)-1;
+   int i;
+   lua_pushcfunction(caller->L,mar_encode);
+   lua_newtable(caller->L);
    for(i=1;i<=args;i++) {
-      lua_pushvalue(L,i+1);
-      lua_rawseti(L,-2,i);
+      lua_pushvalue(caller->L,i+1);
+      lua_rawseti(caller->L,-2,i);
    }
-   lua_pushnil(L);
-   lua_pushboolean(L,TRUE);
-   lua_call(L,3,1); //propagate error
-   if(lua_type(L,-1)!=LUA_TSTRING) {     
-      lua_settop(L,0);
-      lua_getglobal(L, "handler");
-      lua_pushboolean(L,FALSE);
-      lua_pushliteral(L,"Error serializing event");
+   lua_pushnil(caller->L);
+   lua_pushboolean(caller->L,TRUE);
+   lua_call(caller->L,3,1); //propagate error
+   if(lua_type(caller->L,-1)!=LUA_TSTRING) {     
+      lua_settop(caller->L,0);
+      lua_getglobal(caller->L, "handler");
+      lua_pushboolean(caller->L,FALSE);
+      lua_pushliteral(caller->L,"Error serializing event");
       caller->args=2;
       return push_ready_queue(caller);
    }
-   size_t len; const char *payload=lua_tolstring(L,-1,&len); 
-   lua_pop(L,1);    
+   size_t len; const char *payload=lua_tolstring(caller->L,-1,&len); 
+   lua_pop(caller->L,1);    
    send_event(caller,dst_id,len,payload);
+}
+
+int emmit_directly(lua_State * L) {
 }
 
 /* Emmit an event to a stage and continue the execution of the caller instance
@@ -338,14 +346,8 @@ int emmit(lua_State * L) {
    stage_id dst_id=lua_tointeger(L,1);
    int con_id=lua_tointeger(L,2);
 //   lua_remove(L,2);
-
-   if(!CLUSTER(STAGE(dst_id)->cluster)->local) {
-       //Push status code EMMIT_COHORT to the bottom of the stack
-      lua_pushinteger(L,EMMIT_REMOTE);
-      lua_insert(L,1);
-      int args_full=lua_gettop(L);
-      //Yield current instance handler
-      return lua_yield(L,args_full);
+   printf("Event Emmit to local cluster? %d\n",CLUSTER(STAGE(dst_id)->cluster)->local);
+   if(CLUSTER(STAGE(dst_id)->cluster)->local) {
  /*     int i;  
       lua_pushcfunction(L,mar_encode);
       lua_newtable(L);
@@ -381,7 +383,6 @@ int emmit(lua_State * L) {
          return 1;
       }
       return 2;*/
-   }
 
    lua_remove(L,2);
    int const args=lua_gettop(L)-1;
@@ -424,6 +425,15 @@ int emmit(lua_State * L) {
       STATS_UPDATE_EVENTS(CONNECTOR(con_id)->p,1,con_id,ct*1000000);
    }
    return 1;
+   }
+        //Push status code EMMIT_COHORT to the bottom of the stack
+   lua_pushinteger(L,EMMIT_REMOTE);
+   lua_insert(L,1);
+   int args_full=lua_gettop(L);
+   //Yield current instance handler
+   _DEBUG("Thread: Yielding to emmit a remote event\n");
+   dump_stack(L);
+   return lua_yield(L,args_full);
 }
 
 
@@ -433,6 +443,7 @@ int cohort(lua_State * L) {
    lua_insert(L,1);
    int args=lua_gettop(L);
    //Yield current instance handler
+   _DEBUG("Thread: Yielding to emmit a cohort event\n");
    return lua_yield(L,args);
 }
 

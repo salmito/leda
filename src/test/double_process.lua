@@ -11,7 +11,10 @@ local s1=leda.stage{
 		for i=1,n do
 			t[#t+1]=i
 		end
-		leda.send(1,t)
+		 while true do
+   		leda.send(1,t)
+   		--leda.nice()
+       end
 	end
 }
 
@@ -29,7 +32,7 @@ end
 
 local g=leda.graph{s1:connect(1,s2)}
 
---g:part(s1,s2)
---g:map('localhost','localhost:8888')
+g:part(s1,s2)
+g:map('localhost','localhost:8888')
 
 g:run()

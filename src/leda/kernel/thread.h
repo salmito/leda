@@ -73,8 +73,8 @@ int thread_rawkill (lua_State *L);
 int wait_io(lua_State * L);
 int do_file_aio(lua_State * L);
 int emmit(lua_State * L);
+int emmit_directly(lua_State * L);
 int cohort(lua_State * L);
-void emmit_remote(instance caller);
 
 int leda_getmetatable(lua_State *L);
 int leda_setmetatable(lua_State *L);
