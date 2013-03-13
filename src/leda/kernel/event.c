@@ -433,8 +433,9 @@ int send_async_event(instance i, stage_id s_id, int con_id, time_d communication
    _DEBUG("Event: Sending event '%d'\n",len+h_offset);
    while(offset<len+h_offset) {
       _DEBUG("Event: Sending packet %d %p %d\n",sockfd,buffer+offset,len+h_offset-offset);
-      size_t size=write(sockfd,buffer+offset,len+h_offset-offset);
-      if(size<=0) {
+      int size=write(sockfd,buffer+offset,len+h_offset-offset);
+      if(size<0) {
+         if(errno==EAGAIN) continue;
          close(sockfd); 
          return size;
       }
@@ -497,51 +498,34 @@ int send_sync_event(lua_State *L) {
       }
       _DEBUG("Process: Connected to process '%s:%d'\n",PROCESS(dst_id)->host,PROCESS(dst_id)->port);
    }
-   char c=EVENT_TYPE;
-   int size=write(sockfd,&c,1);
-   if(size!=1) {
-      lua_pop(L,1);
-      close(sockfd);
-      lua_pushboolean(L,FALSE);
-      lua_pushfstring(L,"Error1 sending event to process '%s:%d': %s",PROCESS(dst_id)->host,PROCESS(dst_id)->port,strerror(errno));
-   }
-
-   size=write(sockfd,&s_id,sizeof(stage_id));
-   if(size!=sizeof(stage_id)) {
-      lua_pop(L,1);
-      close(sockfd);
-      lua_pushboolean(L,FALSE);
-      lua_pushfstring(L,"Error2 sending event to process '%s:%d': %s",PROCESS(dst_id)->host,PROCESS(dst_id)->port,strerror(errno));
-   }
-   size=write(sockfd,&len,sizeof(size_t));
-   if(size!=sizeof(size_t)) {
-      lua_pop(L,1);
-      close(sockfd);   
-      lua_pushboolean(L,FALSE);
-      lua_pushfstring(L,"Error3 sending event to process '%s:%d': %s",PROCESS(dst_id)->host,PROCESS(dst_id)->port,strerror(errno));
-   }
    
-   int writed=0;
-   while(writed<len) {
-      size=write(sockfd,payload+writed,len-writed);
+   size_t header_size=sizeof(stage_id)+sizeof(size_t)+1;
+   char * buffer=malloc(len+header_size);
+   buffer[0]=EVENT_TYPE;
+   size_t h_offset=1;
+   memcpy(buffer+h_offset,&s_id,sizeof(stage_id));
+   h_offset+=sizeof(stage_id);
+   memcpy(buffer+h_offset,&len,sizeof(size_t));
+   h_offset+=sizeof(size_t);
+   memcpy(buffer+h_offset,payload,len);
+   size_t offset=0;
+   _DEBUG("Event: Sending event '%d'\n",len+h_offset);
+   while(offset<len+h_offset) {
+      _DEBUG("Event: Sending packet %d %p %d\n",sockfd,buffer+offset,len+h_offset-offset);
+      int size=write(sockfd,buffer+offset,len+h_offset-offset);
       if(size<0) {
-         lua_pop(L,1);
-         close(sockfd);      
-         lua_pushboolean(L,FALSE);
-         lua_pushfstring(L,"Error4 sending event to process '%s:%d': %s",PROCESS(dst_id)->host,PROCESS(dst_id)->port,strerror(errno));      
-         return 2;
-      } else if(size==0) {
-         lua_pop(L,1);
-         close(sockfd);
-         lua_pushboolean(L,FALSE);
-         lua_pushfstring(L,"Error5 sending event to process '%s:%d': Process closed connection",PROCESS(dst_id)->host,PROCESS(dst_id)->port);
-         return 2;
+         if(errno==EAGAIN) continue;
+         close(sockfd); 
+         return size;
       }
-      writed+=size;
+      _DEBUG("Event: sent %d\n",size);
+      offset+=size;
    }
+   free(buffer);
+   
    char res=0;
   
-   size=read(sockfd,&res,sizeof(char));
+   int size=read(sockfd,&res,sizeof(char));
    if(size!=sizeof(char)) {
       lua_pop(L,1);
       close(sockfd);
@@ -577,7 +561,7 @@ int send_sync_event(lua_State *L) {
 int read_event(int fd) {
    static size_t h_size=sizeof(stage_id)+sizeof(size_t)+1;
    char header[h_size];
-   size_t received=read(fd,header,h_size);
+   int received=read(fd,header,h_size);
    _DEBUG("Event: Received %d bytes\n",received);
    if(received<=0) {
       _DEBUG("Error receiving event: %s\n",strerror(errno));
@@ -585,12 +569,12 @@ int read_event(int fd) {
    }
    _DEBUG("Event: Received event header: %d bytes\n",received);
    if(header[0]==INIT_TYPE) {
-      size_t s=write(fd,"Process has already started\n",27);
+      int s=write(fd,"Process has already started\n",27);
       _DEBUG("Event: Error: Received init event but the process has already started\n");
       if(s<=0) return -2;
       return -1;
    } else if(header[0]!=EVENT_TYPE) {
-       size_t s=write(fd,"Malformed data\n",15);
+       int s=write(fd,"Malformed data\n",15);
       _DEBUG("Event: Error: Data is not an event\n");
       if(s<=0) return -2;
       return -1;

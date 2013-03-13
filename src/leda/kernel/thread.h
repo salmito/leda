@@ -58,7 +58,7 @@ char const * get_return_status_name(int status);
    #define dump_stack(...)
 #else
    extern MUTEX_T debug_lock;
-   #define _DEBUG(...) /*MUTEX_LOCK(&debug_lock);*/ fprintf(stdout,__VA_ARGS__); /*MUTEX_UNLOCK(&debug_lock);*/
+   #define _DEBUG(...) fprintf(stdout,"%s: %d (%s):",__FILE__,__LINE__,__func__); fprintf(stdout,__VA_ARGS__); 
    void dump_stack( lua_State* L );
 #endif
 

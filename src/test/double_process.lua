@@ -5,7 +5,8 @@ profiler_resolution=0.1
 require 'leda'
 leda.kernel.sleep(1)
 
-local n=n or 1000
+local n=n or 100
+local it=it or 100000
 
 local s1=leda.stage{name="S1",
 	handler=function()
@@ -13,29 +14,27 @@ local s1=leda.stage{name="S1",
 		for i=1,n do
 			t[#t+1]=i
 		end
-		 while true do
-   		assert(leda.send(1,t))
+		for i=1,it do
+   		assert(leda.send(1,t,i))
    		--leda.nice()
        end
+--       leda.quit()
 	end
 }
 
 local s2=leda.stage{name="S2",
-	handler=function(t)
-		print('received',t)
+	handler=function(t,i)
+		--print('received',t)
+		if i==it then print("end") end
 	end
 }
 
-local it=it or 1
-
-for i=1,it do
-	 s1:send(1)
-end
+s1:send(1)
 
 local g=leda.graph{s1:connect(1,s2)}
 
-g:part(s2,s1):map('localhost','localhost:8888')
+--g:part(s2,s1):map('localhost','localhost:8888')
 
 
 
-g:run{controller=require "leda.controller.profiler"}
+g:run{controller=require "leda.controller.profiler",maxpar=4}
