@@ -51,9 +51,6 @@ t.init=get_init(default_thread_pool_size)
    end
 end--]]
 
-function t.get(n)
-   return {init=get_init(n),event_pushed=event_pushed,finish=finish}
-end
 
 function t.finish()
    for i=1,#th do
@@ -61,5 +58,12 @@ function t.finish()
    end
    dbg "Controller finished"
 end
+
+function t.get(n)
+   return {init=get_init(n),finish=t.finish}
+end
+
+leda.controller=leda.controller or {}
+leda.controller.fixed_thread_pool=t
 
 return t

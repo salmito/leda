@@ -14,9 +14,7 @@ local singlethread=fixed_thread_pool.get(1)
 -----------------------------------------------------------------------------
 -- Controller init function
 -----------------------------------------------------------------------------
+leda.controller=leda.controller or {}
+leda.controller.single_thread=singlethread
 
-return {
-   init=singlethread.init,
-   event_pushed=singlethread.event_pushed,
-   finish=singlethread.finish,
-}
+return singlethread

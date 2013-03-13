@@ -16,4 +16,9 @@ local t={}
 -----------------------------------------------------------------------------
 
 t.init=interactive.init
+
+leda.controller.fixed_thread_pool=t 
+
+leda.controller.default=t
+
 return t

@@ -161,4 +161,8 @@ function t.get(n)
    return {init=get_init(n),event_pushed=event_pushed,finish=finish}
 end
 
+leda.controller=leda.controller or {}
+leda.controller.interactive=t 
+
+
 return t
