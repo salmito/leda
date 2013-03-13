@@ -79,7 +79,7 @@ int leda_send(lua_State *L) {
       lua_pushliteral(L,"Invalid stage id");
       return 2;
    }
-   lua_pushcfunction(L,emmit);
+   lua_pushcfunction(L,emmit_sync);
    lua_pushinteger(L,id);
    lua_pushinteger(L,-1); //connector id not known
    for(i=1;i<=args;i++)
@@ -219,7 +219,7 @@ int leda_run(lua_State * L) {
       if(lua_type(L,-1)!=LUA_TTABLE) continue;
       int i,n=lua_objlen(L,-1);
       for(i=1;i<=n;i++) {
-         lua_pushcfunction(L,emmit);
+         lua_pushcfunction(L,emmit_sync);
          lua_pushinteger(L,id);
          lua_pushinteger(L,-1); //Connector id not known
          int begin=lua_gettop(L);
@@ -228,7 +228,9 @@ int leda_run(lua_State * L) {
          lua_rawgeti(L,-5,i);
          lua_call(L,1,LUA_MULTRET); //Unpack the pending arguments
          int args=lua_gettop(L)-begin;
+         _DEBUG("Kernel: Emmiting pending event\n");
          lua_call(L,args+2,2); //Call the emmit function
+         _DEBUG("Kernel: Emmited pending event\n");
          bool_t ok=lua_toboolean(L,-2); 
        
          if(!ok) {

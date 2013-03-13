@@ -372,13 +372,7 @@ void do_read_ack(evutil_socket_t fd, short events, void *arg) {
    return push_ready_queue(i);
 }
 
-/* send an event through the network */
-int send_event(instance i, stage_id s_id, int con_id, time_d communication_time, size_t len ,const char * payload) {
-   	//round robin through possible destination processes
-   int next_d=STORE(cur_process[STAGE(s_id)->cluster],
-   (READ(cur_process[STAGE(s_id)->cluster])+1)%CLUSTER(STAGE(s_id)->cluster)->n_processes);
-   
-   process_id dst_id=CLUSTER(STAGE(s_id)->cluster)->processes[next_d];
+int event_get_process_sock(instance i,process_id dst_id) {
    int sockfd;
    if(!TRY_POP(sockets[dst_id],sockfd)) {
       _DEBUG("Event: Connecting to process '%s:%d'\n",PROCESS(dst_id)->host,PROCESS(dst_id)->port);
@@ -410,9 +404,22 @@ int send_event(instance i, stage_id s_id, int con_id, time_d communication_time,
         lua_pushfstring(i->L,"Could not establish connection with process '%s:%d'",PROCESS(dst_id)->host,PROCESS(dst_id)->port);
         return 2;
       }
+      evutil_make_socket_nonblocking(sockfd);
       _DEBUG("Event: Connected to process '%s:%d'\n",PROCESS(dst_id)->host,PROCESS(dst_id)->port);
    }
-   evutil_make_socket_nonblocking(sockfd);
+   return sockfd;
+}
+
+/* send an event through the network */
+int send_async_event(instance i, stage_id s_id, int con_id, time_d communication_time, size_t len ,const char * payload) {
+   //cicle through possible destination processes
+   int next_d=STORE(cur_process[STAGE(s_id)->cluster],
+   (READ(cur_process[STAGE(s_id)->cluster])+1)%CLUSTER(STAGE(s_id)->cluster)->n_processes);
+   
+   //Request a FD to the target process
+   process_id dst_id=CLUSTER(STAGE(s_id)->cluster)->processes[next_d];
+   int sockfd=event_get_process_sock(i,dst_id);
+   
    size_t header_size=sizeof(stage_id)+sizeof(size_t)+1;
    char * buffer=malloc(len+header_size);
    buffer[0]=EVENT_TYPE;
@@ -442,6 +449,128 @@ int send_event(instance i, stage_id s_id, int con_id, time_d communication_time,
 //   struct event * ack_event = event_new(base, sockfd, EV_READ | EV_PERSIST, do_read_ack, i);
 //   event_add(ack_event, NULL);
    return 0;
+}
+
+/* send an event through the network and wait for ACK*/
+int send_sync_event(lua_State *L) {
+   stage_id s_id=lua_tointeger(L,1);
+
+   luaL_checktype(L,-1,LUA_TSTRING);
+   size_t len; const char *payload=lua_tolstring(L,-1,&len); 
+   lua_pop(L,1);
+
+	//round robin through possible destination processes
+   int next_d=STORE(cur_process[STAGE(s_id)->cluster],
+   (READ(cur_process[STAGE(s_id)->cluster])+1)%CLUSTER(STAGE(s_id)->cluster)->n_processes);
+   
+   process_id dst_id=CLUSTER(STAGE(s_id)->cluster)->processes[next_d];
+   int sockfd;
+   if(!TRY_POP(sockets[dst_id],sockfd)) {
+      _DEBUG("Process: Connecting to process '%s:%d'\n",PROCESS(dst_id)->host,PROCESS(dst_id)->port);
+      struct sockaddr_in adr_inet;
+      adr_inet.sin_family = AF_INET;  
+      adr_inet.sin_port = htons(PROCESS(dst_id)->port); 
+		long res=0;
+		#ifndef _WIN32
+			res=inet_aton(PROCESS(dst_id)->host,&adr_inet.sin_addr);
+		#else
+			res=inet_addr(PROCESS(dst_id)->host);
+			adr_inet.sin_addr.s_addr=res;
+		#endif
+      if (!res ) {
+        lua_pop(L,1);
+        lua_pushboolean(L,FALSE);
+        lua_pushfstring(L,"Bad address '%s'",PROCESS(dst_id)->host);
+        return 2;
+      }
+      if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+        lua_pop(L,1);
+        lua_pushboolean(L,FALSE);
+        lua_pushliteral(L,"Could not create socket");
+        return 2;
+      }
+      if(connect(sockfd, (struct sockaddr *)&adr_inet, sizeof(adr_inet)) < 0) {
+        lua_pop(L,1);
+        lua_pushboolean(L,FALSE);
+        lua_pushfstring(L,"Could not establish connection with process '%s:%d'",PROCESS(dst_id)->host,PROCESS(dst_id)->port);
+        return 2;
+      }
+      _DEBUG("Process: Connected to process '%s:%d'\n",PROCESS(dst_id)->host,PROCESS(dst_id)->port);
+   }
+   char c=EVENT_TYPE;
+   int size=write(sockfd,&c,1);
+   if(size!=1) {
+      lua_pop(L,1);
+      close(sockfd);
+      lua_pushboolean(L,FALSE);
+      lua_pushfstring(L,"Error1 sending event to process '%s:%d': %s",PROCESS(dst_id)->host,PROCESS(dst_id)->port,strerror(errno));
+   }
+
+   size=write(sockfd,&s_id,sizeof(stage_id));
+   if(size!=sizeof(stage_id)) {
+      lua_pop(L,1);
+      close(sockfd);
+      lua_pushboolean(L,FALSE);
+      lua_pushfstring(L,"Error2 sending event to process '%s:%d': %s",PROCESS(dst_id)->host,PROCESS(dst_id)->port,strerror(errno));
+   }
+   size=write(sockfd,&len,sizeof(size_t));
+   if(size!=sizeof(size_t)) {
+      lua_pop(L,1);
+      close(sockfd);   
+      lua_pushboolean(L,FALSE);
+      lua_pushfstring(L,"Error3 sending event to process '%s:%d': %s",PROCESS(dst_id)->host,PROCESS(dst_id)->port,strerror(errno));
+   }
+   
+   int writed=0;
+   while(writed<len) {
+      size=write(sockfd,payload+writed,len-writed);
+      if(size<0) {
+         lua_pop(L,1);
+         close(sockfd);      
+         lua_pushboolean(L,FALSE);
+         lua_pushfstring(L,"Error4 sending event to process '%s:%d': %s",PROCESS(dst_id)->host,PROCESS(dst_id)->port,strerror(errno));      
+         return 2;
+      } else if(size==0) {
+         lua_pop(L,1);
+         close(sockfd);
+         lua_pushboolean(L,FALSE);
+         lua_pushfstring(L,"Error5 sending event to process '%s:%d': Process closed connection",PROCESS(dst_id)->host,PROCESS(dst_id)->port);
+         return 2;
+      }
+      writed+=size;
+   }
+   char res=0;
+  
+   size=read(sockfd,&res,sizeof(char));
+   if(size!=sizeof(char)) {
+      lua_pop(L,1);
+      close(sockfd);
+      lua_pushboolean(L,FALSE);
+      lua_pushfstring(L,"Error6 sending event to process '%s:%d': %s",PROCESS(dst_id)->host,PROCESS(dst_id)->port,strerror(errno));
+      return 2;
+   }
+   if(res==1) {
+      lua_pop(L,1);
+      if(!TRY_PUSH(sockets[dst_id],sockfd)) 
+         close(sockfd);
+      lua_pushboolean(L,TRUE);
+      _DEBUG("Process: Sent remote event\n");
+      return 1;
+   } 
+   char buf[2048];
+   size=read(sockfd,buf,2048);
+   if(size<=0) {
+      lua_pop(L,1);
+      close(sockfd);
+      lua_pushboolean(L,FALSE);
+      lua_pushfstring(L,"Error7 sending event to process '%s:%d': %*s",PROCESS(dst_id)->host,PROCESS(dst_id)->port,buf,strerror(errno));
+      return 2;
+   }
+   lua_pop(L,1);
+   close(sockfd);
+   lua_pushboolean(L,FALSE);
+   lua_pushfstring(L,"Error8 sending event to process '%s:%d': %*s",PROCESS(dst_id)->host,PROCESS(dst_id)->port,buf,size);
+   return 2;
 }
 
 /* read an event from a socket ready for reading */

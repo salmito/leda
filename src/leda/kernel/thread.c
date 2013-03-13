@@ -131,7 +131,7 @@ void thread_resume_instance(instance i) {
 
    switch(status) {
       case ENDED: //stage finished, release instance
-         _DEBUG("thread: Stage '%s' finished top=%d agrs=%d stage=%d\n",
+         _DEBUG("Thread: Stage '%s' finished top=%d agrs=%d stage=%d\n",
          main_graph->s[i->stage]->name,lua_gettop(i->L),(int)i->args,(int)i->stage);
          instance_release(i); //release the instance
          break;
@@ -332,14 +332,40 @@ void emmit_remote(instance caller) {
    }
    size_t len; const char *payload=lua_tolstring(caller->L,-1,&len); 
    lua_pop(caller->L,1);    
-   send_event(caller,dst_id,con_id,communication_time,len,payload);
+   send_async_event(caller,dst_id,con_id,communication_time,len,payload);
 }
 
-int emmit_directly(lua_State * L) { //TODO send event synchronously
-   return 0;
+/* Emmit an event to a stage and continue the execution of the caller instance 
+ * without yelding control
+ * Note: This will block the caller thread.
+ *
+ */
+int emmit_sync(lua_State * L) { //TODO send event synchronously
+   stage_id dst_id=lua_tointeger(L,1);
+   if(CLUSTER(STAGE(dst_id)->cluster)->local) { //if stage is local, call assync emmit
+      return emmit(L);
+   }
+   lua_remove(L,2);
+   int const args=lua_gettop(L)-1;
+   int i;
+   lua_pushcfunction(L,mar_encode);
+   lua_newtable(L);
+   for(i=1;i<=args;i++) {
+      lua_pushvalue(L,i+1);
+      lua_rawseti(L,-2,i);
+   }
+   lua_pushnil(L);
+   lua_pushboolean(L,TRUE);
+   lua_call(L,3,1); //propagate error
+   
+   if(lua_type(L,-1)!=LUA_TSTRING) {     
+      luaL_error(L,"Error serializing event");
+   }
+
+   return send_sync_event(L);
 }
 
-/* Emmit an packed event to a local stage 
+/* Emmit an packed event to a local stage.
  * Note: This will not block the thread of caller instance.
  */
 int emmit_packed_event(stage_id dst_id,char * data,size_t len) {
@@ -368,7 +394,6 @@ int emmit_packed_event(stage_id dst_id,char * data,size_t len) {
  *             the aquired instance 
  */
 int emmit(lua_State * L) {
-   //(instance src,stage_id dst_id, int from, int args)
    time_d comunication_time=now_secs();
    stage_id dst_id=lua_tointeger(L,1);
    int con_id=lua_tointeger(L,2);

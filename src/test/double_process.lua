@@ -34,7 +34,7 @@ end
 
 local g=leda.graph{s1:connect(1,s2)}
 
-g:part(s1,s2):map('localhost','localhost:8888')
+g:part(s2,s1):map('localhost','localhost:8888')
 
 
 
