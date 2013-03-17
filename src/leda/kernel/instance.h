@@ -5,6 +5,7 @@
 #include "graph.h"
 
 struct event_data;
+struct event;
 
 /* lua state structure */
 typedef struct instance_data {
@@ -16,6 +17,7 @@ typedef struct instance_data {
    int con_id;
    char packed;
    struct event_data * packed_event;
+   struct event * ev;
    time_d communication_time;
    process_id last_proc;
 //   long int recycled; //count the number of time this instance was recycled

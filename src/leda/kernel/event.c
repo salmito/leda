@@ -137,6 +137,7 @@ int restore_event_to_lua_state(lua_State * L, event *e_t) {
       lua_pushcfunction(L,mar_decode);
       lua_pushlstring(L,e->data,e->data_len);
       destroy_event(e);
+      dump_stack(L);
       lua_call(L,1,1); //decode event
       lua_call(L,1,LUA_MULTRET); //Unpack event
       return lua_gettop(L)-begin;
@@ -333,10 +334,11 @@ struct event_base *base;
 void do_read_ack(evutil_socket_t fd, short events, void *arg) {
    _DEBUG("Event: Read ACK\n");
    instance i=arg;
+   event_del(i->ev);
    process_id dst_id=i->last_proc;
    char buf[1024];
    size_t size=read(fd,buf,1024);
-   if(size<=0) {
+	   if(size<=0) {
       close(fd);
       lua_settop(i->L,0);
       lua_getglobal(i->L, "handler");
@@ -435,7 +437,10 @@ int send_async_event(instance i, stage_id s_id, int con_id, time_d communication
       _DEBUG("Event: Sending packet %d %p %d\n",sockfd,buffer+offset,len+h_offset-offset);
       int size=write(sockfd,buffer+offset,len+h_offset-offset);
       if(size<0) {
-         if(errno==EAGAIN) continue;
+         if(errno==EAGAIN) {
+		_DEBUG("Event: Received EAGAIN\n");
+		continue;
+	}
          close(sockfd); 
          return size;
       }
@@ -446,9 +451,10 @@ int send_async_event(instance i, stage_id s_id, int con_id, time_d communication
    i->last_proc=dst_id;
    i->con_id=con_id;
    i->communication_time=communication_time;
-   event_base_once(base, sockfd, EV_READ, do_read_ack, i, NULL);
-//   struct event * ack_event = event_new(base, sockfd, EV_READ | EV_PERSIST, do_read_ack, i);
-//   event_add(ack_event, NULL);
+//   event_base_once(base, sockfd, EV_READ|EV_PERSIST, do_read_ack, i, NULL);
+   struct event * ack_event = event_new(base, sockfd, EV_READ | EV_PERSIST, do_read_ack, i);
+   i->ev=ack_event;
+   event_add(ack_event, NULL);
    return 0;
 }
 
