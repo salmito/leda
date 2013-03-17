@@ -350,7 +350,7 @@ void do_read_ack(evutil_socket_t fd, short events, void *arg) {
       return push_ready_queue(i);
    }
    if(size==1&&buf[0]==1) {
-      _DEBUG("Event: Recicling socket %d %p %d\n",dst_id,sockets[dst_id],fd);
+      _DEBUG("Event: Recicling socket %d %p %d\n",(int)dst_id,sockets[dst_id],fd);
       if(!TRY_PUSH(sockets[dst_id],fd)) close(fd);
       lua_settop(i->L,0);
       lua_getglobal(i->L, "handler");
@@ -430,9 +430,9 @@ int send_async_event(instance i, stage_id s_id, int con_id, time_d communication
    h_offset+=sizeof(size_t);
    memcpy(buffer+h_offset,payload,len);
    size_t offset=0;
-   _DEBUG("Event: Sending event '%d'\n",len+h_offset);
+   _DEBUG("Event: Sending event '%zu'\n",len+h_offset);
    while(offset<len+h_offset) {
-      _DEBUG("Event: Sending packet %d %p %d\n",sockfd,buffer+offset,len+h_offset-offset);
+      _DEBUG("Event: Sending packet %d %p %zu\n",sockfd,buffer+offset,len+h_offset-offset);
       int size=write(sockfd,buffer+offset,len+h_offset-offset);
       if(size<0) {
          if(errno==EAGAIN) continue;
@@ -509,9 +509,9 @@ int send_sync_event(lua_State *L) {
    h_offset+=sizeof(size_t);
    memcpy(buffer+h_offset,payload,len);
    size_t offset=0;
-   _DEBUG("Event: Sending event '%d'\n",len+h_offset);
+   _DEBUG("Event: Sending event '%zu'\n",len+h_offset);
    while(offset<len+h_offset) {
-      _DEBUG("Event: Sending packet %d %p %d\n",sockfd,buffer+offset,len+h_offset-offset);
+      _DEBUG("Event: Sending packet %d %p %zu\n",sockfd,buffer+offset,len+h_offset-offset);
       int size=write(sockfd,buffer+offset,len+h_offset-offset);
       if(size<0) {
          if(errno==EAGAIN) continue;
@@ -569,12 +569,12 @@ int read_event(int fd) {
    }
    _DEBUG("Event: Received event header: %d bytes\n",received);
    if(header[0]==INIT_TYPE) {
-      int s=write(fd,"Process has already started\n",27);
+      int s=write(fd,"Process has already started",28);
       _DEBUG("Event: Error: Received init event but the process has already started\n");
       if(s<=0) return -2;
       return -1;
    } else if(header[0]!=EVENT_TYPE) {
-       int s=write(fd,"Malformed data\n",15);
+       int s=write(fd,"Malformed data",15);
       _DEBUG("Event: Error: Data is not an event\n");
       if(s<=0) return -2;
       return -1;
@@ -583,7 +583,7 @@ int read_event(int fd) {
    size_t len;
    size_t offset=1;
    memcpy(&s_id,header+offset,sizeof(stage_id));
-   _DEBUG("Event: Stage id %d\n",s_id);
+   _DEBUG("Event: Stage id %d\n",(int)s_id);
    offset+=sizeof(stage_id);
    memcpy(&len,header+offset,sizeof(size_t));
    offset+=sizeof(size_t);
@@ -591,7 +591,7 @@ int read_event(int fd) {
    if((int)len<=0) {
       return -1;
    }
-   _DEBUG("Event: Receiving event (size=%d bytes)\n",len);
+   _DEBUG("Event: Receiving event (size=%zu bytes)\n",len);
    char * buf=malloc(len);
    if(!buf) return -1;
    
@@ -600,7 +600,7 @@ int read_event(int fd) {
       int size=read(fd,buf+readed,len-readed);
       if(size<0) {
           if(errno==EAGAIN) continue; //Read socket again
-         _DEBUG("Event: Error receiving event (size=%d bytes): %s\n",len,strerror(errno));
+         _DEBUG("Event: Error receiving event (size=%zu bytes): %s\n",len,strerror(errno));
          free(buf);
          return -1;
       }
@@ -621,9 +621,8 @@ int read_event(int fd) {
       size_t size=write(fd,&res,1);
       if(size!=1) return 1;
    } else {
-      char res=FALSE;
-      size_t size=write(fd,&res,1);
-      if(size!=1) return 1;
+      int s=write(fd,"Event queue is full",20);
+      if(s!=1) return 1;
    }
    return 0;
 }

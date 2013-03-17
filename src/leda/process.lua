@@ -84,14 +84,16 @@ local function init(g,ro_g,host,port,controller,maxpar)
 end
 t.init=init
 
-local function start(p_port,maxpar,controller,has_graph)
+local function start(p_port,p_host,controller,maxpar,has_graph)
    if type(p_port)=="table" then
       local t=p_port
       p_port=t.port
+      p_host=t.host
       maxpar=t.maxpar
       controller=t.controller
    end
    l_localport=p_port or l_localport
+   localhost=p_host and socket.dns.toip(p_host) or localhost
    process_socket=assert(socket.bind("*", l_localport))
    local ip, port = process_socket:getsockname()
    if has_graph~=true then
@@ -204,7 +206,7 @@ function t.run(g,localport,maxpar,controller)
          send_graph(g,d)
       end
    end
-   start(l_localport,nil,nil,true)   
+   start(l_localport,nil,nil,nil,true)   
    init(g,ro_graph,localhost,l_localport,controller,maxpar)
 end
 

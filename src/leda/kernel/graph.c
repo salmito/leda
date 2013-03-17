@@ -390,7 +390,7 @@ graph build_graph_representation(lua_State *L, int index, graph g) {
       int idx=lua_tointeger(L,-1);
       lua_pop(L,1);
 
-      lua_getfield(L,index,"get_output_ports");
+      lua_getfield(L,index,"get_output");
       luaL_checktype(L, -1, LUA_TFUNCTION);
       lua_pushvalue(L,index);
       lua_pushvalue(L,-3);
