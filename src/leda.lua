@@ -11,6 +11,9 @@ local t={}
 --Define main global variable leda with methods
 leda=t
 
+--Table to hold connectors
+t.controller={}
+
 t.kernel=require("leda.kernel")
 t.debug= require("leda.debug")
 
@@ -38,7 +41,7 @@ t.leda_graph=leda_graph
 ------------------------------------------------------------------------
 t.connect=leda_stage.connect
 t.process=process
-t.controller={}
+
 
 local print,pairs=print,pairs
 
