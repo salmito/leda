@@ -161,8 +161,8 @@ function t.get(n)
    return {init=get_init(n),event_pushed=event_pushed,finish=finish}
 end
 
-leda.controller=leda.controller or {}
-leda.controller.interactive=t 
-
+if leda and leda.controller then
+   leda.controller.interactive=t 
+end
 
 return t

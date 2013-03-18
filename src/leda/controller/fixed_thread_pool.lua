@@ -63,7 +63,8 @@ function t.get(n)
    return {init=get_init(n),finish=t.finish}
 end
 
-leda.controller=leda.controller or {}
-leda.controller.fixed_thread_pool=t
+if leda and leda.controller then
+   leda.controller.fixed_thread_pool=t
+end
 
 return t

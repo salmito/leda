@@ -202,6 +202,8 @@ end
 function t.finish()
    output:close()
 end
-leda.controller=leda.controller or {}
-leda.controller.profiler=t
+
+if leda and leda.controller then
+   leda.controller.profiler=t
+end
 return t

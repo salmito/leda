@@ -11,10 +11,7 @@ local singlethread=fixed_thread_pool.get(1)
 
 --module("leda.controller.singlethread")
 
------------------------------------------------------------------------------
--- Controller init function
------------------------------------------------------------------------------
-leda.controller=leda.controller or {}
-leda.controller.singlethread=singlethread
-
+if leda and leda.controller then
+   leda.controller.singlethread=singlethread
+end
 return singlethread

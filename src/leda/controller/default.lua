@@ -3,22 +3,13 @@
 -- Author: Tiago Salmito, Noemi Rodriguez, Ana Lucia de Moura
 -----------------------------------------------------------------------------
 
------------------------------------------------------------------------------
--- Declare module and import dependencies
------------------------------------------------------------------------------
 local interactive=require("leda.controller.interactive")
 
 --module("leda.controller.default")
-local t={}
+local t=interactive.get(leda.kernel.cpu())
 
------------------------------------------------------------------------------
--- Controller init function
------------------------------------------------------------------------------
-
-t.init=interactive.init
-
-leda.controller.fixed_thread_pool=t 
-
-leda.controller.default=t
+if leda and leda.controller then
+   leda.controller.default=t
+end
 
 return t
