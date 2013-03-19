@@ -340,11 +340,10 @@ void emmit_remote(instance caller) {
  * Note: This will block the caller thread.
  *
  */
-int emmit_sync(lua_State * L) { //TODO send event synchronously
+int emmit_remote_sync(lua_State * L) { //TODO send event synchronously
+   time_d comunication_time=now_secs();
    stage_id dst_id=lua_tointeger(L,1);
-   if(CLUSTER(STAGE(dst_id)->cluster)->local) { //if stage is local, call assync emmit
-      return emmit(L);
-   }
+   int con_id=lua_tointeger(L,2);
    lua_remove(L,2);
    int const args=lua_gettop(L)-1;
    int i;
@@ -362,7 +361,14 @@ int emmit_sync(lua_State * L) { //TODO send event synchronously
       luaL_error(L,"Error serializing event");
    }
 
-   return send_sync_event(L);
+   int resp=send_sync_event(L);
+
+   if(con_id>=0) {
+      time_d ct=now_secs()-comunication_time;
+      STATS_UPDATE_EVENTS(CONNECTOR(con_id)->p,1,con_id,ct*1000000);
+   }
+
+   return resp;
 }
 
 /* Emmit an packed event to a local stage.
@@ -400,12 +406,7 @@ int emmit(lua_State * L) {
 //   lua_remove(L,2);
    _DEBUG("Event Emmit to local cluster? %d\n",CLUSTER(STAGE(dst_id)->cluster)->local);
    if(!CLUSTER(STAGE(dst_id)->cluster)->local) {
-      lua_pushinteger(L,EMMIT_REMOTE);
-      lua_insert(L,1);
-      int args_full=lua_gettop(L);
-      //Yield current instance handler
-      _DEBUG("Thread: Yielding to emmit a remote event\n");
-      return lua_yield(L,args_full);
+      return emmit_remote_sync(L);
    }
    lua_remove(L,2);
    int const args=lua_gettop(L)-1;

@@ -79,7 +79,7 @@ int leda_send(lua_State *L) {
       lua_pushliteral(L,"Invalid stage id");
       return 2;
    }
-   lua_pushcfunction(L,emmit_sync);
+   lua_pushcfunction(L,emmit);
    lua_pushinteger(L,id);
    lua_pushinteger(L,-1); //connector id not known
    for(i=1;i<=args;i++)

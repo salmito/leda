@@ -531,12 +531,12 @@ int send_sync_event(lua_State *L) {
    
    char res=0;
   
-   int size=read(sockfd,&res,sizeof(char));
-   if(size!=sizeof(char)) {
+   int size=read(sockfd,&res,1);
+   if(size<=0) {
       lua_pop(L,1);
       close(sockfd);
       lua_pushboolean(L,FALSE);
-      lua_pushfstring(L,"Error6 sending event to process '%s:%d': %s",PROCESS(dst_id)->host,PROCESS(dst_id)->port,strerror(errno));
+      lua_pushfstring(L,"Error sending event to process '%s:%d': %s",PROCESS(dst_id)->host,PROCESS(dst_id)->port,strerror(errno));
       return 2;
    }
    if(res==1) {
@@ -547,7 +547,7 @@ int send_sync_event(lua_State *L) {
       _DEBUG("Process: Sent remote event\n");
       return 1;
    } 
-   char buf[2048];
+/*   char buf[2048];
    size=read(sockfd,buf,2048);
    if(size<=0) {
       lua_pop(L,1);
@@ -556,10 +556,10 @@ int send_sync_event(lua_State *L) {
       lua_pushfstring(L,"Error7 sending event to process '%s:%d': %*s",PROCESS(dst_id)->host,PROCESS(dst_id)->port,buf,strerror(errno));
       return 2;
    }
-   lua_pop(L,1);
-   close(sockfd);
+   lua_pop(L,1); 
+   close(sockfd);*/
    lua_pushboolean(L,FALSE);
-   lua_pushfstring(L,"Error8 sending event to process '%s:%d': %*s",PROCESS(dst_id)->host,PROCESS(dst_id)->port,buf,size);
+   lua_pushfstring(L,"Error sending event to process '%s:%d': %d",PROCESS(dst_id)->host,PROCESS(dst_id)->port,(int)res);
    return 2;
 }
 
@@ -575,14 +575,17 @@ int read_event(int fd) {
    }
    _DEBUG("Event: Received event header: %d bytes\n",received);
    if(header[0]==INIT_TYPE) {
-      int s=write(fd,"Process has already started",28);
+      char ress=4;
+      int size=write(fd,&ress,1);
+      if(size!=1) return 1;
       _DEBUG("Event: Error: Received init event but the process has already started\n");
-      if(s<=0) return -2;
+      if(size<=0) return -2;
       return -1;
    } else if(header[0]!=EVENT_TYPE) {
-       int s=write(fd,"Malformed data",15);
+      char ress=3;
+      int size=write(fd,&ress,1);
       _DEBUG("Event: Error: Data is not an event\n");
-      if(s<=0) return -2;
+      if(size<=0) return -2;
       return -1;
    }
    stage_id s_id;
@@ -623,12 +626,13 @@ int read_event(int fd) {
    _DEBUG("Event: Event received\n");
    int res=emmit_packed_event(s_id,buf,len);
    if(res==0) {
-      char res=TRUE;
-      size_t size=write(fd,&res,1);
+      char ress=1;
+      size_t size=write(fd,&ress,1);
       if(size!=1) return 1;
    } else {
-      int s=write(fd,"Event queue is full",20);
-      if(s!=1) return 1;
+      char ress=2;
+      size_t size=write(fd,&ress,1);
+      if(size!=1) return 1;
    }
    return 0;
 }
