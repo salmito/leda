@@ -342,7 +342,7 @@ void emmit_remote(instance caller) {
  */
 int emmit_remote_sync(lua_State * L) { //TODO send event synchronously
    time_d comunication_time=now_secs();
-   stage_id dst_id=lua_tointeger(L,1);
+   //stage_id dst_id=lua_tointeger(L,1);
    int con_id=lua_tointeger(L,2);
    lua_remove(L,2);
    int const args=lua_gettop(L)-1;
