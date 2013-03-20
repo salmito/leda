@@ -219,7 +219,7 @@ int leda_run(lua_State * L) {
       if(lua_type(L,-1)!=LUA_TTABLE) continue;
       int i,n=lua_objlen(L,-1);
       for(i=1;i<=n;i++) {
-         lua_pushcfunction(L,emmit_sync);
+         lua_pushcfunction(L,emmit);
          lua_pushinteger(L,id);
          lua_pushinteger(L,-1); //Connector id not known
          int begin=lua_gettop(L);
