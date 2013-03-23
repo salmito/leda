@@ -2,14 +2,26 @@ local tostring = tostring
 local pcall = pcall
 local antgr=graph
 graph=nil
-module ("leda.utils.plot", package.seeall)
+--module ("leda.utils.plot", package.seeall)
+
+local t={}
+
 local gr = require "graph"
 graph=antgr
 
 local node, edge, subgraph, cluster, digraph, strictdigraph =
   gr.node, gr.edge, gr.subgraph, gr.cluster, gr.digraph, gr.strictdigraph
 
-function plot_graph(leda_graph,out)
+function t.plot_graph(leda_graph,out)
+   if out=='ascii' then
+       local fn = os.tmpname()..'.dot'
+         t.plot_graph(leda_graph,fn) 
+         local f=assert(io.popen("graph-easy "..fn.." --boxart 2>/dev/null","r"))
+         gr=assert(f:read('*a'))
+         f:close()
+         --s.remove(fn)
+         return gr
+   end
    local g = strictdigraph{
       tostring(leda_graph),
       compound = "1",
@@ -78,7 +90,7 @@ function plot_graph(leda_graph,out)
    if not out then
       g:show()
    elseif type(out)=="string" then
-      ext=out:reverse():gmatch("[^\.]*")():reverse()
+      ext=out:reverse():gmatch('[^\.]*')():reverse()
       if ext then
          g:layout()
          g:render(ext, out)
@@ -88,4 +100,6 @@ function plot_graph(leda_graph,out)
    end
    g:close()
 end
+
 leda.plot_graph=plot_graph
+return t

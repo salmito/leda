@@ -91,13 +91,13 @@ end
 --local function handler_str() return stage.__handler end
 __handler=leda.decode(leda.stage.__handler)
 if not (type(__handler)=='function' or type(__handler)=='string') then 
-   error("Error loading handler function for stage")
+   error("Error loading handler function for stage: "..tostring(leda.stage.name).." type:"..type(__handler))
 end
 
 if type(__handler)=="string" then
 	__handler,err=loadstring(__handler)
 	if not __handler then 
-	   error("Error loading handler function for stage "..leda.stage.name.."': "..err)
+	   error("Error loading handler function for stage "..tostring(leda.stage.name).."': "..tostring(err))
 	end
 end
 
@@ -126,14 +126,24 @@ end
 -----------------------------------------------------------------------------
 -- Create the main coroutine for the stage handler
 -----------------------------------------------------------------------------
+local debug=nil
+if not setfenv then
+   debug=require('debug')
+end
+
 local coroutine=coroutine
 local function main_coroutine()
    local end_code=__end_code
    while true do
+      local env=setmetatable({},{__index=_G})
       --clean environment --DISABLED on lua 5.2
-      if setfenv and not stage.serial then 
-         local env=setmetatable({},{__index=_G})
+      if setfenv and not stage.serial then       
          setfenv(__handler,env)
+      else
+         local upname,old_env = debug.getupvalue (__handler, 1)
+         if upname == '_ENV' then
+           debug.setupvalue (__handler, 1,env)
+         end
       end
       __handler(coroutine.yield(end_code))
    end 

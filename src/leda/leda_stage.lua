@@ -11,13 +11,15 @@ local type,pairs,assert,tostring,setmetatable,getmetatable,error,io,print,loadst
       type,pairs,assert,tostring,setmetatable,getmetatable,error,io,print,loadstring
 local string,table,kernel= string,table,leda.kernel
 local leda_connector = require("leda.leda_connector")
-local is_connector=leda.leda_connector.is_connector
-local new_connector=leda.leda_connector.new_connector
-local dbg = leda.debug.get_debug("Stage: ")
+local is_connector=leda_connector.is_connector
+local new_connector=leda_connector.new_connector
+local dbug=require("leda.debug")
+local dbg = dbug.get_debug("Stage: ")
 local dump = string.dump
 local leda=leda
 
-module("leda.leda_stage")
+--module("leda.leda_stage")
+local t={}
 
 ----------------------------------------------------------------------------
 -- Stage metatable
@@ -41,6 +43,19 @@ end
 local index=stage.__index
 
 -----------------------------------------------------------------------------
+-- Verify if parameter 's' is a stage
+-- (i.e. has the stage metatable)
+--
+-- returns:       'true' if 's' is a stage
+--                'false' if not
+-----------------------------------------------------------------------------
+local function is_stage(s)
+   if getmetatable(s)==stage then return true end
+   return false
+end
+t.is_stage = is_stage
+
+-----------------------------------------------------------------------------
 -- Add pending data to the stage
 -----------------------------------------------------------------------------    
 function index.send(self,...)
@@ -59,9 +74,9 @@ end
 function index.connect(head,key,tail,method)
    return function (g) return g:connect(head,key,tail,method) end
 end
-leda.connect=index.connect
+t.connect=index.connect
 
-function metatable()
+function t.metatable()
    return stage
 end
 
@@ -69,9 +84,9 @@ end
 -- Creates a new stage and returns it
 -- param:   't': table used to hold the stage representation
 -----------------------------------------------------------------------------
-function new_stage(t,init,name,bind,serial)
+function t.new_stage(t,init,name,bind,serial)
    local s={}
-   if type(t)=="function" then  -- arg1=handler, arg2=init, arg3=name, ...
+   if type(t)=="function" or type(t)=="string" then  -- arg1=handler, arg2=init, arg3=name, ...
       s.handler=t
       s.init=init
       assert(type(s.init)=="function" or type(s.init)=='string' or type(s.init)=="nil",string.format("Stage's init field must be a function or nil",type(s.init)))
@@ -102,9 +117,21 @@ function new_stage(t,init,name,bind,serial)
       return s
    end
 
+   assert(type(s.handler)=="function" or type(s.handler)=="string","Invalid handler type (string or function expected)")
+
    s=setmetatable(s,stage)
- 
-   s.handler=kernel.encode(s.handler)
+   local f_handler=s.handler
+   if type(f_handler)=="function" then
+      local upname,env = debug.getupvalue (s.handler, 1)
+      if upname == '_ENV' then
+         debug.setupvalue (s.handler, 1,{})
+      end
+      s.handler=kernel.encode(s.handler)
+      debug.setupvalue (f_handler, 1,env)
+   else 
+       s.handler=kernel.encode(s.handler)
+   end
+   
    if type(s.init)=="function" or type(s.init)=="string" then s.init=kernel.encode(s.init) end
    
    s.name=s.name or tostring(s)
@@ -112,14 +139,5 @@ function new_stage(t,init,name,bind,serial)
    return s
 end
 
------------------------------------------------------------------------------
--- Verify if parameter 's' is a stage
--- (i.e. has the stage metatable)
---
--- returns:       'true' if 's' is a stage
---                'false' if not
------------------------------------------------------------------------------
-function is_stage(s)
-   if getmetatable(s)==stage then return true end
-   return false
-end
+
+return t

@@ -37,6 +37,7 @@ THE SOFTWARE.
 #include "thread.h"
 #include "graph.h"
 #include "queue.h"
+#include "event.h"
 #include "instance.h"
 #include "stats.h"
 #include "extra/lmarshal.h"
@@ -44,7 +45,7 @@ THE SOFTWARE.
 
 #include <event2/event.h>
 
-#define __VERSION "0.2.5"
+#define __VERSION "0.2.6"
 
 #define CONNECTOR_TIMEOUT 2.0
 
@@ -227,7 +228,9 @@ int leda_run(lua_State * L) {
          lua_rawgeti(L,-5,i);
          lua_call(L,1,LUA_MULTRET); //Unpack the pending arguments
          int args=lua_gettop(L)-begin;
+         _DEBUG("Kernel: Emmiting pending event\n");
          lua_call(L,args+2,2); //Call the emmit function
+         _DEBUG("Kernel: Emmited pending event\n");
          bool_t ok=lua_toboolean(L,-2); 
        
          if(!ok) {
@@ -286,12 +289,13 @@ int leda_run(lua_State * L) {
 
    //call the init function of a controller, if defined
    lua_getfield(L, 3,"init");
-   lua_pushvalue(L,1);
-   if(lua_type(L,-2)==LUA_TFUNCTION) {
+  if(lua_type(L,-1)==LUA_TFUNCTION) {
+      lua_pushvalue(L,1);
+      lua_pushvalue(L,2);
       _DEBUG("Kernel: Calling controller init function\n");
-      lua_call(L,1,0);
+      lua_call(L,2,0);
    } else {
-      lua_pop(L,2);
+      lua_pop(L,1);
       luaL_error(L,"Controller does not defined an init method");
    }
     _DEBUG("Kernel: Running Graph '%s'\n",g->name);
@@ -433,14 +437,12 @@ int leda_set_capacity(lua_State * L) {
 
 /* Leda's kernel info  */
 static void set_leda_info (lua_State *L) {
-   lua_getglobal(L,"leda");
 	lua_pushliteral (L, "_DESCRIPTION");
 	lua_pushliteral (L, "Leda");
 	lua_settable (L, -3);
 	lua_pushliteral (L, "_VERSION");
 	lua_pushliteral (L, __VERSION);
 	lua_settable (L, -3);
-	lua_pop(L,1);
 }
 
 /* Load the Leda's kernel C API into a lua_State
@@ -461,8 +463,9 @@ int luaopen_leda_kernel (lua_State *L) {
       {"cpu", leda_number_of_cpus},
   	   //functions for controllers
   	   {"add_timer", add_timer},
-  	   {"new_thread", thread_new},
-  	   {"kill_thread", thread_kill},
+  	   {"thread_new", thread_new},
+  	   {"thread_kill", thread_kill},
+  	   {"thread_rawkill", thread_rawkill},
   	   {"stats", leda_get_stats},
   	   {"reset_stats", stats_reset},
   	   {"stats_latency_reset", stats_latency_reset},
@@ -487,15 +490,17 @@ int luaopen_leda_kernel (lua_State *L) {
 	
 	/* Load main library functions */
    _DEBUG("Kernel: Loading leda main API\n");
+	dump_stack(L);	
 	REGISTER_LEDA(L, LEDA_NAME, leda_funcs);
-
+	dump_stack(L);
 	set_leda_info (L);
-
+	dump_stack(L);
  	/* Create the thread metatable */
    thread_createmetatable(L);
+ 	dump_stack(L);
  	/* Create the graph metatable */
    graph_createmetatable(L);
-
+	dump_stack(L);
    _DEBUG("Kernel: Leda's kernel loaded successfully.\n");
  	return 1;
 }

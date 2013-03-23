@@ -8,42 +8,45 @@
 -----------------------------------------------------------------------------
 local leda=leda or require "leda"
 local kernel=require "leda.kernel"
-local dbg = leda.debug.get_debug("Controller: Profiler: ")
+local debug=require("leda.debug")
+local dbg = debug.get_debug("Controller: Profiler: ")
 local print,loadstring,pcall,os,string,pairs,ipairs,tostring,io,assert,table=
       print,loadstring,pcall,os,string,pairs,ipairs,tostring,io,assert,table
 local output=io.stderr
 local default_thread_pool_size=kernel.cpu()
 local init_time=nil
-local pool_size=thread_pool_size or default_thread_pool_size
 local t={}
 local th={}
 local last_t={}
 local last_t2={}
-local profile_output=profile_output
 local testcase=testcase or 'default'
 
 -----------------------------------------------------------------------------
 -- Controller init function
 -----------------------------------------------------------------------------
-local resolution=profiler_resolution or 0.1
+local resolution=profile_resolution or 0.1
 local stages,connectors=nil,nil
+local graph=nil
 
-function t.init()
+function t.init(g)
+   graph=g
    if maxpar then
       kernel.maxpar(maxpar)
    end
-   for i=1,pool_size do
-      table.insert(th,kernel.new_thread())
+   for i=1,(thread_pool_size or default_thread_pool_size) do
+      table.insert(th,kernel.thread_new())
       dbg("Thread %d created",i)
    end
    if profile_output then
-      output=io.open(profile_output,"a")
+      output=io.open(profile_output,"w")
    end
    stages,connectors=kernel.stats()
    output:write('testcase\ttype\ttime\tid\tname\tready\tthreads\tmax_par\tevents\tqueue_size\texecuted\terrors\tlatency\tthroughput\tactive_threads\n')
-   kernel.add_timer(profiler_resolution,1)
+   kernel.add_timer(resolution,1)
    init_time=kernel.gettime()
 end
+
+local iit=0
 
 local out_temp={}
 function t.on_timer(id)
@@ -55,8 +58,18 @@ function t.on_timer(id)
    if rsc<0 then rs=0 ta=ps+rsc else ta=ps rs=rsc end
    local rc=kernel.ready_queue_capacity()
    local stats,cstats=kernel.stats()
-   for k,v in ipairs(stats) do 
-      if v.events_pushed>0 or v.times_executed>0 then
+   
+   
+--   for k,v in ipairs(stats) do
+--      if v.events_pushed>0 or v.times_executed>0 then
+   
+   for cl in pairs(graph:clusters()) do
+      if cl:is_local(leda.process.get_localhost(),leda.process.get_localport()) then
+         for s in pairs(cl) do
+            if s~="process_addr" then
+            local k=graph:getid(s)+1
+            local v=stats[tonumber(graph:getid(s))+1]
+            
          local last=last_t[k] or {0,0}
          last_t[k]={v.events_pushed,kernel.gettime()}
          local l_e=v.events_pushed-last[1]
@@ -77,6 +90,8 @@ function t.on_timer(id)
             v.average_latency, 
             l_e/l_t,ta
             ))
+           end     
+         end
       end
    end
    for k,v in ipairs(cstats) do
@@ -102,12 +117,15 @@ function t.on_timer(id)
       end
    end
    table.insert(out_temp,table.concat(out))
-   if #out_temp >= 10 then
-	   output:write(table.concat(out_temp))
-      kernel.stats_latency_reset()
+   output:write(table.concat(out_temp))
+   out_temp={}
+         kernel.stats_latency_reset()
+   iit=iit+1
+   if iit >= 10 then
+--      kernel.stats_latency_reset()
+      iit=0
 --      last_t={}
 --      last_t2={}
-	   out_temp={}
    end
 end
 
@@ -185,6 +203,8 @@ end
 function t.finish()
    output:close()
 end
-leda.controller=leda.controller or {}
-leda.controller.profiler=t
+
+if leda and leda.controller then
+   leda.controller.profiler=t
+end
 return t

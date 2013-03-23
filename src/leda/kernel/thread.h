@@ -25,6 +25,7 @@ typedef struct thread_data {
 enum return_status{ 
    ENDED=0xF1F21AB,
    EMMIT_COHORT,
+   EMMIT_REMOTE,
    WAIT_IO,
    FILE_IO,
    SLEEP,
@@ -41,12 +42,7 @@ char const * get_return_status_name(int status);
    #define luaL_reg luaL_Reg
    #define REGISTER_LEDA(L,libname,funcs) \
            lua_newtable(L); \
-           lua_pushvalue(L,-1); \
-           lua_setglobal(L,"leda");  \
-           lua_pushliteral(L,"kernel");  \
-           lua_newtable(L); \
-           luaL_setfuncs (L,funcs,0); \
-           lua_rawset(L,-3); 
+           luaL_setfuncs (L,funcs,0); 
 #else
    #define REGISTER_LEDA(L,libname,funcs) luaL_register(L,libname,funcs)
 #endif
@@ -57,7 +53,7 @@ char const * get_return_status_name(int status);
    #define dump_stack(...)
 #else
    extern MUTEX_T debug_lock;
-   #define _DEBUG(...) /*MUTEX_LOCK(&debug_lock);*/ fprintf(stdout,__VA_ARGS__); /*MUTEX_UNLOCK(&debug_lock);*/
+   #define _DEBUG(...) fprintf(stdout,"%s: %d (%s):",__FILE__,__LINE__,__func__); fprintf(stdout,__VA_ARGS__); 
    void dump_stack( lua_State* L );
 #endif
 
@@ -67,10 +63,13 @@ thread thread_get (lua_State *L, int i);
 int thread_new (lua_State *L);
 int thread_createmetatable (lua_State *L);
 int thread_kill (lua_State *L);
+int thread_rawkill (lua_State *L);
 
 int wait_io(lua_State * L);
 int do_file_aio(lua_State * L);
 int emmit(lua_State * L);
+int emmit_sync(lua_State * L);
+int emmit_packed_event(stage_id dst_id,char * data,size_t len);
 int cohort(lua_State * L);
 
 int leda_getmetatable(lua_State *L);

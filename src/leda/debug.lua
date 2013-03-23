@@ -8,12 +8,13 @@
 local string = string
 local io=io
 local DEBUG=DEBUG
-module("leda.debug")
+--module("leda.debug")
+local t={}
 
 -----------------------------------------------------------------------------
 -- Function to get a debug handler
 -----------------------------------------------------------------------------
-function get_debug(prefix,sufix)
+function t.get_debug(prefix,sufix)
    if DEBUG then
       sufix=sufix or "\n"
       return function (fmt, ...)
@@ -25,3 +26,4 @@ function get_debug(prefix,sufix)
    return function () end
 end
 
+return t

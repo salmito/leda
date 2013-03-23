@@ -7,30 +7,34 @@
 -- Declare module and import dependencies
 -----------------------------------------------------------------------------
 local base = _G
-local dbg = leda.debug.get_debug("Controller: Fixed-thread: ")
+local debug=require("leda.debug")
+local dbg = debug.get_debug("Controller: Fixed-thread: ")
 local kernel=leda.kernel
 local table,ipairs,pairs,print=table,ipairs,pairs,print
 local default_thread_pool_size=10
 
 
-module("leda.controller.fixed_thread_pool")
+--module("leda.controller.fixed_thread_pool")
+
+local t={}
 
 local pool_size=default_thread_pool_size
 local th={}
+
 -----------------------------------------------------------------------------
 -- Controller init function
 -----------------------------------------------------------------------------
 
-function get_init(n)
+local function get_init(n)
    return   function()
                pool_size=n
                for i=1,n do
-                  table.insert(th,kernel.new_thread())
+                  table.insert(th,kernel.thread_new())
                   dbg("Thread %d created",i)
                end
             end
 end
-init=get_init(default_thread_pool_size)
+t.init=get_init(default_thread_pool_size)
 
 --[[function event_pushed(timedout,stats)
    local ps=kernel.thread_pool_size()
@@ -48,13 +52,20 @@ init=get_init(default_thread_pool_size)
    end
 end--]]
 
-function get(n)
-   return {init=get_init(n),event_pushed=event_pushed,finish=finish}
-end
 
-function finish()
+function t.finish()
    for i=1,#th do
       th[i]:kill()
    end
    dbg "Controller finished"
 end
+
+function t.get(n)
+   return {init=get_init(n),finish=t.finish}
+end
+
+if leda and leda.controller then
+   leda.controller.fixed_thread_pool=t
+end
+
+return t

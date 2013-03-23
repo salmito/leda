@@ -13,14 +13,14 @@ all: 5.1
 	cd $(SRC_DIR)/kernel && make LUA_INC_FLAGS="$(LUA_5_1_INC)" && cd -
 
 5.2:
-	cd $(SRC_DIR)/kernel && make LUA_INC_FLAGS="$(LUA_5_2_INC)" && cd -
+	cd $(SRC_DIR)/kernel && make LUA=lua5.2 LUA_INC_FLAGS="$(LUA_5_2_INC)" && cd -
 
 debug: 5.1-debug
 
-5.1-debug: clean
+5.1-debug: 
 	cd $(SRC_DIR)/kernel && make all LUA_INC_FLAGS="$(LUA_5_1_INC)" DEBUG_FLAGS="-ggdb -DDEBUG" && cd -
 
-5.2-debug: clean
+5.2-debug: 
 	cd $(SRC_DIR)/kernel && make all LUA_INC_FLAGS="$(LUA_5_2_INC)" DEBUG_FLAGS="-ggdb -DDEBUG" && cd -
 
 clean:
@@ -46,8 +46,10 @@ install5.1: all
 	install $(SRC_DIR)/../leda.lua $(LUA_INSTALL_PATH)
 	mkdir -p $(LUA_INSTALL_PATH)/leda
 	mkdir -p $(LUA_INSTALL_PATH)/leda/utils
+	mkdir -p $(LUA_INSTALL_PATH)/leda/stage
 	mkdir -p $(LUA_INSTALL_PATH)/leda/controller
 	install $(SRC_DIR)/controller/*.lua $(LUA_INSTALL_PATH)/leda/controller/
+	install $(SRC_DIR)/stage/*.lua $(LUA_INSTALL_PATH)/leda/stage/
 	install $(SRC_DIR)/utils/*.lua $(LUA_INSTALL_PATH)/leda/utils/
 	install $(LUA_FILES) $(LUA_INSTALL_PATH)/leda
 	mkdir -p $(LIB_INSTALL_PATH)/leda

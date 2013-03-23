@@ -1,7 +1,11 @@
 -----------------------------------------------------------------------------
 -- Leda Graph Lua API
--- Author: Tiago Salmito, Noemi Rodriguez, Ana Lucia de Moura
 -----------------------------------------------------------------------------
+--[[ @name leda
+module "leda.graph"
+]]-----------------------------------------------------------------------------
+
+-- Author: Tiago Salmito, Noemi Rodriguez, Ana Lucia de Moura
 
 -----------------------------------------------------------------------------
 -- Declare module and import dependencies
@@ -10,14 +14,20 @@ local base = _G
 local tostring,type,assert,pairs,setmetatable,getmetatable,print,error,ipairs,unpack =
       tostring,type,assert,pairs,setmetatable,getmetatable,print,error,ipairs,unpack
 local string,table,kernel,io=string,table,leda.kernel,io
-local dbg = leda.debug.get_debug("Graph: ")
-local is_connector=leda.leda_connector.is_connector
-local new_connector=leda.leda_connector.new_connector
-local is_stage=leda.leda_stage.is_stage
-local is_cluster=leda.leda_cluster.is_cluster
+local debug=require("leda.debug")
+local dbg = debug.get_debug("Graph: ")
+local leda_connector = require("leda.leda_connector")
+local is_connector=leda_connector.is_connector
+local new_connector=leda_connector.new_connector
+local leda_stage = require("leda.leda_stage")
+local is_stage=leda_stage.is_stage
+local leda_cluster = require("leda.leda_cluster")
+local is_cluster=leda_cluster.is_cluster
 local leda=leda
 local localhost = localhost or 'localhost'
-module("leda.leda_graph")
+--module("leda.leda_graph")
+
+local t={}
 
 ----------------------------------------------------------------------------
 -- Graph metatable
@@ -28,6 +38,8 @@ local graph_metatable = {
 
 -----------------------------------------------------------------------------
 -- Graph __tostring metamethod
+-- @name metatable.__tostring
+-- @param g A leda.graph
 -----------------------------------------------------------------------------
 function graph_metatable.__tostring(g) 
    if g.name then 
@@ -37,6 +49,21 @@ function graph_metatable.__tostring(g)
    end
 end
 
+
+-----------------------------------------------------------------------------
+-- Verify if parameter 'g' is a graph
+-- (i.e. has the graph metatable)
+-- @name graph.is_graph
+-- @return       'true' if 'g' is a graph
+--                'false' if not
+-----------------------------------------------------------------------------
+function t.is_graph(g) 
+  if getmetatable(g)==graph_metatable then return true end
+  return false
+end
+
+local is_graph=t.is_graph
+
 -----------------------------------------------------------------------------
 -- Graph __index metamethod
 -----------------------------------------------------------------------------
@@ -45,24 +72,25 @@ local index=graph_metatable.__index
 ----------------------------------------------------------------------------
 -- Add connector to a graph
 -- If a connector is already on the graph, nothing is done
+-- If a different connector if added on an already connected output port,
+-- a warn is issued
+-- @name graph:add
+-- @param c Connector to be added to the graph
 -----------------------------------------------------------------------------
 function index.add(self,c)
    if type(c)=='function' then
       c=c(self)
    end
-   if self:contains(c) then return end
    assert(is_graph(self),string.format("Invalid parameter #1 ('graph' expected, got '%s')",type(self)))
    assert(is_connector(c),string.format("Invalid parameter #2 ('connector' expected, got '%s')",type(c)))
+   if self:contains(c) then return c end
    dbg("Adding connector '%s' to graph '%s'",tostring(c),tostring(self))
    self.conns[c]=true
+   return c
 end
 index.add_connector=add
-
------------------------------------------------------------------------------
--- Create a new graph and returns it
--- param:   't': table used to hold the graph representation
------------------------------------------------------------------------------  
-function graph(...)
+  
+function t.graph(...)
    local t={...}
    if type(t[1]=='table') and not is_graph(t[1]) then
       t=t[1]
@@ -78,50 +106,39 @@ function graph(...)
    gr.outputs={}
    gr.name=gr.name or tostring(gr)
 
+
    for i, v in pairs(gr) do
       --if value is a connector, add it to graph
-      if is_connector(v) then
+      if i=='start' then
+         assert(is_stage(gr.start),string.format("Graph 'start' field must be a stage (got %s)",type(gr.start)))
+         local c=new_connector(nil,'start',gr.start)
+         gr:add(c)
+         assert(gr:contains(gr.start),"Graph start field is not a stage in the graph")
+      elseif is_connector(v) then
          gr:add(v)
       elseif type(v)=='function' then
          local c=v(gr)
          assert(is_connector(c),string.format("Connector constructor returned an invalid value (%s)",type(c)))
+         gr[i]=c
          gr:add(c)
-      elseif type(v)=='table' and v~=t then
-      	for _,v2 in ipairs(v) do
-      	 	local c=v2(gr)
-         	assert(is_connector(c),string.format("Connector constructor returned an invalid value (%s)",type(c)))
-         	gr:add(c)
-      	end
       else --ignore other values
          dbg("WARNING: Ignoring parameter of graph '%s' (type %s)\n",gr.name,type(v))
       end
    end
    
-   if gr.start then
-      assert(is_stage(gr.start),string.format("Graph 'start' field must be a stage (got %s)",type(gr.start)))
-      local c=new_connector(nil,'start',gr.start)
-      gr:add(c)
-      assert(gr:contains(gr.start),"Graph start field is not a stage in the graph")
-   end
    return gr
 end
 
------------------------------------------------------------------------------
--- Verify if parameter 'g' is a graph
--- (i.e. has the graph metatable)
---
--- returns:       'true' if 'g' is a graph
---                'false' if not
------------------------------------------------------------------------------
-function is_graph(g) 
-  if getmetatable(g)==graph_metatable then return true end
-  return false
-end
 index.is_graph=is_graph
 
+----------------------------------------------------------------------------
+-- Define a start stage for the graph
+-- @name graph:set_start
+-- @param s Stage to be used as the start of the pipeline
+-----------------------------------------------------------------------------
 function index.set_start(g,s)
    assert(is_stage(s),string.format("Invalid parameter (stage expected, got %s)",type(s)))
-   if not g:contains(s) then error(string.format("Stage '%s' not defined on graph '%s'",s,g)) end
+--   if not g:contains(s) then error(string.format("Stage '%s' not defined on graph '%s'",s,g)) end
    for c in pairs(g:connectors()) do
       if c.producer == nil then
          c.consumer=stage
@@ -133,6 +150,12 @@ function index.set_start(g,s)
    return true
 end
 
+----------------------------------------------------------------------------
+-- Checks if a stage or a connector is present on a graph
+-- @name graph:contains
+-- @param s Stage or connector to be checked
+-- @return true if the object is on the graph, false if not
+-----------------------------------------------------------------------------
 function index.contains(g,s)
    assert(is_graph(g),string.format("Invalid parameter #1 type (Graph expected, got %s)",type(g)))
    if is_stage(s) then
@@ -144,6 +167,12 @@ function index.contains(g,s)
    error(string.format("Invalid parameter type (stage or connector expected, got %s)",type(s)))
 end
 
+----------------------------------------------------------------------------
+-- Get a set of stages inside a graph
+-- @name graph:stages
+-- @return A table with a key for each stage of the graph
+-- @usage for s in pairs(g:stages()) do ...
+-----------------------------------------------------------------------------
 function index.stages(g)
    assert(is_graph(g),string.format("Invalid parameter #1 type (Graph expected, got %s)",type(g)))
    local stages={}
@@ -154,6 +183,11 @@ function index.stages(g)
    return stages
 end
 
+----------------------------------------------------------------------------
+-- Get a cluster with all stages of the graph
+-- @name graph:all
+-- @return A cluster with all stages of the graph
+-----------------------------------------------------------------------------
 function index.all(g)
    local res=leda.cluster()
    for s in pairs(g:stages()) do
@@ -162,6 +196,12 @@ function index.all(g)
    return res
 end
 
+----------------------------------------------------------------------------
+-- Get a set of clusters defined for the graph
+-- @name graph:clusters
+-- @return A table with a key for each cluster of the graph
+-- @usage for cl in pairs(g:clusters()) do ...
+-----------------------------------------------------------------------------
 function index.clusters(g)
    local clusters={}
    cl=g.cluster or {}
@@ -171,12 +211,19 @@ function index.clusters(g)
    return clusters
 end
 
+----------------------------------------------------------------------------
+-- Partition a graph
+-- @name graph:part
+-- @param ... A set of clusters
+-- @return The partitioned graph
+-- @usage g:part(g:all())
+-----------------------------------------------------------------------------
 function index.part(g,...)
    assert(is_graph(g),string.format("Invalid parameter #1 type (graph expected, got %s)",type(g)))
 
    for s in pairs(g:stages()) do
       if type(s.bind)=="function" then
-         s.bind(g:get_output_ports(s))
+         s.bind(g:get_output(s),s,g)
       end
    end
 
@@ -198,7 +245,7 @@ function index.part(g,...)
          assert(i:size()==0,"Invalid cluster, stages "..tostring(i).." are already clustered")
          for s in pairs(cl) do
             if is_stage(s) then
-               for key,c in pairs(g:get_output_ports(s)) do
+               for key,c in pairs(g:get_output(s)) do
                   if c.type~='decoupled' then
                      assert(cl:contains(c.consumer),"Invalid cluster, stages '"..tostring(s).."' and '"..tostring(c.consumer).."' cannot be on different clusters")
                   end
@@ -216,6 +263,13 @@ function index.part(g,...)
    return g
 end
 
+----------------------------------------------------------------------------
+-- Map each cluster of a partitioned graph into processes
+-- @name graph:map
+-- @param ... Strings representing each process address
+-- @return The mapped graph
+-- @usage g:part(g:all()):map('host.domain.com:9999')
+-----------------------------------------------------------------------------
 function index.map(g,...)
    assert(is_graph(g),string.format("Invalid parameter #1 type (graph expected, got %s)",type(g)))
    assert(g.cluster,"Graph is not partitioned")
@@ -245,9 +299,15 @@ function index.map(g,...)
             d_list[d]=true
          end
       end
-      return self
+      return g
    end
 
+----------------------------------------------------------------------------
+-- Get the cluster of a stage
+-- @name graph:get_cluster
+-- @param s A stage to search
+-- @return A cluster with the passed stage
+-----------------------------------------------------------------------------
 function index.get_cluster(g,s)
    assert(is_graph(g),string.format("Invalid parameter #1 type (Graph expected, got %s)",type(g)))
    assert(is_stage(s),string.format("Invalid parameter #1 type (Stage expected, got %s)",type(s)))
@@ -257,7 +317,13 @@ function index.get_cluster(g,s)
    return nil,"Cluster not found"
 end
 
-function index.get_output_ports(g,s)
+----------------------------------------------------------------------------
+-- Get the output ports of a stage defined on the current graph
+-- @name graph:get_output
+-- @param s A stage to search for its output
+-- @return A cluster with the passed stage
+-----------------------------------------------------------------------------
+function index.get_output(g,s)
    assert(is_graph(g),string.format("Invalid parameter #1 type (Graph expected, got %s)",type(g)))
    assert(is_stage(s),string.format("Invalid parameter #1 type (Stage expected, got %s)",type(s)))
    if type(g.outputs[s])=='table' then
@@ -315,10 +381,8 @@ function index.send(g,...)
 end
 
 function index.plot(g,out)
-   if leda.plot_graph then 
-      return leda.plot_graph(g,out)
-   end
-   error("Module 'leda.utils.plot' must be loaded.'")
+   local res=require 'leda.utils.plot'
+   return res.plot_graph(g,out)
 end
 
 -----------------------------------------------------------------------------
@@ -401,6 +465,16 @@ function index.run(g,...)
    end
    error(err)
 end
+-----------------------------------------------------------------------------
+-- Get the unique id of a stage
+-----------------------------------------------------------------------------
+function index.getid(g,s)
+   assert(is_graph(g),string.format("Invalid parameter #1 (graph expected, got '%s')",type(g)))
+   assert(g.stagesid,"Graph not running")
+   assert(is_stage(s),string.format("Invalid parameter #2 (stage expected, got '%s')",type(s)))
+   return g.stagesid[s]
+end
+
 
 -----------------------------------------------------------------------------
 -- Dump a graph
@@ -409,7 +483,7 @@ function index.dump(g)
    print('==== DUMP Stages ====')
    for s,_ in pairs(g:stages()) do 
       print(string.format("Stage: name='%s' pending='%d' serial='%s' cluster='%s'",tostring(s),#s.pending,tostring(s.serial==true),tostring(g:get_cluster(s))))
-      for k,v in pairs(g:get_output_ports(s)) do print(string.format("\tOutput: %s -> %s\t",tostring(k),tostring(v.consumer))) end
+      for k,v in pairs(g:get_output(s)) do print(string.format("\tOutput: %s -> %s\t",tostring(k),tostring(v.consumer))) end
    end
    print('==== DUMP Connectors ====')
    for c,_ in pairs(g:connectors()) do 
@@ -429,16 +503,18 @@ function index.dump(g)
    dbg('========')
 end
 
-function restore_metatables(g)
+function t.restore_metatables(g)
    setmetatable(g,graph_metatable)
    for c in pairs(g.conns) do
-      setmetatable(c,leda.leda_connector.metatable())
+      setmetatable(c,leda_connector.metatable())
    end
    for s in pairs(g:stages()) do
-      setmetatable(s,leda.leda_stage.metatable())
+      setmetatable(s,leda_stage.metatable())
    end
    for cl in pairs(g:clusters()) do
-      setmetatable(cl,leda.leda_cluster.metatable())
+      setmetatable(cl,leda_cluster.metatable())
    end
    return g
 end
+
+return t
