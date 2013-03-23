@@ -12,7 +12,8 @@ local leda_graph=require 'leda.leda_graph'
 local is_graph=leda_graph.is_graph
 
 local socket=require("socket")
-local dbg = leda.debug.get_debug("Process: ")
+local debug=require("leda.debug")
+local dbg = debug.get_debug("Process: ")
 local default_p=9999
 local localhost=localhost or "127.0.0.1"
 localhost=socket.dns.toip(localhost) or localhost

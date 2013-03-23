@@ -7,7 +7,9 @@
 -- Declare module and import dependencies
 -----------------------------------------------------------------------------
 local base = _G
-local dbg = leda.debug.get_debug("Controller: Interactive: ")
+local debug=require("leda.debug")
+local kernel=require("leda.kernel")
+local dbg = debug.get_debug("Controller: Interactive: ")
 local has_plot,plot=pcall(require,'leda.utils.plot')
 local table,leda=table,leda
 local print,loadstring,pcall,os,string,pairs,ipairs,tostring,io,assert=
@@ -15,7 +17,7 @@ local print,loadstring,pcall,os,string,pairs,ipairs,tostring,io,assert=
 local read=io.read
 local write=io.write
 local stderr=io.stderr
-local prompt="leda-"..leda._VERSION..'> '
+local prompt="leda-"..kernel._VERSION..'> '
 kernel=leda.kernel
 local kernel=kernel
 leda.rawsend=kernel.send

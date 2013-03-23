@@ -7,7 +7,8 @@
 -- Declare module and import dependencies
 -----------------------------------------------------------------------------
 local base = _G
-local dbg = leda.debug.get_debug("Controller: Fixed-thread: ")
+local debug=require("leda.debug")
+local dbg = debug.get_debug("Controller: Fixed-thread: ")
 local kernel=leda.kernel
 local table,ipairs,pairs,print=table,ipairs,pairs,print
 local default_thread_pool_size=10

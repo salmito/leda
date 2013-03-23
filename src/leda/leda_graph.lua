@@ -14,7 +14,8 @@ local base = _G
 local tostring,type,assert,pairs,setmetatable,getmetatable,print,error,ipairs,unpack =
       tostring,type,assert,pairs,setmetatable,getmetatable,print,error,ipairs,unpack
 local string,table,kernel,io=string,table,leda.kernel,io
-local dbg = leda.debug.get_debug("Graph: ")
+local debug=require("leda.debug")
+local dbg = debug.get_debug("Graph: ")
 local leda_connector = require("leda.leda_connector")
 local is_connector=leda_connector.is_connector
 local new_connector=leda_connector.new_connector

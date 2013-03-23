@@ -42,12 +42,7 @@ char const * get_return_status_name(int status);
    #define luaL_reg luaL_Reg
    #define REGISTER_LEDA(L,libname,funcs) \
            lua_newtable(L); \
-           lua_pushvalue(L,-1); \
-           lua_setglobal(L,"leda");  \
-           lua_pushliteral(L,"kernel");  \
-           lua_newtable(L); \
-           luaL_setfuncs (L,funcs,0); \
-           lua_rawset(L,-3); 
+           luaL_setfuncs (L,funcs,0); 
 #else
    #define REGISTER_LEDA(L,libname,funcs) luaL_register(L,libname,funcs)
 #endif

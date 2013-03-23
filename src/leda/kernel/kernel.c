@@ -437,14 +437,12 @@ int leda_set_capacity(lua_State * L) {
 
 /* Leda's kernel info  */
 static void set_leda_info (lua_State *L) {
-   lua_getglobal(L,"leda");
 	lua_pushliteral (L, "_DESCRIPTION");
 	lua_pushliteral (L, "Leda");
 	lua_settable (L, -3);
 	lua_pushliteral (L, "_VERSION");
 	lua_pushliteral (L, __VERSION);
 	lua_settable (L, -3);
-	lua_pop(L,1);
 }
 
 /* Load the Leda's kernel C API into a lua_State
@@ -492,15 +490,17 @@ int luaopen_leda_kernel (lua_State *L) {
 	
 	/* Load main library functions */
    _DEBUG("Kernel: Loading leda main API\n");
+	dump_stack(L);	
 	REGISTER_LEDA(L, LEDA_NAME, leda_funcs);
-
+	dump_stack(L);
 	set_leda_info (L);
-
+	dump_stack(L);
  	/* Create the thread metatable */
    thread_createmetatable(L);
+ 	dump_stack(L);
  	/* Create the graph metatable */
    graph_createmetatable(L);
-
+	dump_stack(L);
    _DEBUG("Kernel: Leda's kernel loaded successfully.\n");
  	return 1;
 }

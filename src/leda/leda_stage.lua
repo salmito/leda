@@ -13,7 +13,8 @@ local string,table,kernel= string,table,leda.kernel
 local leda_connector = require("leda.leda_connector")
 local is_connector=leda_connector.is_connector
 local new_connector=leda_connector.new_connector
-local dbg = leda.debug.get_debug("Stage: ")
+local dbug=require("leda.debug")
+local dbg = dbug.get_debug("Stage: ")
 local dump = string.dump
 local leda=leda
 
@@ -85,7 +86,7 @@ end
 -----------------------------------------------------------------------------
 function t.new_stage(t,init,name,bind,serial)
    local s={}
-   if type(t)=="function" then  -- arg1=handler, arg2=init, arg3=name, ...
+   if type(t)=="function" or type(t)=="string" then  -- arg1=handler, arg2=init, arg3=name, ...
       s.handler=t
       s.init=init
       assert(type(s.init)=="function" or type(s.init)=='string' or type(s.init)=="nil",string.format("Stage's init field must be a function or nil",type(s.init)))
@@ -119,8 +120,18 @@ function t.new_stage(t,init,name,bind,serial)
    assert(type(s.handler)=="function" or type(s.handler)=="string","Invalid handler type (string or function expected)")
 
    s=setmetatable(s,stage)
- 
-   s.handler=kernel.encode(s.handler)
+   local f_handler=s.handler
+   if type(f_handler)=="function" then
+      local upname,env = debug.getupvalue (s.handler, 1)
+      if upname == '_ENV' then
+         debug.setupvalue (s.handler, 1,{})
+      end
+      s.handler=kernel.encode(s.handler)
+      debug.setupvalue (f_handler, 1,env)
+   else 
+       s.handler=kernel.encode(s.handler)
+   end
+   
    if type(s.init)=="function" or type(s.init)=="string" then s.init=kernel.encode(s.init) end
    
    s.name=s.name or tostring(s)

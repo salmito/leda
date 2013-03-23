@@ -8,7 +8,8 @@
 -----------------------------------------------------------------------------
 local leda=leda or require "leda"
 local kernel=require "leda.kernel"
-local dbg = leda.debug.get_debug("Controller: Profiler: ")
+local debug=require("leda.debug")
+local dbg = debug.get_debug("Controller: Profiler: ")
 local print,loadstring,pcall,os,string,pairs,ipairs,tostring,io,assert,table=
       print,loadstring,pcall,os,string,pairs,ipairs,tostring,io,assert,table
 local output=io.stderr

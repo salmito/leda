@@ -15,7 +15,8 @@ leda=t
 t.controller={}
 
 t.kernel=require("leda.kernel")
-t.debug= require("leda.debug")
+t._VERSION=t.kernel._VERSION
+t.debug=require("leda.debug")
 
 local leda_connector = require("leda.leda_connector")
 --Exporting connector related functions
@@ -51,7 +52,7 @@ local print,pairs=print,pairs
 -- @name leda.gettime
 -- @return Current time (unix timestamp with microsecond resolution).
 ------------------------------------------------------------------------
-t.gettime=kernel.gettime
+t.gettime=t.kernel.gettime
 
 --Exporting graph related functions
 ------------------------------------------------------------------------
@@ -80,8 +81,8 @@ t.is_graph=leda_graph.is_graph
 t.is_cluster=leda_graph.is_cluster
 
 --Kernel functions shortcuts
-t.getmetatable=kernel.getmetatable
-t.setmetatable=kernel.setmetatable
+t.getmetatable=t.kernel.getmetatable
+t.setmetatable=t.kernel.setmetatable
 
 
 t.couple=leda_connector.coupled

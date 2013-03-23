@@ -109,7 +109,13 @@ static void openlibs(lua_State * L) {
    lua_pushcfunction(L,luaopen_base);
    lua_pcall(L,0,0,0);
    lua_pushcfunction(L,luaopen_package);
-   lua_pcall(L,0,0,0);
+   lua_pcall(L,0,1,0);
+   lua_setglobal(L,"package");
+#if LUA_VERSION_NUM > 501
+   lua_pushcfunction(L,luaopen_coroutine);
+   lua_pcall(L,0,1,0);
+   lua_setglobal(L,"coroutine");  
+#endif
    registerlib(L,"io", luaopen_io);
    registerlib(L,"os", luaopen_os);
    registerlib(L,"table", luaopen_table);
@@ -121,9 +127,7 @@ static void openlibs(lua_State * L) {
 /*Create an empty new lua_state and returns it */
 lua_State * new_lua_state(bool_t libs) {
    lua_State * L = luaL_newstate();
-
    lua_gc( L, LUA_GCSTOP, 0);
-   
    if(libs) {
       openlibs(L);
       serialize_require(L);
@@ -348,6 +352,7 @@ instance instance_wait(stage_id s) {
  *
  */
 instance instance_aquire(stage_id s) {
+   _DEBUG("Instance: Aquiring instance for stage %d\n",(int) s);
    if(s<0 && s>main_graph->n_s) return NULL; //error: invalid stage
 
    instance ret=NULL;
@@ -366,6 +371,7 @@ instance instance_aquire(stage_id s) {
       STAGE(s)->name,READ(number_of_instances[s]),READ(recycle_queue_limits[s]));
       return NULL;//No more instances allowed for this stage
    }
+
    STATS_ACTIVE(s);
    //Lock protected add
    ADD(number_of_instances[s],1);
@@ -373,14 +379,12 @@ instance instance_aquire(stage_id s) {
    ret=calloc(1,sizeof(struct instance_data));
    ret->L=new_lua_state(TRUE);
    ret->stage=s;
-   
    ret->instance_number=READ(number_of_instances[s]);
    
    lua_pushlightuserdata( ret->L, ret);
 	lua_setfield( ret->L, LUA_REGISTRYINDEX, "__SELF" );
    if(luaL_loadbuffer( ret->L, instance_chunk, sizeof(instance_chunk), "@instance.lua"))
 			return NULL; //"luaL_loadbuffer() failed";   // LUA_ERRMEM
-   
    //Create a stage representation
    lua_newtable(ret->L); //Table holds all information
 
@@ -465,6 +469,7 @@ instance instance_aquire(stage_id s) {
      
    /* Call the lua_chunk loaded in the luaL_loadbuffer */
 //   dump_stack(ret->L);
+   
    lua_call( ret->L, 0 , 0 );
    _DEBUG("Instance created for stage '%d' name='%s'\n",(int)s,STAGE(s)->name);
 

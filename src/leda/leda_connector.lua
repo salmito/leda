@@ -9,8 +9,9 @@
 local string,table,kernel = string,table,leda.kernel
 local getmetatable,setmetatable,type,tostring,assert,io,error=
       getmetatable,setmetatable,type,tostring,assert,io,error
+local debug=require("leda.debug")
 
-local dbg = leda.debug.get_debug("Connector: ")
+local dbg = debug.get_debug("Connector: ")
 local dump = string.dump
 
 local leda=leda

@@ -126,14 +126,24 @@ end
 -----------------------------------------------------------------------------
 -- Create the main coroutine for the stage handler
 -----------------------------------------------------------------------------
+local debug=nil
+if not setfenv then
+   debug=require('debug')
+end
+
 local coroutine=coroutine
 local function main_coroutine()
    local end_code=__end_code
    while true do
+      local env=setmetatable({},{__index=_G})
       --clean environment --DISABLED on lua 5.2
-      if setfenv and not stage.serial then 
-         local env=setmetatable({},{__index=_G})
+      if setfenv and not stage.serial then       
          setfenv(__handler,env)
+      else
+         local upname,old_env = debug.getupvalue (__handler, 1)
+         if upname == '_ENV' then
+           debug.setupvalue (__handler, 1,env)
+         end
       end
       __handler(coroutine.yield(end_code))
    end 

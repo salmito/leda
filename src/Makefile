@@ -13,14 +13,14 @@ all: 5.1
 	cd $(SRC_DIR)/kernel && make LUA_INC_FLAGS="$(LUA_5_1_INC)" && cd -
 
 5.2:
-	cd $(SRC_DIR)/kernel && make LUA_INC_FLAGS="$(LUA_5_2_INC)" && cd -
+	cd $(SRC_DIR)/kernel && make LUA=lua5.2 LUA_INC_FLAGS="$(LUA_5_2_INC)" && cd -
 
 debug: 5.1-debug
 
-5.1-debug: clean
+5.1-debug: 
 	cd $(SRC_DIR)/kernel && make all LUA_INC_FLAGS="$(LUA_5_1_INC)" DEBUG_FLAGS="-ggdb -DDEBUG" && cd -
 
-5.2-debug: clean
+5.2-debug: 
 	cd $(SRC_DIR)/kernel && make all LUA_INC_FLAGS="$(LUA_5_2_INC)" DEBUG_FLAGS="-ggdb -DDEBUG" && cd -
 
 clean:
