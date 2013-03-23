@@ -2,7 +2,7 @@
 Leda is a Lua library for bulding parallel, non-linear pipelines based on the concepts of the SEDA (Staged Event-Driven Architecture).
 
 ## Compiling and Installing
-Leda is compatible with Lua version 5.1 and Luajit-2.0.0, experimental support for Lua verion 5.2 is available but not fully functional.
+Leda is compatible with Lua version 5.1, 5.2 and Luajit.
 
 Leda requires Threading Building Blocks (TBB), Libevent and luasocket libraries to work properly.
 
@@ -30,7 +30,7 @@ To build and install Leda for Lua 5.1:
    $ sudo make install
 ```
 
-To build and install Leda for Lua 5.2 (experimental and should not be used yet):
+To build and install Leda for Lua 5.2:
 ```
    $ make 5.2
    $ sudo make install5.2
