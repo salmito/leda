@@ -48,7 +48,7 @@ Leda's documentation can be found in: <a href="https://github.com/Salmito/leda/w
 
 <h2>Compiling and Installing</h2>
 
-<p>Leda is compatible with Lua version 5.1 and Luajit-2.0.0. Experimental support for Lua version 5.2 is available but not fully functional.</p>
+<p>Leda is compatible with Lua version 5.1, 5.2 and Luajit.</p>
 
 <p>Leda requires Threading Building Blocks (TBB), Libevent and Luasocket libraries to work properly.</p>
 
@@ -58,7 +58,7 @@ Leda's documentation can be found in: <a href="https://github.com/Salmito/leda/w
 
 <p>For more information about the Luasocket library: <br /><a href="http://w3.impa.br/~diego/software/luasocket/">http://w3.impa.br/~diego/software/luasocket/</a></p>
 
-<p>To install all dependencies on a Debian like linux (Ubuntu, mint, etc) do:</p>
+<p>To install dependencies on a Debian like linux (Ubuntu, mint, etc) do:</p>
 
 <pre><code>   sudo apt-get install libtbb-dev libevent-dev
    sudo apt-get install lua5.1-dev lua5.1 lua-socket
@@ -71,13 +71,21 @@ Leda's documentation can be found in: <a href="https://github.com/Salmito/leda/w
    sudo luarocks install luagraph
 </code></pre>
 
-<p>To build and install Leda for Lua 5.1:</p>
+<p>To build Leda for 5.1:</p>
+<pre><code>   $ make
+</code></pre>
+
+<p>To build Leda for 5.2:</p>
+<pre><code>   $ make 5.2
+</code></pre>
+
+<p>To install Leda for Lua 5.1:</p>
 
 <pre><code>   $ make
    $ sudo make install
 </code></pre>
 
-<p>To build and install Leda for Lua 5.2 (experimental and should not be used yet):</p>
+<p>To install Leda for Lua 5.2:</p>
 
 <pre><code>   $ make 5.2
    $ sudo make install5.2
