@@ -24,7 +24,7 @@ dependencies = {
 
 external_dependencies = {
   TBB = { library = "tbb", header="tbb/concurrent_queue.h" },
-  LIBEVENT = { library = "event", header="event2/event.h" },
+  LIBEVENT = { header="event2/event.h" },
 }
 
 build = {
