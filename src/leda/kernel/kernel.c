@@ -484,7 +484,7 @@ int luaopen_leda_kernel (lua_State *L) {
    }
    initialized=TRUE;
    #ifdef DEBUG
-   MUTEX_INIT(&debug_lock);
+//   MUTEX_INIT(&debug_lock);
    #endif
    thread_init(-1);
 	
