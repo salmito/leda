@@ -30,7 +30,7 @@ To build and install Leda for Lua 5.1:
    $ sudo make install
 ```
 
-To build and install Leda for Lua 5.2 (experimental and should not be used yet):
+To build and install Leda for Lua 5.2:
 ```
    $ make 5.2
    $ sudo make install5.2
