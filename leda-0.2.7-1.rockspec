@@ -10,7 +10,7 @@ source= {
 description = {
   summary = "Leda",
   detailed = [[
-    Leda is a Lua library for building parallel, non-linear pipelines based on
+    Leda is a Lua library for building parallel, non-linear pipelines in Lua based on
     the concepts of SEDA (Staged Event-Driven Architecture).
   ]],
   license = "MIT",
@@ -41,6 +41,6 @@ build = {
             LIB_INSTALL_PATH = "$(LIBDIR)"
          },
          install_command = "make install"
-      }
+       }
    }
 }
