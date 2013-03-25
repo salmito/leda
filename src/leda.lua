@@ -14,7 +14,7 @@ leda=t
 --Table to hold connectors
 t.controller={}
 
-t.kernel=require("leda.kernel")
+t.kernel=assert(require("leda.kernel"))
 t._VERSION=t.kernel._VERSION
 t.debug=require("leda.debug")
 

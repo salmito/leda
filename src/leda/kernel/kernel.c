@@ -45,7 +45,7 @@ THE SOFTWARE.
 
 #include <event2/event.h>
 
-#define __VERSION "0.2.7-unstable"
+#define __VERSION "0.2.8-unstable"
 
 #define CONNECTOR_TIMEOUT 2.0
 
@@ -484,7 +484,7 @@ int luaopen_leda_kernel (lua_State *L) {
    }
    initialized=TRUE;
    #ifdef DEBUG
-   MUTEX_INIT(&debug_lock);
+//   MUTEX_INIT(&debug_lock);
    #endif
    thread_init(-1);
 	

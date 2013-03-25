@@ -91,17 +91,17 @@ end
 index.add_connector=add
   
 function t.graph(...)
-   local t={...}
-   if type(t[1]=='table') and not is_graph(t[1]) then
-      t=t[1]
+   local p={...}
+   if type(p[1]=='table') and not is_graph(p[1]) then
+      p=p[1]
    end
    
-   if type(t[1])=="string" then
-      t.name=t.name or t[1]
-      table.remove(t,1)
+   if type(p[1])=="string" then
+      p.name=p.name or p[1]
+      table.remove(p,1)
    end
 
-   local gr = setmetatable(t,graph_metatable)
+   local gr = setmetatable(p,graph_metatable)
    gr.conns={}
    gr.outputs={}
    gr.name=gr.name or tostring(gr)

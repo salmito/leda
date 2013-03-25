@@ -44,8 +44,8 @@ install:
 uninstall:
 	cd $(SRC_DIR) && make uninstall
 	
-windows32:
-	cd $(SRC_DIR) && make windows32
+#windows32:
+#	cd $(SRC_DIR) && make windows32
 
 #windows64:
 #	cd $(SRC_DIR) && make windows64

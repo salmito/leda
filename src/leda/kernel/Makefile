@@ -1,14 +1,13 @@
 LUA_INC_FLAGS=/usr/include/lua5.1
+
 INCFLAGS=-I$(LUA_INC_FLAGS)
 CFLAGS=-fPIC $(INCFLAGS) -Wall -O2 $(DEBUG_FLAGS)
-LDFLAGS_POSIX=-fPIC -Wall -O2 $(DEBUG_FLAGS) $(LD_FLAGS) -ltbb -lpthread -levent -levent_pthreads
-LDFLAGS_MINGW32=-fPIC -Wall -O2 $(DEBUG_FLAGS) \
-      -L extra/dll -ltbb -lpthread-i386 -llua
+LDFLAGS=$(DEBUG_FLAGS) $(LD_FLAGS) -ltbb -lpthread -levent -levent_pthreads
       
 LUA=lua
 
 CC=cc
-G_PLUS_PLUS=cc
+G_PLUS_PLUS=$(CC)
 
 OBJ=  kernel.o \
       graph.o \
@@ -34,16 +33,11 @@ ifdef STATS_OFF
    CFLAGS+=-DSTATS_OFF
 endif
 
-_SO=.so
+
 ifeq ($(MINGW32),true)
-INCFLAGS=-IC:\lua-5.1.4\src -IC:\tbb30_20110704oss\include
-LDFLAGS=$(LDFLAGS_MINGW32)
-_SO=.dll
-CFLAGS=$(INCFLAGS) -Wall -O2 $(DEBUG_FLAGS)
-CC=cc
-G_PLUS_PLUS=g++
+   _SO=.dll
 else
-LDFLAGS=$(LDFLAGS_POSIX)
+   _SO=.so
 endif
 
 MODULE=../kernel$(_SO)
