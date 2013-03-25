@@ -27,7 +27,7 @@ clean:
 	cd $(SRC_DIR)/kernel && make clean && cd - 
 
 ultraclean:
-	cd $(SRC_DIR)/kernel && make ultraclean && cd -
+	cd $(SRC_DIR)/kernel && make ultraclean && cd - && rm -f `find -iname *~`
 
 install5.2: 5.2
 	make install LUA_INSTALL_PATH=$(LUA_INSTALL_PATH_5_2) LIB_INSTALL_PATH=$(LIB_INSTALL_PATH_5_2)
