@@ -8,7 +8,7 @@ LDFLAGS_MINGW32=-fPIC -Wall -O2 $(DEBUG_FLAGS) \
 LUA=lua
 
 CC=cc
-G_PLUS_PLUS=cc
+G_PLUS_PLUS=$(CC)
 
 OBJ=  kernel.o \
       graph.o \
