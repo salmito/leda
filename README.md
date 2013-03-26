@@ -1,6 +1,13 @@
 # Leda
 Leda is a Lua library for bulding parallel, non-linear pipelines based on the concepts of the SEDA (Staged Event-Driven Architecture).
 
+## Documentation
+
+Leda's documentation can be found in: https://github.com/Salmito/leda/wiki
+
+You can also use the official Leda's e-mail list to post questions.
+https://groups.google.com/forum/?fromgroups#!forum/leda-l
+
 ## Compiling and Installing
 Leda is compatible with Lua version 5.1, 5.2 and Luajit.
 
