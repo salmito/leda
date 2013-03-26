@@ -3,7 +3,6 @@ require "leda"
 local graph,connector,stage=leda.graph,leda.connector,leda.stage
 
 function produce(seed,interval)
-   print(string.format("Producing random data: seed=%d interval=%f",seed,interval))
    math.randomseed( seed )
    local i=0
    while true do
@@ -11,13 +10,15 @@ function produce(seed,interval)
        i=i+1
        local out=leda.get_output(1):send(data,i)
 --       print("Produced",data)
-       leda.sleep(interval)
+      if interval>0 then
+         leda.sleep(interval)
+      end
    end
 end
 
 function p_init() 
-   require "math"
-   require "string"
+   math=require "math"
+   string=require "string"
 end
 
 function square(data,i)
@@ -30,7 +31,7 @@ end
 
 local prod=stage{name="Producer",handler=produce,init=p_init}
 local cons=stage{name="Consumer",handler=consume,init=p_init}
-local sqrt=stage{name="Sqrt",handler=square,init=p_init}
+local sqrt=stage{name="Sqrt",handler=square,init=p_init,serial=true}
 
 
 local g=graph{"Producer-consumer",
@@ -39,6 +40,6 @@ local g=graph{"Producer-consumer",
 }
 
 
-prod:send(os.time(),0.1)
+prod:send(os.time(),tonumber(arg[1]) or 0.1)
 
-g:run()
+g:run{maxpar=4}

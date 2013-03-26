@@ -106,19 +106,23 @@ end
 -----------------------------------------------------------------------------
 if leda.stage.__init and leda.stage.__init~="" then
 	local init,err=leda.decode(leda.stage.__init)
-	if not init then 
-	   error("Error loading init function for stage '"..leda.stage.name.."': "..err)
-	else
+	if init then
 		if type(init)=="string" then
 			init,err=loadstring(init)
 			if not init then 
 			   error(string.format("Error loading init function for stage '%s': %s", stage.__name,err))
 	   	end
-		end
+		--end
 	   -- Execute init function of the stage
-	   local ok,err=pcall(init) 
-	   if not ok then error("Error executing init function for stage '"..leda.stage.name.."': ".. err)
-	   end
+	   elseif not setfenv and type(init)=="function" then
+	      local debug=require 'debug'
+         local upname,old_env = debug.getupvalue (init, 1)
+         if upname == '_ENV' then
+           debug.setupvalue (init, 1,_ENV)
+         end
+      end
+	   local ok,err=init() 
+--	   if not ok then error("Error executing init function for stage '"..leda.stage.name.."': ".. err) end
 	end
 end
 

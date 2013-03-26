@@ -30,9 +30,9 @@ function stage.handler(file,...)
 end
 
 function stage.init()
-   require 'table'
-   require 'string'
-   require 'leda.utils.io'
+   table=require 'table'
+   string=require 'string'
+   io=require 'leda.utils.io'
 end
 
 function stage.bind(self) 
@@ -54,5 +54,17 @@ Requires 'line' port to be connected
 ]]
 
 stage.version='0.1'
+
+stage.test=function(file)
+   local utils=require 'leda.utils'
+   local s=leda.stage(stage)
+   s:send(file or '/etc/passwd')
+   local g=leda.graph{
+      s:connect('line',leda.stage("print(...)")),
+      s:connect('EOF',leda.stage('leda.quit()'))
+   }
+   --g:plot()
+   g:run()
+end
 
 return leda.stage(stage)

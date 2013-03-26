@@ -1,4 +1,4 @@
-require "io"
+local io=require "io"
 
 local block=block or false
 
@@ -7,7 +7,7 @@ if file_mt then
    file_mt.__wrap=function(file)
       local filefd=leda.io.wrap(file)
       return function()
-	 require 'leda.utils.io'
+	      require 'leda.utils.io'
          return leda.io.unwrap(filefd)
       end
    end
@@ -32,3 +32,5 @@ if file_mt then
    	file_mt.__index.awrite=file_mt.__index.write
    end
 end
+
+return io
