@@ -6,7 +6,7 @@ LDFLAGS=$(DEBUG_FLAGS) $(LD_FLAGS) -ltbb -lpthread -levent -levent_pthreads
       
 LUA=lua
 
-CC=cc
+CC=gcc
 G_PLUS_PLUS=$(CC)
 
 OBJ=  kernel.o \
