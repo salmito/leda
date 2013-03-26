@@ -1,5 +1,5 @@
 package="leda"
-version="0.2.7-1"
+version="0.2.8-1"
 
 source= {
 	url= "git://github.com/Salmito/leda.git",
