@@ -84,9 +84,26 @@ end
 -- Creates a new stage and returns it
 -- param:   't': table used to hold the stage representation
 -----------------------------------------------------------------------------
-function t.new_stage(t,init,name,bind,serial)
-   local s={}
-   if type(t)=="function" or type(t)=="string" then  -- arg1=handler, arg2=init, arg3=name, ...
+function t.new_stage(...)--t,init,name,bind,serial)
+   local s={...}
+   if type(s[1])=="table" then
+      s=s[1]
+   end
+   if is_stage(s) then
+      local ns={}
+      for k,v in pairs(s) do
+         ns[k]=v
+      end
+      s=ns
+   end
+   s.handler=s.handler or s[1]
+   s.init=s.init or s[2]
+   s.bind=s.bind or s[3]
+   s.serial=s.serial or s.stateful or s[4]
+   s.autostart=s.autostart or s[5]
+   s.pending={}
+   
+   --[[if type(t)=="function" or type(t)=="string" then  -- arg1=handler, arg2=init, arg3=name, ...
       s.handler=t
       s.init=init
       assert(type(s.init)=="function" or type(s.init)=='string' or type(s.init)=="nil",string.format("Stage's init field must be a function or nil",type(s.init)))
@@ -115,24 +132,57 @@ function t.new_stage(t,init,name,bind,serial)
       s.pending={}
       s=setmetatable(s,stage)
       return s
-   end
+   end --]]
 
-   assert(type(s.handler)=="function" or type(s.handler)=="string","Invalid handler type (string or function expected)")
+   assert(type(s.handler)=="function" or type(s.handler)=="string","Invalid handler type (function or string expected)")
+   assert(type(s.init)=="function" or type(s.init)=="string" or s.init==nil,"Invalid init type (function or string expected)")
 
    s=setmetatable(s,stage)
-   local f_handler=s.handler
-   if type(f_handler)=="function" then
-      local upname,env = debug.getupvalue (s.handler, 1)
-      if upname == '_ENV' then
-         debug.setupvalue (s.handler, 1,{})
+   if _ENV then
+      local f_handler=s.handler
+      if type(f_handler)=="function" then
+         local upname,env = debug.getupvalue (s.handler, 1)
+         if upname == '_ENV' then
+            debug.setupvalue (s.handler, 1,{})
+         end
+         s.handler=kernel.encode(s.handler)
+         s.handler_enc=true
+         debug.setupvalue (f_handler, 1,env)
       end
-      s.handler=kernel.encode(s.handler)
-      debug.setupvalue (f_handler, 1,env)
-   else 
-       s.handler=kernel.encode(s.handler)
+      
+      local f_init=s.init
+      if type(f_init)=="function" then
+         local upname,env = debug.getupvalue (s.init, 1)
+         if upname == '_ENV' then
+            debug.setupvalue (s.init, 1,{})
+         end
+         s.init=kernel.encode(s.init)
+         s.init_enc=true
+         debug.setupvalue (f_init, 1,env)
+      end
    end
+
+   if type(s.handler)=="function" then 
+      s.handler=kernel.encode(s.handler)
+      s.handler_enc=true
+   end
+
+   if type(s.init)=="function" then 
+      s.init=kernel.encode(s.init)
+      s.init_enc=true
+   end
+
    
-   if type(s.init)=="function" or type(s.init)=="string" then s.init=kernel.encode(s.init) end
+   if not s.init_enc then
+      s.init=kernel.encode(s.init)
+      s.init_enc=true   
+   end
+
+   if not s.handler_enc then
+      s.handler=kernel.encode(s.handler)
+      s.handler_enc=true 
+   end
+
    
    s.name=s.name or tostring(s)
    s.pending={}

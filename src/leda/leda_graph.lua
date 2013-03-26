@@ -456,6 +456,10 @@ end
 -----------------------------------------------------------------------------
 function index.run(g,...)
    assert(is_graph(g),string.format("Invalid parameter #1 (graph expected, got '%s')",type(g)))
+   do local sum=0
+      for k,v in pairs(g:stages()) do sum=sum+1 break end
+      assert(sum>0,string.format("Error: the graph is empty."))
+   end
    if not g.cluster then
       g:part(g:all()):map(localhost)
    end

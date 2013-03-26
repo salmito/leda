@@ -470,7 +470,12 @@ instance instance_aquire(stage_id s) {
    /* Call the lua_chunk loaded in the luaL_loadbuffer */
 //   dump_stack(ret->L);
    
-   lua_call( ret->L, 0 , 0 );
+   if(lua_pcall( ret->L, 0 , 0, 0)) {
+      const char * err=lua_tostring(ret->L,-1);
+      fprintf(stderr,"Error in call to init function of stage '%s': %s\n",STAGE(s)->name,err);
+      instance_destroy(ret);
+      return NULL;
+   }
    _DEBUG("Instance created for stage '%d' name='%s'\n",(int)s,STAGE(s)->name);
 
    ret->init_time=now_secs();
