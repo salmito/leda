@@ -3,7 +3,7 @@ version="0.2.7-1"
 
 source= {
 	url= "git://github.com/Salmito/leda.git",
-	branch= "0.2.7"
+	branch= "0.2.8"
 }
 
 
