@@ -1,9 +1,9 @@
 package="leda"
-version="0.2.7-1"
+version="0.2.8-1"
 
 source= {
 	url= "git://github.com/Salmito/leda.git",
-	branch= "0.2.7"
+	branch= "0.2.8"
 }
 
 
@@ -24,7 +24,7 @@ dependencies = {
 
 external_dependencies = {
   TBB = { library = "tbb", header="tbb/concurrent_queue.h" },
-  LIBEVENT = { library = "event", header="event2/event.h" },
+  LIBEVENT = { header="event2/event.h" },
 }
 
 build = {
