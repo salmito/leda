@@ -11,10 +11,10 @@
 #define CLUSTER(i) main_graph->cl[i]
 #define PROCESS(i) main_graph->d[i]
 
-typedef size_t stage_id;
-typedef size_t connector_id;
-typedef size_t cluster_id;
-typedef size_t process_id;
+typedef int stage_id;
+typedef int connector_id;
+typedef int cluster_id;
+typedef int process_id;
 
 
 typedef struct {

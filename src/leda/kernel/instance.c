@@ -353,7 +353,7 @@ instance instance_wait(stage_id s) {
  */
 instance instance_aquire(stage_id s) {
    _DEBUG("Instance: Aquiring instance for stage %d\n",(int) s);
-   if(s<0 && s>main_graph->n_s) return NULL; //error: invalid stage
+   if(s>main_graph->n_s) return NULL; //error: invalid stage
 
    instance ret=NULL;
 

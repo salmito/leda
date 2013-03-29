@@ -31,7 +31,7 @@ end
 
 local prod=stage{name="Producer",handler=produce,init=p_init}
 local cons=stage{name="Consumer",handler=consume,init=p_init}
-local sqrt=stage{name="Sqrt",handler=square,init=p_init,serial=true}
+local sqrt=stage{name="Sqrt",handler=square,init=p_init}
 
 
 local g=graph{"Producer-consumer",
