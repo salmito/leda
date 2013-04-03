@@ -89,7 +89,7 @@ end
 -- Load handler function of the stage 
 -----------------------------------------------------------------------------
 --local function handler_str() return stage.__handler end
-__handler=leda.decode(leda.stage.__handler)
+local __handler=leda.decode(leda.stage.__handler)
 if not (type(__handler)=='function' or type(__handler)=='string') then 
    error("Error loading handler function for stage: "..tostring(leda.stage.name).." type:"..type(__handler))
 end
@@ -100,6 +100,8 @@ if type(__handler)=="string" then
 	   error("Error loading handler function for stage "..tostring(leda.stage.name).."': "..tostring(err))
 	end
 end
+
+leda.stage.handler=__handler
 
 -----------------------------------------------------------------------------
 -- Load the stage init function
@@ -126,6 +128,8 @@ if leda.stage.__init and leda.stage.__init~="" then
 	end
 end
 
+
+__handler=leda.stage.handler
 
 -----------------------------------------------------------------------------
 -- Create the main coroutine for the stage handler

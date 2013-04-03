@@ -7,8 +7,8 @@
 -- Declare module and import dependencies
 -----------------------------------------------------------------------------
 local base = _G
-local type,pairs,assert,tostring,setmetatable,getmetatable,error,io,print,loadstring=
-      type,pairs,assert,tostring,setmetatable,getmetatable,error,io,print,loadstring
+--local pairs,assert,tostring,setmetatable,getmetatable,error,io,print,loadstring=
+--      pairs,assert,tostring,setmetatable,getmetatable,error,io,print,loadstring
 local string,table,kernel= string,table,leda.kernel
 local leda_connector = require("leda.leda_connector")
 local is_connector=leda_connector.is_connector
@@ -16,7 +16,7 @@ local new_connector=leda_connector.new_connector
 local dbug=require("leda.debug")
 local dbg = dbug.get_debug("Stage: ")
 local dump = string.dump
-local leda=leda
+--local leda=leda
 
 --module("leda.leda_stage")
 local t={}
@@ -84,7 +84,13 @@ end
 -- Creates a new stage and returns it
 -- param:   't': table used to hold the stage representation
 -----------------------------------------------------------------------------
-function t.new_stage(...)--t,init,name,bind,serial)
+
+-----------------------------------------------------------------------------
+-- Creates a new stage and returns it
+-- param:   't': table used to hold the stage representation
+-----------------------------------------------------------------------------
+
+local function new_stage_t(...)--t,init,name,bind,serial)
    local s={...}
    if type(s[1])=="table" then
       s=s[1]
@@ -103,37 +109,6 @@ function t.new_stage(...)--t,init,name,bind,serial)
    s.autostart=s.autostart or s[5]
    s.pending={}
    
-   --[[if type(t)=="function" or type(t)=="string" then  -- arg1=handler, arg2=init, arg3=name, ...
-      s.handler=t
-      s.init=init
-      assert(type(s.init)=="function" or type(s.init)=='string' or type(s.init)=="nil",string.format("Stage's init field must be a function or nil",type(s.init)))
-      s.name=name
-      s.bind=bind
-      s.serial=serial
-   elseif type(t) == "table" and not is_stage(t) then
-   	if type(t[1])=="string" then
-   		t.name=t.name or t[1]
-   	end
-      s.handler=t.handler
-      assert(type(s.handler)=="function" or type(s.handler=="string"),string.format("Stage's event handler field must be a function (got %s)",type(s.handler)))
-      s.init=t.init
-      assert(type(s.init)=="function" or type(s.init)=='string' or type(s.init)=="nil",string.format("Stage's init field must be a function or nil",type(s.init)))
-      s.name=t.name
-      s.bind=t.bind
-      s.serial=t.serial or t.stateful
-      s.autostart=t.autostart
-   elseif is_stage(t) then
-      s.handler=t.handler
-      if t.init then s.init=t.init end
-      s.bind=t.bind
-      s.serial=t.serial
-      s.name=t.name.."'"
-      s.autostart=t.autostart
-      s.pending={}
-      s=setmetatable(s,stage)
-      return s
-   end --]]
-
    assert(type(s.handler)=="function" or type(s.handler)=="string","Invalid handler type (function or string expected)")
    assert(type(s.init)=="function" or type(s.init)=="string" or s.init==nil,"Invalid init type (function or string expected)")
 
@@ -189,5 +164,45 @@ function t.new_stage(...)--t,init,name,bind,serial)
    return s
 end
 
+function t.new_stage(...) 
+   local s={...}
+   if type(s[1])=='string' and #s==1 then -- stage "name" {...}
+      local name=s[1]
+      return function(...) local s=new_stage_t(...) s.name=name return s end
+   end
+   return new_stage_t(...)
+end
+
+function index:compose(key,consumer)
+   assert(type(key)=='number' or type(key)=='string' or (is_stage(key) and consumer==nil),"Invalid argument #1, only string or number keys are allowed")
+   if is_stage(key) and consumer==nil then key,consumer=1,key end
+   assert(is_stage(consumer), "Invalid argument, stage expected")
+   
+   local producer_init=self.init
+   local consumer_init=consumer.init
+   local consumer_handler=consumer.handler
+   
+   local function new_init()
+      local oldinit=leda.decode(producer_init)
+      if type(oldinit)=='string' then assert(loadstring(oldinit)) end
+      local consinit=leda.decode(consumer_init)
+      if type(consinit)=='string' then assert(loadstring(consinit)) end
+      local conshand=leda.decode(consumer_handler)
+      if type(conshand)=='string' then assert(loadstring(conshand)) end
+      assert(type(conshand)=='function',"Error loading stage handler")
+      local f=function(self,...)
+         _G.print("AE",self,...)
+         conshand(...)
+         return true
+      end
+      leda.output[key].send=f
+      if type(oldinit)=='function' then oldinit() end
+      if type(consinit)=='function' then consinit() end
+      
+   end
+   self.init=kernel.encode(new_init)
+   
+   return self
+end
 
 return t

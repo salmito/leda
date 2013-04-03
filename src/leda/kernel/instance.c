@@ -52,7 +52,7 @@ atomic * number_of_instances;
 queue ready_queue;
 
 /* defining external signal */
-extern SIGNAL_T queue_used_cond;
+//extern SIGNAL_T queue_used_cond;
 
 /* Graph read-only gobal representation of the running graph */
 //g=NULL;
@@ -457,7 +457,7 @@ instance instance_aquire(stage_id s) {
    lua_pushinteger(ret->L,ENDED);   
    lua_setglobal(ret->L,"__end_code");
    /* Push the endcode for this instance, for now is only an integer*/
-   lua_pushinteger(ret->L,YIELDED);   
+   lua_pushinteger(ret->L,NICE);   
    lua_setglobal(ret->L,"__yield_code");
 
    /* load api with assorted functions useful for concurrency*/

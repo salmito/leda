@@ -1,37 +1,39 @@
 require "leda"
 
+local arg={...}
+
+local n = n or tonumber(arg[2]) or 10000
+
 local graph,connector,stage=leda.graph,leda.connector,leda.stage
 
 function produce(seed,interval)
    math.randomseed( seed )
-   local i=0
-   while true do
-       local data=math.random(1,1024)
-       i=i+1
-       local out=leda.get_output(1):send(data,i)
---       print("Produced",data)
+   for i=1,n do
+      local data=math.random(1,1024)
+      assert(leda.send(1,data,i))
+--    print("Produced",data)
       if interval>0 then
          leda.sleep(interval)
       end
    end
 end
 
-function p_init() 
-   math=require "math"
-   string=require "string"
-end
-
-function square(data,i)
-   leda.get_output(1):send(data*data,i)
+function square(data,...)
+   leda.send(1,data*data,...)
 end
 
 function consume(data,i)
-   print(string.format("Data consumed: %d  i='%d'",data,i))
+--   local acc=acc
+   --print(string.format("Data consumed: %d  i='%d' n='%d' %s",data,i,n,tostring(i==n)))
+   if i==n then
+      print('quit')
+      leda.quit()
+   end
 end
 
-local prod=stage{name="Producer",handler=produce,init=p_init}
-local cons=stage{name="Consumer",handler=consume,init=p_init}
-local sqrt=stage{name="Sqrt",handler=square,init=p_init}
+local prod=stage{name="Producer",handler=produce,init="require 'math'"}
+local cons=stage{name="Consumer",handler=consume,init="require 'string'"}
+local sqrt=stage{name="Sqrt",handler=square}
 
 
 local g=graph{"Producer-consumer",
@@ -42,4 +44,6 @@ local g=graph{"Producer-consumer",
 
 prod:send(os.time(),tonumber(arg[1]) or 0.1)
 
-g:run{maxpar=4}
+local th = th or tonumber(arg[3]) or leda.kernel.cpu()
+
+g:run{maxpar=16,controller=leda.controller.fixed_thread_pool.get(th)}
