@@ -173,36 +173,4 @@ function t.new_stage(...)
    return new_stage_t(...)
 end
 
-function index:compose(key,consumer)
-   assert(type(key)=='number' or type(key)=='string' or (is_stage(key) and consumer==nil),"Invalid argument #1, only string or number keys are allowed")
-   if is_stage(key) and consumer==nil then key,consumer=1,key end
-   assert(is_stage(consumer), "Invalid argument, stage expected")
-   
-   local producer_init=self.init
-   local consumer_init=consumer.init
-   local consumer_handler=consumer.handler
-   
-   local function new_init()
-      local oldinit=leda.decode(producer_init)
-      if type(oldinit)=='string' then assert(loadstring(oldinit)) end
-      local consinit=leda.decode(consumer_init)
-      if type(consinit)=='string' then assert(loadstring(consinit)) end
-      local conshand=leda.decode(consumer_handler)
-      if type(conshand)=='string' then assert(loadstring(conshand)) end
-      assert(type(conshand)=='function',"Error loading stage handler")
-      local f=function(self,...)
-         _G.print("AE",self,...)
-         conshand(...)
-         return true
-      end
-      leda.output[key].send=f
-      if type(oldinit)=='function' then oldinit() end
-      if type(consinit)=='function' then consinit() end
-      
-   end
-   self.init=kernel.encode(new_init)
-   
-   return self
-end
-
 return t
