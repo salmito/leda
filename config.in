@@ -4,7 +4,5 @@ LIB_INSTALL_PATH=/usr/local/lib/lua/5.1
 LUA_INSTALL_PATH_5_2=/usr/local/share/lua/5.2
 LIB_INSTALL_PATH_5_2=/usr/local/lib/lua/5.2
 
-LUA_5_1_INC=/usr/include/lua5.1
-LUA_5_2_INC=/usr/include/lua5.2
-
-LD_FLAGS=''
+LUA_INCDIR=/usr/include/lua5.1
+LUA_5_2_INCDIR=/usr/include/lua5.2
