@@ -1,8 +1,13 @@
+#Lua install paths
 LUA_INSTALL_PATH=/usr/local/share/lua/5.1
 LIB_INSTALL_PATH=/usr/local/lib/lua/5.1
 
+#Lua include directory
+LUA_INCDIR=/usr/include/lua5.1
+
+#Lua 5.2 install paths
 LUA_INSTALL_PATH_5_2=/usr/local/share/lua/5.2
 LIB_INSTALL_PATH_5_2=/usr/local/lib/lua/5.2
 
-LUA_INCDIR=/usr/include/lua5.1
+#Lua 5.2 include directory
 LUA_5_2_INCDIR=/usr/include/lua5.2
