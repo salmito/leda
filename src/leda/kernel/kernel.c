@@ -45,7 +45,7 @@ THE SOFTWARE.
 
 #include <event2/event.h>
 
-#define __VERSION "0.2.8"
+#define __VERSION "0.2.9-unstable"
 
 #define CONNECTOR_TIMEOUT 2.0
 
@@ -449,7 +449,7 @@ static void set_leda_info (lua_State *L) {
  */
 int luaopen_leda_kernel (lua_State *L) {
 	/* Leda's kernel library functions */
-	struct luaL_reg leda_funcs[] = {
+	struct luaL_Reg leda_funcs[] = {
 	   {"run", leda_run},
   	   {"to_pointer", leda_to_pointer},
   	   {"encode", mar_encode},

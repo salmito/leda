@@ -98,9 +98,10 @@ char const * get_return_status_name(int status) {
          return "PCALL_ERROR";
       case EMMIT_REMOTE:
          return "EMMIT_REMOTE";
-      case YIELDED:
+      case NICE:
+         return "NICE";
       default:
-         return "YIELDED";
+         return "UNKNOWN";
    }
    return "UNKNOWN";
 }
@@ -169,7 +170,7 @@ void thread_resume_instance(instance i) {
          event_sleep(i);
          break;
          
-      case YIELDED: 
+      case NICE: 
          //handler coroutine yielded, put it again in the ready queue
          //It will be resumed with the value 'true' as return value
          emmit_self(i);

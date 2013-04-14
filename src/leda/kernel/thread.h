@@ -30,16 +30,17 @@ enum return_status{
    FILE_IO,
    SLEEP,
    PCALL_ERROR,
-   YIELDED
+   NICE
 };
 
 extern atomic pool_size;
+
+//#define luaL_reg luaL_Reg
 
 char const * get_return_status_name(int status);
 /* lua 5.1 to 5.2 compatibility macros */
 #if LUA_VERSION_NUM > 501
    #define lua_objlen lua_rawlen
-   #define luaL_reg luaL_Reg
    #define REGISTER_LEDA(L,libname,funcs) \
            lua_newtable(L); \
            luaL_setfuncs (L,funcs,0); 
@@ -54,7 +55,7 @@ char const * get_return_status_name(int status);
 #else
    extern MUTEX_T debug_lock;
    #define _DEBUG(...) fprintf(stdout,"%s: %d (%s):",__FILE__,__LINE__,__func__); fprintf(stdout,__VA_ARGS__); 
-   void dump_stack( lua_State* L );
+   void dump_stack(lua_State* L);
 #endif
 
 void thread_init(size_t ready_queue_capacity);

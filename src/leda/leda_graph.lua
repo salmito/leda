@@ -90,10 +90,13 @@ function index.add(self,c)
 end
 index.add_connector=add
   
-function t.graph(...)
+local function new_graph(...)
    local p={...}
-   if type(p[1]=='table') and not is_graph(p[1]) then
-      p=p[1]
+
+   if type(p[1])=='table' then
+      if not is_graph(p[1]) then
+         p=p[1]
+      end
    end
    
    if type(p[1])=="string" then
@@ -129,6 +132,15 @@ function t.graph(...)
    return gr
 end
 
+function t.graph(...)
+   local g={...}
+   if type(g[1])=='string' and #g==1 then -- stage "name" {...}
+      local name=g[1]
+      return function(...) local g=new_graph(...) g.name=name return g end
+   end
+   return new_graph(...)
+end
+
 index.is_graph=is_graph
 
 ----------------------------------------------------------------------------
@@ -147,6 +159,7 @@ function index.set_start(g,s)
    end
    local c=new_connector(nil,'start',s)
    g:add(c)
+   g.start=s
    return true
 end
 
