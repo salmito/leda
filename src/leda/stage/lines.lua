@@ -60,8 +60,8 @@ stage.test=function(file)
    local s=leda.stage(stage)
    s:send(file or '/etc/passwd')
    local g=leda.graph{
-      s:connect('line',leda.stage("print(...)")),
-      s:connect('EOF',leda.stage('leda.quit()'))
+      s:connect('line',leda.stage'printer'("print(...)")),
+      s:connect('EOF',leda.stage'quitter'('leda.quit()'))
    }
    --g:plot()
    g:run()

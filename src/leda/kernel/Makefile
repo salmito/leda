@@ -1,9 +1,8 @@
-LUA_INC_FLAGS=/usr/include/lua5.1
-
-INCFLAGS=-I$(LUA_INC_FLAGS)
-CFLAGS=-fPIC $(INCFLAGS) -Wall -O2 $(DEBUG_FLAGS)
-LDFLAGS=$(DEBUG_FLAGS) $(LD_FLAGS) -ltbb -lpthread -levent -levent_pthreads
-      
+INCFLAGS=-I$(LUA_INCDIR)
+CFLAGS=-fPIC $(INCFLAGS) -Wall $(EXTRA_FLAGS) -O2
+TBBLIB_FLAG=-ltbb
+LDFLAGS=$(EXTRA_FLAGS) -lpthread -levent -levent_pthreads
+     
 LUA=lua
 
 CC=gcc
@@ -15,30 +14,28 @@ OBJ=  kernel.o \
 		mutex.o \
       thread.o \
       event.o \
-      stats.o \
       extra/threading.o \
       extra/leda-io.o \
       extra/lmarshal.o \
       
-ifdef LOCK
+ifdef DISABLE_TBB
 OBJ+= queue.o \
       atomic.o    
 else
 OBJ+= tbb_queue.o \
       tbb_atomic.o 
+LDFLAGS+=$(TBBLIB_FLAG)
 endif
 HEADERS=*.h extra/*.h
 
-ifdef STATS_OFF
+ifdef DISABLE_STATS
    CFLAGS+=-DSTATS_OFF
-endif
-
-
-ifeq ($(MINGW32),true)
-   _SO=.dll
+   OBJ+=stats.o
 else
-   _SO=.so
+   OBJ+=stats.o
 endif
+
+_SO=.so
 
 MODULE=../kernel$(_SO)
 

@@ -10,24 +10,26 @@ LIB_FILES=$(SRC_DIR)/kernel.so
 all: 5.1
 
 5.1: 
-	cd $(SRC_DIR)/kernel && make LUA_INC_FLAGS="$(LUA_5_1_INC)" && cd -
+	cd $(SRC_DIR)/kernel && make LUA_INCDIR="$(LUA_INCDIR)"
 
 5.2:
-	cd $(SRC_DIR)/kernel && make LUA=lua5.2 LUA_INC_FLAGS="$(LUA_5_2_INC)" && cd -
+	cd $(SRC_DIR)/kernel && make LUA_INCDIR="$(LUA_5_2_INCDIR)"
 
-debug: 5.1-debug
-
-5.1-debug: 
-	cd $(SRC_DIR)/kernel && make all LUA_INC_FLAGS="$(LUA_5_1_INC)" DEBUG_FLAGS="-ggdb -DDEBUG" && cd -
+debug:
+	cd $(SRC_DIR)/kernel && make EXTRA_FLAGS="-ggdb -DDEBUG" LUA_INCDIR="$(LUA_INCDIR)"
 
 5.2-debug: 
-	cd $(SRC_DIR)/kernel && make all LUA_INC_FLAGS="$(LUA_5_2_INC)" DEBUG_FLAGS="-ggdb -DDEBUG" && cd -
+	cd $(SRC_DIR)/kernel && make LUA_INCDIR="$(LUA_5_2_INCDIR)" EXTRA_FLAGS="-ggdb -DDEBUG"
+
+opt:
+	cd $(SRC_DIR)/kernel && make LUA_INCDIR="$(LUA_INCDIR)" EXTRA_FLAGS="-Wall -s -O9 -msse4.2 -ffast-math -ftree-vectorize -funroll-loops"
 
 clean:
-	cd $(SRC_DIR)/kernel && make clean && cd - 
+	cd $(SRC_DIR)/kernel && make clean 
 
 ultraclean:
-	cd $(SRC_DIR)/kernel && make ultraclean && cd - && rm -f `find -iname *~`
+	cd $(SRC_DIR)/kernel && make ultraclean
+	cd $(SRC_DIR) && rm -f `find -iname *~`
 
 install5.2: 5.2
 	make install LUA_INSTALL_PATH=$(LUA_INSTALL_PATH_5_2) LIB_INSTALL_PATH=$(LIB_INSTALL_PATH_5_2)
@@ -35,14 +37,11 @@ install5.2: 5.2
 uninstall5.2: 
 	make uninstall LUA_INSTALL_PATH=$(LUA_INSTALL_PATH_5_2) LIB_INSTALL_PATH=$(LIB_INSTALL_PATH_5_2)
 
-windows32:
-	cd $(SRC_DIR)/kernel && make LUA_INC_FLAGS="$(LUA_5_1_INC)" MINGW32="true" && cd -
+install-both:
+	make clean; make install; make clean; make install5.2
 
-install: install5.1
 
-uninstall: uninstall5.1
-
-install5.1: all
+install: all
 	install $(SRC_DIR)/../leda.lua $(LUA_INSTALL_PATH)
 	mkdir -p $(LUA_INSTALL_PATH)/leda
 	mkdir -p $(LUA_INSTALL_PATH)/leda/utils
@@ -56,7 +55,7 @@ install5.1: all
 	mkdir -p $(LIB_INSTALL_PATH)/leda/utils
 	install $(LIB_FILES) $(LIB_INSTALL_PATH)/leda
 	
-uninstall5.1:
+uninstall:
 	rm -f $(LUA_INSTALL_PATH)/leda.lua
 	rm -rf $(LUA_INSTALL_PATH)/leda
 	rm -rf $(LIB_INSTALL_PATH)/leda
