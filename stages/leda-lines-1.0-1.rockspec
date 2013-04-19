@@ -1,7 +1,7 @@
 package = 'leda-lines'
 version = '1.0-1'
 source  = {
-    url = 'lines.lua'
+    url = 'https://github.com/Salmito/leda/raw/unstable/stages/lines.lua'
 }
 description = {
   summary  = [[Receives a filename as input and outputs 
