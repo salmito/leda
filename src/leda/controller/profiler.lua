@@ -7,7 +7,7 @@
 -- Declare module and import dependencies
 -----------------------------------------------------------------------------
 local leda=leda or require "leda"
-local kernel=require "leda.kernel"
+local kernel=leda.kernel
 local debug=require("leda.debug")
 local dbg = debug.get_debug("Controller: Profiler: ")
 local print,loadstring,pcall,os,string,pairs,ipairs,tostring,io,assert,table=

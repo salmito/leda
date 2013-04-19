@@ -105,6 +105,8 @@ int serialize_require(lua_State * L) {
 	return 0;
 }
 
+int luaopen_lmemarray(lua_State * L);
+
 static void openlibs(lua_State * L) {
    lua_pushcfunction(L,luaopen_base);
    lua_pcall(L,0,0,0);
@@ -122,6 +124,7 @@ static void openlibs(lua_State * L) {
    registerlib(L,"string", luaopen_string);
    registerlib(L,"math", luaopen_math);
    registerlib(L,"debug", luaopen_debug);   
+   registerlib(L,"lmemarray", luaopen_lmemarray); 
 }
 
 /*Create an empty new lua_state and returns it */

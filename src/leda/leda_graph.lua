@@ -89,29 +89,10 @@ function index.add(self,c)
    return c
 end
 index.add_connector=add
-  
-local function new_graph(...)
-   local p={...}
 
-   if type(p[1])=='table' then
-      if not is_graph(p[1]) then
-         p=p[1]
-      end
-   end
-   
-   if type(p[1])=="string" then
-      p.name=p.name or p[1]
-      table.remove(p,1)
-   end
+local add_table=nil
 
-   local gr = setmetatable(p,graph_metatable)
-   gr.conns={}
-   gr.outputs={}
-   gr.name=gr.name or tostring(gr)
-
-
-   for i, v in pairs(gr) do
-      --if value is a connector, add it to graph
+local function add_item(gr,i,v)
       if i=='start' then
          assert(is_stage(gr.start),string.format("Graph 'start' field must be a stage (got %s)",type(gr.start)))
          local c=new_connector(nil,'start',gr.start)
@@ -124,9 +105,41 @@ local function new_graph(...)
          assert(is_connector(c),string.format("Connector constructor returned an invalid value (%s)",type(c)))
          gr[i]=c
          gr:add(c)
+      elseif type(v)=='table' then
+      	add_table(gr,v)
       else --ignore other values
          dbg("WARNING: Ignoring parameter of graph '%s' (type %s)\n",gr.name,type(v))
       end
+end
+  
+add_table=function (gr,t)
+	assert(not is_stage(t),"Error, trying to add a stage to a graph without a connector")
+	for i,v in ipairs(t) do
+		add_item(gr,i,v)
+	end
+end
+ 
+local function new_graph(...)
+   local p={...}
+
+   if type(p[1])=='table' then
+      p=p[1]
+   end
+   
+   if type(p[1])=="string" then
+--      p.name=p.name or p[1]
+      table.remove(p,1)
+   end
+
+   local gr = setmetatable(p,graph_metatable)
+   gr.conns={}
+   gr.outputs={}
+   gr.name=gr.name or tostring(gr)
+
+
+   for i, v in pairs(gr) do
+      --if value is a connector, add it to graph
+		add_item(gr,i,v)
    end
    
    return gr

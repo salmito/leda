@@ -15,6 +15,7 @@ OBJ=  kernel.o \
       thread.o \
       event.o \
       extra/threading.o \
+      extra/memarray.o \
       extra/leda-io.o \
       extra/lmarshal.o \
       
@@ -37,7 +38,7 @@ endif
 
 _SO=.so
 
-MODULE=../kernel$(_SO)
+MODULE=../leda/kernel$(_SO)
 
 all: $(MODULE)
 
@@ -62,5 +63,5 @@ clean:
 	rm -f *.o extra/*.o instance.lo
 	
 ultraclean: clean
-	rm -f ../kernel.so ../kernel.dll
+	rm -f ../leda/kernel.so
 

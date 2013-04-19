@@ -480,7 +480,8 @@ int luaopen_leda_kernel (lua_State *L) {
 	
    /* Initialize some debug related variables and the thread subsystem */
    if(initialized) {
-   	return 0;
+   	lua_getglobal(L,"leda");
+   	return 1;
    }
    initialized=TRUE;
    #ifdef DEBUG

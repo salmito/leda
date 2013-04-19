@@ -8,7 +8,6 @@
 -----------------------------------------------------------------------------
 local base = _G
 local debug=require("leda.debug")
-local kernel=require("leda.kernel")
 local dbg = debug.get_debug("Controller: Interactive: ")
 local has_plot,plot=pcall(require,'leda.utils.plot')
 local table,leda=table,leda
@@ -17,9 +16,9 @@ local print,loadstring,pcall,os,string,pairs,ipairs,tostring,io,assert=
 local read=io.read
 local write=io.write
 local stderr=io.stderr
-local prompt="leda-"..kernel._VERSION..'> '
 kernel=leda.kernel
-local kernel=kernel
+local kernel=leda.kernel
+local prompt="leda-"..kernel._VERSION..'> '
 leda.rawsend=kernel.send
 local default_thread_pool_size=kernel.cpu()
 
