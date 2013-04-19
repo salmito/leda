@@ -43,18 +43,6 @@ stage.serial=false --Not serial
 
 stage.name="Line feeder"
 
-stage.description=[[
-Receives a filename as input and outputs 
-each line of file to the 'line' port along with a line counter and the filename.
-EOF event is emmited at the end of file.
-
-Uses asynchronous IO
-         
-Requires 'line' port to be connected
-]]
-
-stage.version='0.1'
-
 stage.test=function(file)
    local utils=require 'leda.utils'
    local s=leda.stage(stage)
