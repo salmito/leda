@@ -3,18 +3,12 @@
 -- Author: Tiago Salmito, Noemi Rodriguez, Ana Lucia de Moura
 -----------------------------------------------------------------------------
 
------------------------------------------------------------------------------
--- Declare module and import dependencies
------------------------------------------------------------------------------
 local base = _G
 local debug=require("leda.debug")
-local dbg = debug.get_debug("Controller: Fixed-thread: ")
+local dbg = debug.get_debug("Controller: Fixed-thread-pool: ")
 local kernel=leda.kernel
 local table,ipairs,pairs,print=table,ipairs,pairs,print
-local default_thread_pool_size=10
-
-
---module("leda.controller.fixed_thread_pool")
+local default_thread_pool_size=kernel.cpu()
 
 local t={}
 
@@ -36,23 +30,6 @@ local function get_init(n)
 end
 t.init=get_init(default_thread_pool_size)
 
---[[function event_pushed(timedout,stats)
-   local ps=kernel.thread_pool_size()
-   local rs=kernel.ready_queue_size()
-   local rc=kernel.ready_queue_capacity()
-   print("Write happened",timedout,ps,rs,rc)
-   if stats then
-   for k,v in ipairs(stats) do 
-      print(k)
-      for k2,v2 in pairs(v) do
-         print(k2,v2)
-      end
-   end
-
-   end
-end--]]
-
-
 function t.finish()
    for i=1,#th do
       th[i]:kill()
@@ -65,7 +42,7 @@ function t.get(n)
 end
 
 if leda and leda.controller then
-   leda.controller.fixed_thread_pool=t
+   leda.controller.thread_pool=t
 end
 
 return t

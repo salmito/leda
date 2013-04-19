@@ -1,5 +1,5 @@
 require "leda"
-require "leda.controller.fixed_thread_pool"
+require "leda.controller.thread_pool"
 
 local stage,graph=leda.stage,leda.graph
 
@@ -18,10 +18,8 @@ wait_client=stage{
    end,
    bind=function (out)
       assert(out['Client socket'],"'Client socket' port bust be connected")
-      assert(out['Client socket'].type==leda.couple,"Stages '"..
-             tostring(out['Client socket'].producer).."' and '"..tostring(out['Client socket'].consumer)..
-             "' must be coupled")
    end,
+   autostart=port or 4000,
    name="wait client"
 }
 
@@ -61,11 +59,7 @@ local_echo=stage{
 }
 
 g=graph{read_request:connect("Line sent",local_echo),
-wait_client:connect("Client socket",read_request,leda.couple)
+wait_client:connect("Client socket",read_request)
 }
 
-wait_client:send(43)
-
---g:part(wait_client+read_request,local_echo):map("localhost","localhost:7777")
---g:plot()
-g:run{controller=leda.controller.fixed_thread_pool.get(1)}
+g:run{controller=leda.controller.singlethread}

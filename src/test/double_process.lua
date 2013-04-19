@@ -1,7 +1,5 @@
-local exec=[[lua -e "profile_output='f2.csv' profiler_resolution=0.1" -l leda -e "leda.start{port=8888,controller=require 'leda.controller.profiler'}"&]]
+local exec=[[lua -l leda -e "leda.start{port=8888,controller=require 'leda.controller.thread_pool'}"&]]
 os.execute(exec)
-profile_output='f1.csv'
-profiler_resolution=0.1
 require 'leda'
 leda.kernel.sleep(1)
 
@@ -33,8 +31,6 @@ s1:send(1)
 
 local g=leda.graph{s1:connect(1,s2)}
 
---g:part(s2,s1):map('localhost','localhost:8888')
+g:part(s2,s1):map('localhost','localhost:8888')
 
-
-
-g:run{controller=require "leda.controller.profiler",maxpar=4}
+g:run{maxpar=leda.kernel.cpu()}
