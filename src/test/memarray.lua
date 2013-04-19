@@ -1,4 +1,4 @@
-local exec=[[lua5.2 -l leda -e "leda.start{port=8888,controller=require 'leda.controller.fixed_thread_pool'.get(4)}"&]]
+local exec=[[lua -l leda -e "leda.start{port=8888,controller=require 'leda.controller.fixed_thread_pool'.get(4)}"&]]
 os.execute(exec)
 require 'leda'
 leda.kernel.sleep(1)
