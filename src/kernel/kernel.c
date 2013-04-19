@@ -45,7 +45,7 @@ THE SOFTWARE.
 
 #include <event2/event.h>
 
-#define __VERSION "0.2.9"
+#define __VERSION "0.3.0-alpha"
 
 #define CONNECTOR_TIMEOUT 2.0
 
