@@ -45,10 +45,8 @@ install: all
 	install $(SRC_DIR)/../leda.lua $(LUA_INSTALL_PATH)
 	mkdir -p $(LUA_INSTALL_PATH)/leda
 	mkdir -p $(LUA_INSTALL_PATH)/leda/utils
-	mkdir -p $(LUA_INSTALL_PATH)/leda/stage
 	mkdir -p $(LUA_INSTALL_PATH)/leda/controller
 	install $(SRC_DIR)/controller/*.lua $(LUA_INSTALL_PATH)/leda/controller/
-	install $(SRC_DIR)/stage/*.lua $(LUA_INSTALL_PATH)/leda/stage/
 	install $(SRC_DIR)/utils/*.lua $(LUA_INSTALL_PATH)/leda/utils/
 	install $(LUA_FILES) $(LUA_INSTALL_PATH)/leda
 	mkdir -p $(LIB_INSTALL_PATH)/leda
