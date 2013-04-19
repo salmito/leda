@@ -46,4 +46,4 @@ prod:send(os.time(),tonumber(arg[1]) or 0.1)
 
 local th = th or tonumber(arg[3]) or leda.kernel.cpu()
 
-g:run{maxpar=16,controller=leda.controller.fixed_thread_pool.get(th)}
+g:run{maxpar=16,controller=leda.controller.thread_pool.get(th)}

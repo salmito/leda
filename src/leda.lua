@@ -7,14 +7,14 @@ module "leda"
 
 -- Author: Tiago Salmito, Noemi Rodriguez, Ana Lucia de Moura
 
-local t={}
+local t=type(leda)=='table' and leda or {}
 --Define main global variable leda with methods
 leda=t
 
 --Table to hold connectors
 t.controller={}
 
-t.kernel=assert(require("leda.kernel"))
+t.kernel=t.kernel or assert(require("leda.kernel"))
 t._VERSION=t.kernel._VERSION
 t.debug=require("leda.debug")
 
@@ -43,6 +43,9 @@ t.leda_graph=leda_graph
 t.connect=leda_stage.connect
 t.process=process
 
+function leda.require(stage)
+	return assert(is_stage(require(stage)))
+end
 
 local print,pairs=print,pairs
 

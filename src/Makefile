@@ -10,26 +10,26 @@ LIB_FILES=$(SRC_DIR)/kernel.so
 all: 5.1
 
 5.1: 
-	cd $(SRC_DIR)/kernel && make LUA_INCDIR="$(LUA_INCDIR)"
+	cd kernel && make LUA_INCDIR="$(LUA_INCDIR)"
 
 5.2:
-	cd $(SRC_DIR)/kernel && make LUA_INCDIR="$(LUA_5_2_INCDIR)"
+	cd kernel && make LUA_INCDIR="$(LUA_5_2_INCDIR)"
 
 debug:
-	cd $(SRC_DIR)/kernel && make EXTRA_FLAGS="-ggdb -DDEBUG" LUA_INCDIR="$(LUA_INCDIR)"
+	cd kernel && make EXTRA_FLAGS="-ggdb -DDEBUG" LUA_INCDIR="$(LUA_INCDIR)"
 
 5.2-debug: 
-	cd $(SRC_DIR)/kernel && make LUA_INCDIR="$(LUA_5_2_INCDIR)" EXTRA_FLAGS="-ggdb -DDEBUG"
+	cd kernel && make LUA_INCDIR="$(LUA_5_2_INCDIR)" EXTRA_FLAGS="-ggdb -DDEBUG"
 
 opt:
-	cd $(SRC_DIR)/kernel && make LUA_INCDIR="$(LUA_INCDIR)" EXTRA_FLAGS="-Wall -s -O9 -msse4.2 -ffast-math -ftree-vectorize -funroll-loops"
+	cd kernel && make LUA_INCDIR="$(LUA_INCDIR)" EXTRA_FLAGS="-Wall -s -O9 -msse4.2 -ffast-math -ftree-vectorize -funroll-loops"
 
 clean:
-	cd $(SRC_DIR)/kernel && make clean 
+	cd kernel && make clean 
 
 ultraclean:
-	cd $(SRC_DIR)/kernel && make ultraclean
-	cd $(SRC_DIR) && rm -f `find -iname *~`
+	cd kernel && make ultraclean
+	rm -f `find -iname *~`
 
 install5.2: 5.2
 	make install LUA_INSTALL_PATH=$(LUA_INSTALL_PATH_5_2) LIB_INSTALL_PATH=$(LIB_INSTALL_PATH_5_2)
@@ -45,14 +45,11 @@ install: all
 	install $(SRC_DIR)/../leda.lua $(LUA_INSTALL_PATH)
 	mkdir -p $(LUA_INSTALL_PATH)/leda
 	mkdir -p $(LUA_INSTALL_PATH)/leda/utils
-	mkdir -p $(LUA_INSTALL_PATH)/leda/stage
 	mkdir -p $(LUA_INSTALL_PATH)/leda/controller
 	install $(SRC_DIR)/controller/*.lua $(LUA_INSTALL_PATH)/leda/controller/
-	install $(SRC_DIR)/stage/*.lua $(LUA_INSTALL_PATH)/leda/stage/
 	install $(SRC_DIR)/utils/*.lua $(LUA_INSTALL_PATH)/leda/utils/
 	install $(LUA_FILES) $(LUA_INSTALL_PATH)/leda
 	mkdir -p $(LIB_INSTALL_PATH)/leda
-	mkdir -p $(LIB_INSTALL_PATH)/leda/utils
 	install $(LIB_FILES) $(LIB_INSTALL_PATH)/leda
 	
 uninstall:

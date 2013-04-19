@@ -25,7 +25,8 @@ local magicbyte='\027'
 local default_controller=require("leda.controller.default")
 
 --preload some controllers
-require('leda.controller.fixed_thread_pool')
+require('leda.controller.thread_pool')
+require('leda.controller.singlethread')
 require('leda.controller.profiler')
 
 --module("leda.process")

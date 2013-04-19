@@ -1,5 +1,0 @@
-v4l-lua is a small library binding V4L2 CAMERA API to Lua. 
-See the example "capture.lua" to see how easy is to capture from V4L2 cameras :D
-To compile v4l-lua, you'll need the v4lconvert and Lua development files.
-
-WARNING: THIS LIBRARY STILL IS IN ALPHA STAGE! Plese, report bugs ;)
