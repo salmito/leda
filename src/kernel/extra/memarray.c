@@ -33,6 +33,11 @@
 #define mem_type(m)        ((m)->flags & MEMARRAY_TYPE_MASK)
 #define mem_inherited(m)   ((m)->flags & MEMARRAY_INHERITED)
 
+#if LUA_VERSION_NUM > 501
+	#define luaL_putchar luaL_addchar
+	#define luaL_openlib(L, n, r, p) luaL_setfuncs (L,r,0)
+#endif
+
 typedef struct {
    char *name;
    int   size;
@@ -76,14 +81,14 @@ static int get_memtype(const char * typename)
 static const void * check_lightuserdata(lua_State *L, int n)
 {
    if (lua_type(L,n) != LUA_TLIGHTUSERDATA)
-      luaL_typerror(L, n, "lightuserdata");
+      luaL_error(L, "lightuserdata expected");
    return (const void *) lua_touserdata(L, n);
 }
 
 static memarray_t *memarray_get(lua_State * L, int i)
 {
    if (luaL_checkudata(L, i, MYTYPE) == NULL)
-      luaL_typerror(L, i, MYTYPE);
+      luaL_error(L,"Memarray userdata expected");
    memarray_t *m=lua_touserdata(L, i);
    if (!mem_inherited(m) && m->data==NULL){
 		luaL_error(L,"Data was invalidated");
@@ -367,7 +372,7 @@ static int Lfrom_ptr(lua_State *L) {
 static int L__gc(lua_State *L)
 {
    if (luaL_checkudata(L, 1, MYTYPE) == NULL)
-      luaL_typerror(L, 1, MYTYPE);
+      luaL_error(L,"Memarray userdata expected");
    memarray_t *m=lua_touserdata(L, 1);
    /*
    fprintf(stderr, "invoking __gc for ");
@@ -538,7 +543,7 @@ static int Ltype(lua_State *L) {
    return 1;
 }
 
-static const luaL_reg reg_memarray[] =
+static const luaL_Reg reg_memarray[] =
 {
    { "__call",    L__call  },
    { "sizeof",    Lsizeof  },
@@ -547,7 +552,7 @@ static const luaL_reg reg_memarray[] =
    { NULL,        NULL     }
 };
 
-static const luaL_reg reg_memarray_ptr[] =
+static const luaL_Reg reg_memarray_ptr[] =
 {
    { "__index",      L__index    },
    { "__newindex",   L__newindex },
