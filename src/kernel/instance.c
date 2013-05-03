@@ -412,13 +412,13 @@ instance instance_aquire(stage_id s) {
    lua_settable(ret->L,-3); //Set __init
    */
    //Push the init and handler chunks into the table
-   lua_pushliteral(ret->L,"__init"); //key
-   lua_pushlstring (ret->L, STAGE(s)->init, STAGE(s)->init_len); //value
+   lua_pushliteral(ret->L,"__env"); //key
+   lua_pushlstring (ret->L, STAGE(s)->env, STAGE(s)->env_len); //value
    lua_settable(ret->L,-3); //Set __init
    
-   lua_pushliteral(ret->L,"__handler"); //key
-   lua_pushlstring (ret->L, STAGE(s)->handler, STAGE(s)->handler_len); //value
-   lua_settable(ret->L,-3); //Set __handler
+//   lua_pushliteral(ret->L,"__handler"); //key
+//   lua_pushlstring (ret->L, STAGE(s)->handler, STAGE(s)->handler_len); //value
+//   lua_settable(ret->L,-3); //Set __handler
    
    //push output table __output[id]={sendf,{ids}}
    lua_pushliteral(ret->L,"__output"); //key
@@ -477,7 +477,7 @@ instance instance_aquire(stage_id s) {
 //   register_mutex_api(ret->L);
    register_marshal_api(ret->L);
 
-   lua_setglobal(ret->L,"leda")
+   lua_setglobal(ret->L,"leda");
    /* Call the lua_chunk loaded in the luaL_loadbuffer */
    dump_stack(ret->L);
    

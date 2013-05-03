@@ -30,6 +30,11 @@ for key,connector in pairs(stage.__output) do
    c.send=function(self,...) return self.sendf(c.consumer,c.id,...) end
    leda.output[key]=c
 end
+local stage_env=leda.decode(leda.stage.__env)
+setmetatable(stage_env,{__index=_G})
+leda.stage.__handler=stage_env.handler
+leda.stage.__init=stage_env.init
+
 local __handler=leda.decode(leda.stage.__handler)
 if not (type(__handler)=='function' or type(__handler)=='string') then 
    error("Error loading handler function for stage: "..tostring(leda.stage.name).." type:"..type(__handler))
@@ -56,6 +61,16 @@ if leda.stage.__init and leda.stage.__init~="" then
            debug.setupvalue (init, 1,_ENV)
          end
       end
+      
+		if setfenv then       
+			setfenv(init,stage_env)
+		else
+		local upname,old_env = debug.getupvalue (init, 1)
+			if upname == '_ENV' then
+		      debug.setupvalue (init, 1,stage_env)
+		   end
+		end
+
 	   local ok,err=init() 
 	end
 end
@@ -65,10 +80,20 @@ if not setfenv then
    debug=require('debug')
 end
 local coroutine=coroutine
+local env=setmetatable({},{__index=stage_env})
+if setfenv then       
+	setfenv(stage.handler,env)
+else
+local upname,old_env = debug.getupvalue (stage.handler, 1)
+	if upname == '_ENV' then
+      debug.setupvalue (stage.handler, 1,env)
+   end
+end
 local function main_coroutine()
    while true do
+      stage.handler(coroutine.yield(__end_code_l))
 		if not stage.serial then
-         local env=setmetatable({},{__index=_G})
+         env=setmetatable({},{__index=stage_env})
          --clean environment --DISABLED on lua 5.2
          if setfenv then       
             setfenv(stage.handler,env)
@@ -79,7 +104,6 @@ local function main_coroutine()
             end
          end
    	end
-      stage.handler(coroutine.yield(__end_code_l))
    end 
 end
 handler=coroutine.wrap(main_coroutine)

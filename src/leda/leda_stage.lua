@@ -108,6 +108,7 @@ local function new_stage_t(...)--t,init,name,bind,serial)
    s.serial=s.serial or s.stateful or s[4]
    s.autostart=s.autostart or s[5]
    s.pending={}
+   s[1],s[2],s[3],s[4],s[5]=nil
    
    assert(type(s.handler)=="function" or type(s.handler)=="string","Invalid handler type (function or string expected)")
    assert(type(s.init)=="function" or type(s.init)=="string" or s.init==nil,"Invalid init type (function or string expected)")

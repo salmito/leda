@@ -31,6 +31,7 @@ THE SOFTWARE.
 
 #include "graph.h"
 #include "thread.h"
+#include "extra/lmarshal.h"
 
 graph main_graph;
 
@@ -275,7 +276,20 @@ graph build_graph_representation(lua_State *L, int index, graph g) {
       s->name_len=len;
       lua_pop(L,1); //pop the name field
       
-      lua_getfield (L, -2, "handler"); //push the handler field of stage
+      lua_pushcfunction(L,mar_encode);
+		lua_pushvalue(L,-3);
+		lua_pushnil(L);
+      lua_pushboolean(L,TRUE);
+      lua_call(L,3,1);
+		size_t llen=0;
+      str=lua_tolstring(L, -1, &llen); //verify if it's a string
+      char * senv=malloc(llen+1);
+      memcpy(senv,str,llen);
+      senv[llen]='\0';
+      s->env=senv;
+      s->env_len=llen;
+      lua_pop(L,1); //pop the env field
+/*      lua_getfield (L, -2, "handler"); //push the handler field of stage
       str=lua_tolstring(L, -1, &len); //verify if it's a string
       char * handler=malloc(len+1);
       memcpy(handler,str,len);
@@ -291,7 +305,7 @@ graph build_graph_representation(lua_State *L, int index, graph g) {
       init[len]='\0';
       s->init=init;
       s->init_len=len;
-      lua_pop(L,1); //pop the init field
+      lua_pop(L,1); //pop the init field*/
       
       lua_getfield (L, index, "get_cluster");
       lua_pushvalue(L,index);
@@ -487,8 +501,9 @@ int graph_destroy(lua_State* L) {
    int i;
    for(i=0;i<g->n_s;i++) {
       NULL_SAFE_FREE(g->s[i]->name);
-      NULL_SAFE_FREE(g->s[i]->handler);
-      NULL_SAFE_FREE(g->s[i]->init);
+//      NULL_SAFE_FREE(g->s[i]->handler);
+//      NULL_SAFE_FREE(g->s[i]->init);
+		NULL_SAFE_FREE(g->s[i]->env);
       NULL_SAFE_FREE(g->s[i]->output);
       NULL_SAFE_FREE(g->s[i]);
    }
