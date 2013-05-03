@@ -42,11 +42,8 @@ atomic atomic_new(long int x) {
    return a;
 }
 
+
 long int atomic_value(atomic x) {
-//   MUTEX_LOCK(&x->lock);
-   //long int oldx=x->i;
-//   MUTEX_UNLOCK(&x->lock);
-//   return oldx;
    return x->i;
 }
 

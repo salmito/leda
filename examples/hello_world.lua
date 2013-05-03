@@ -1,19 +1,19 @@
 require "leda"
 
-local hello=leda.stage{
+local hello=leda.stage"Hello"{
    handler=function(port)
-      print "Hello"
-      leda.send(1,"World")
-   end
+      print "Hello world"
+      leda.send('quit')
+   end,
+   autostart=true
 }
 
-local world=leda.stage{
-   handler=function(str)
-      print(str)
+local quit=leda.stage{
+   handler=function(...)
+      print('indeed')
       leda.quit()
    end
 }
 
-local g=leda.graph{hello:connect(world)}
-hello:send()
-g:run()
+leda.graph{hello:connect('quit',quit)}
+      :run{controller=leda.controller.singlethread}
