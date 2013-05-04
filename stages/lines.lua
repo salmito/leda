@@ -35,8 +35,8 @@ function stage.init()
    io=require 'leda.utils.io'
 end
 
-function stage.bind(self) 
-   assert(self.line,"File output must be connected")
+function stage.bind(self,out) 
+   assert(out.line,"File output must be connected")
 end
 
 stage.serial=false --Not serial

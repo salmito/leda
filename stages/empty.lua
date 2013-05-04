@@ -2,23 +2,18 @@ require 'leda'
 
 local stage={}
 
-function stage.handler(file,...)
+function stage.handler(...)
    print('stage')
 end
 
 function stage.init()
 end
 
-function stage.bind(self) 
+function stage.bind(self,out,graph) 
 end
 
 stage.serial=false
 
 stage.name="Stage"
-
-stage._DESCRIPTION=[[
-]]
-
-stage._VERSION='0.1'
 
 return leda.stage(stage)

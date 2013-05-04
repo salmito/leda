@@ -15,7 +15,7 @@ local fib=leda.stage"Fibonacci"{
          leda.send('end')
 		end
 	end,
-	bind=function(output,self,graph)
+	bind=function(self,output,graph)
 		assert(#output.value.consumer,"Value output must be connected to someone")
       --print("I'm connected to: ",output.value.consumer)
       graph:add(self:connect('loopback',self))

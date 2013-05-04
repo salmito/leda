@@ -1,10 +1,10 @@
 require "leda"
-require "leda.controller.thread_pool"
 
 local stage,graph=leda.stage,leda.graph
 
 wait_client=stage{
    handler=function(port)
+       require "leda.utils.socket" 
        local server_sock=socket.bind("*",port)
        print("SERVER: Waiting on port >> ",port)
        while true do
@@ -13,10 +13,7 @@ wait_client=stage{
           leda.send('Client socket',cli_sock)
        end
    end, 
-   init=function () 
-      require "leda.utils.socket" 
-   end,
-   bind=function (out)
+   bind=function (self,out)
       assert(out['Client socket'],"'Client socket' port bust be connected")
    end,
    autostart=port or 4000,
@@ -27,8 +24,8 @@ read_request=stage{
    handler=function(cli_sock)
       print("SERVER: Serving client",cli_sock)
       local cli=cli_sock
---      assert(leda.sleep(1))
-      cli:send("Welcome stranger\r\n")
+      leda.sleep(1)
+      cli:send("Welcome stranger, hit enter twice to close connection\r\n")
       local line = cli:receive()
       local last_line=""
       local i=0

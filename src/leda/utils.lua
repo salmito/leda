@@ -150,8 +150,8 @@ utils.get_copy_stage=function (n,cpy_func)
    		   end
 
 		end,
-   		bind=function(self) 
-      		assert(self[1],"Copy must have an output at [1]") 
+   		bind=function(self,out) 
+      		assert(out[1],"Copy must have an output at [1]") 
    		end,
    		name="Event copy ("..tostring(n)..")"
 	}

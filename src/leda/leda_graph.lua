@@ -249,7 +249,7 @@ function index.part(g,...)
 
    for s in pairs(g:stages()) do
       if type(s.bind)=="function" then
-         s.bind(g:get_output(s),s,g)
+         s.bind(s,g:get_output(s),g)
       end
    end
 

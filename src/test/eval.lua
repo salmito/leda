@@ -10,7 +10,7 @@ s1=leda.stage{ name="s1",
       end
    end,
    init=function() require "string" end,
-	bind=function(output)
+	bind=function(self,output)
 		assert(output[1],"default output must be connected")
 	end
 }
