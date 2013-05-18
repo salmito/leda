@@ -75,7 +75,7 @@ function t.on_timer(id)
          local l_e=v.events_pushed-last[1]
          local l_t=kernel.gettime()-last[2]
          table.insert(out,
-            string.format("%s\tstage\t%.0f\t%d\t%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%.6f\t%.6f\t%d\n",
+            string.format("%s\tstage\t%.1f\t%d\t%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%.6f\t%.6f\t%d\n",
             testcase,
             now,
             k-1,
@@ -101,7 +101,7 @@ function t.on_timer(id)
          local l_e=v.events_pushed-last[1]
          local l_t=kernel.gettime()-last[2]
          table.insert(out,
-         string.format("%s\tconnector\t%.0f\t%d\t%s.%s->%s\t0\t%d\t0\t%d\t0\t0\t0\t%.6f\t%.6f\t%d\n",
+         string.format("%s\tconnector\t%.1f\t%d\t%s.%s->%s\t0\t%d\t0\t%d\t0\t0\t0\t%.6f\t%.6f\t%d\n",
          testcase,
          now,
          k-1, 

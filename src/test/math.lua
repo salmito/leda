@@ -11,29 +11,29 @@ function produce(seed,interval)
    for i=1,n do
       local data=math.random(1,1024)
       assert(leda.send(1,data,i))
---    print("Produced",data)
+--      print("Produced",data,seed)
       if interval>0 then
          leda.sleep(interval)
       end
    end
 end
 
-function square(data,...)
-   leda.send(1,data*data,...)
+function square_root(data,...)
+   leda.send(1,math.sqrt(data),...)
 end
 
 function consume(data,i)
 --   local acc=acc
-   --print(string.format("Data consumed: %d  i='%d' n='%d' %s",data,i,n,tostring(i==n)))
+   print(string.format("Data consumed: %f  i='%d' n='%d' %s",data,i,n,tostring(i==n)))
    if i==n then
       print('quit')
       leda.quit()
    end
 end
 
-local prod=stage{name="Producer",handler=produce,init="require 'math'"}
+local prod=stage{name="Producer",handler=produce,init="require 'math'",autostart={seed or os.time(),tonumber(arg[1]) or 0.1}}
 local cons=stage{name="Consumer",handler=consume,init="require 'string'"}
-local sqrt=stage{name="Sqrt",handler=square}
+local sqrt=stage{name="Sqrt",handler=square_root,init="require 'math'"}
 
 
 local g=graph{"Producer-consumer",
@@ -41,9 +41,25 @@ local g=graph{"Producer-consumer",
    leda.connect(sqrt,cons)
 }
 
-
-prod:send(os.time(),tonumber(arg[1]) or 0.1)
-
 local th = th or tonumber(arg[3]) or leda.kernel.cpu()
 
-g:run{maxpar=16,controller=leda.controller.thread_pool.get(th)}
+local c=controller or leda.controller.thread_pool.get(th)
+
+
+g:run{maxpar=16,controller=c}
+
+do 
+local sock=require 'socket'
+	local function inline(seed,time)
+	   math.randomseed( seed )
+	   for i=1,n do
+	      local data=math.random(1,1024)
+	      local sqrt=math.sqrt(data)
+	      
+	      if interval>0 then
+				socket.select(nil,nil,time)
+	      end
+	   end
+	end
+
+end
