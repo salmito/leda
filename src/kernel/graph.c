@@ -497,17 +497,19 @@ int graph_build(lua_State * L) {
 /* destoy a graph representation from the memory */
 int graph_destroy(lua_State* L) {
    graph g=to_graph(L,1);
+   _DEBUG("Graph: Finalizing graph\n");
    //printf("Collecting graph '%s'\n",g->name);
    int i;
-   for(i=0;i<g->n_s;i++) {
-      NULL_SAFE_FREE(g->s[i]->name);
+/*   for(i=0;i<g->n_s;i++) {
+//      NULL_SAFE_FREE(g->s[i]->name);
 //      NULL_SAFE_FREE(g->s[i]->handler);
 //      NULL_SAFE_FREE(g->s[i]->init);
 		NULL_SAFE_FREE(g->s[i]->env);
       NULL_SAFE_FREE(g->s[i]->output);
       NULL_SAFE_FREE(g->s[i]);
-   }
+   }*/
    NULL_SAFE_FREE(g->s);
+   g->s=NULL;
    
    for(i=0;i<g->n_c;i++) {
       NULL_SAFE_FREE(g->c[i]->name);

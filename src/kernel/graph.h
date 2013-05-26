@@ -80,6 +80,7 @@ typedef struct graph_data {
    size_t n_d;
    char const * name;
    size_t name_len;
+   char finalized;
 } * graph;
 
 extern graph main_graph;

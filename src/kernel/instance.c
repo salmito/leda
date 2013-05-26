@@ -479,7 +479,7 @@ instance instance_aquire(stage_id s) {
 
    lua_setglobal(ret->L,"leda");
    /* Call the lua_chunk loaded in the luaL_loadbuffer */
-   dump_stack(ret->L);
+//   dump_stack(ret->L);
    
    if(lua_pcall( ret->L, 0 , 0, 0)) {
       const char * err=lua_tostring(ret->L,-1);

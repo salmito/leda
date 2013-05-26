@@ -45,7 +45,7 @@ THE SOFTWARE.
 
 #include <event2/event.h>
 
-#define __VERSION "0.3.0-alpha"
+#define __VERSION "0.3.0-rc1"
 
 #define CONNECTOR_TIMEOUT 2.0
 
@@ -491,17 +491,12 @@ int luaopen_leda_kernel (lua_State *L) {
 	
 	/* Load main library functions */
    _DEBUG("Kernel: Loading leda main API\n");
-	dump_stack(L);	
 	REGISTER_LEDA(L, LEDA_NAME, leda_funcs);
-	dump_stack(L);
 	set_leda_info (L);
-	dump_stack(L);
  	/* Create the thread metatable */
    thread_createmetatable(L);
- 	dump_stack(L);
  	/* Create the graph metatable */
    graph_createmetatable(L);
-	dump_stack(L);
    _DEBUG("Kernel: Leda's kernel loaded successfully.\n");
  	return 1;
 }

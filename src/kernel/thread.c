@@ -117,7 +117,7 @@ void thread_resume_instance(instance i) {
       i->packed=0;
       i->args=restore_event_to_lua_state(i->L,&i->packed_event);
    }
-   dump_stack(i->L);
+//   dump_stack(i->L);
    //resume main instance coroutine
    int status=0;
    if(lua_pcall(i->L,i->args,LUA_MULTRET,0)) {
@@ -441,9 +441,7 @@ int emmit(lua_State * L) {
    //Get the  main coroutine of the instance's handler
    lua_getglobal(dst->L, "handler");
    //push arguments to instance
-   dump_stack(L);
    copy_values_directly(dst->L, L, 2, args);
-   dump_stack(dst->L);
    dst->args=args;
    push_ready_queue(dst);
    lua_pushboolean(L,TRUE);
