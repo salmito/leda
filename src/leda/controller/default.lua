@@ -3,10 +3,10 @@
 -- Author: Tiago Salmito, Noemi Rodriguez, Ana Lucia de Moura
 -----------------------------------------------------------------------------
 
-local interactive=require("leda.controller.interactive")
+local controller=require("leda.controller.thread_pool")
 
 --module("leda.controller.default")
-local t=interactive.get(leda.kernel.cpu())
+local t=controller
 
 if leda and leda.controller then
    leda.controller.default=t

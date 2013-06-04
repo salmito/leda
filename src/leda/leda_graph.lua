@@ -162,6 +162,7 @@ index.is_graph=is_graph
 -- @param s Stage to be used as the start of the pipeline
 -----------------------------------------------------------------------------
 function index.set_start(g,s)
+	assert(is_graph(g),string.format("Invalid parameter #1 type (Graph expected, got %s)",type(g)))
    assert(is_stage(s),string.format("Invalid parameter (stage expected, got %s)",type(s)))
 --   if not g:contains(s) then error(string.format("Stage '%s' not defined on graph '%s'",s,g)) end
    for c in pairs(g:connectors()) do
@@ -249,7 +250,7 @@ function index.part(g,...)
 
    for s in pairs(g:stages()) do
       if type(s.bind)=="function" then
-         s.bind(g:get_output(s),s,g)
+         s.bind(s,g:get_output(s),g)
       end
    end
 

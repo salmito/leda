@@ -74,7 +74,7 @@ static void registerlib(lua_State * L,char const * name, lua_CFunction f) {
    lua_pop(L,2);
 }
 
-MUTEX_T require_cs;
+//MUTEX_T require_cs;
 
 /* isolate require function from other threads */
 /*static int new_require(lua_State *L) {
@@ -95,15 +95,15 @@ MUTEX_T require_cs;
 	return 1;
 }*/
 
-int serialize_require(lua_State * L) {
+//int serialize_require(lua_State * L) {
 //	lua_getglobal( L, "require" );
 //	if (lua_isfunction( L, -1 )) {
 //		lua_pushcclosure( L, new_require, 1);
 //		lua_setglobal( L, "require" );
 //	}
 //	else lua_pop(L,1);
-	return 0;
-}
+//	return 0;
+//}
 
 int luaopen_lmemarray(lua_State * L);
 
@@ -133,7 +133,7 @@ lua_State * new_lua_state(bool_t libs) {
    lua_gc( L, LUA_GCSTOP, 0);
    if(libs) {
       openlibs(L);
-      serialize_require(L);
+//      serialize_require(L);
    }
    else {
       lua_pushcfunction(L,luaopen_base);
@@ -141,6 +141,11 @@ lua_State * new_lua_state(bool_t libs) {
    }
    lua_gc( L, LUA_GCRESTART, 0);   
 	return L;
+}
+
+int instance_loadlibs(lua_State * L) {
+	luaL_openlibs(L);
+	return 0;
 }
 
 /* Destroy an instance, i.e. destroy its lua_state. */
@@ -173,7 +178,7 @@ void instance_init(size_t recycle_limit_t,size_t pending_limit_t) {
   
    number_of_instances = calloc(main_graph->n_s,sizeof(atomic));
    
-   MUTEX_RECURSIVE_INIT( &require_cs );
+//   MUTEX_RECURSIVE_INIT( &require_cs );
    
    //for each stage of the graph, initiate queues and set limits
    for(i=0;i<main_graph->n_s;i++) {
@@ -253,7 +258,7 @@ int instance_peek_for_event(lua_State *L) {
 }
 
 
-void register_mutex_api(lua_State * L) {
+/*void register_mutex_api(lua_State * L) {
    lua_newtable(L);
    lua_pushliteral(L,"new");
    lua_pushcfunction(L,mutex_new);
@@ -268,62 +273,59 @@ void register_mutex_api(lua_State * L) {
    lua_pushcfunction(L,mutex_unlock);
    lua_rawset(L,-3);
    lua_setglobal(L,"__mutex");
-}
+}*/
 
 void register_io_api(lua_State * L) {
    lua_newtable(L);
-   lua_pushliteral(L,"wrap");
    lua_pushcfunction(L,leda_wrap_io);
-   lua_rawset(L,-3);
-   lua_pushliteral(L,"unwrap");
+   lua_setfield(L,-2,"wrap");
    lua_pushcfunction(L,leda_unwrap_io);
-   lua_rawset(L,-3);
-   lua_setglobal(L,"__io");
+   lua_setfield(L,-2,"unwrap");
+   lua_setfield(L,-2,"io");
 }
 
 void register_marshal_api(lua_State * L) {
    lua_pushcfunction(L,mar_encode);
-   lua_setglobal(L,"__encode");
+   lua_setfield(L,-2,"encode");
    lua_pushcfunction(L,mar_decode);
-   lua_setglobal(L,"__decode");
+   lua_setfield(L,-2,"decode");
    lua_pushcfunction(L,mar_clone);
-   lua_setglobal(L,"__clone");
+   lua_setfield(L,-2,"clone");
 }
 
 void register_aio_api(lua_State * L) {
    lua_newtable(L);
-   lua_pushliteral(L,"wait_io");
    lua_pushcfunction(L,wait_io);
-   lua_rawset(L,-3);
-	
+   lua_setfield(L,-2,"wait_io");
 #ifndef SYNC_IO
-   lua_pushliteral(L,"do_file_aio");
    lua_pushcfunction(L,do_file_aio);
-   lua_rawset(L,-3);
+   lua_setfield(L,-2,"do_file_aio");
 #endif
-
-   lua_pushliteral(L,"flush");
    lua_pushcfunction(L,socket_flush);
-   lua_rawset(L,-3);   
-   lua_setglobal(L,"__aio");
+   lua_setfield(L,-2,"flush");
+   lua_setfield(L,-2,"aio");
 }
 
 void register_debug_api(lua_State * L) {
    lua_pushcfunction(L,leda_sleep);
-   lua_setglobal(L,"__sleep");
+   lua_setfield(L,-2,"sleep");
    lua_pushcfunction(L,leda_quit);
-   lua_setglobal(L,"__quit");
+   lua_setfield(L,-2,"quit");
    lua_pushcfunction(L,leda_setmetatable);
-   lua_setglobal(L,"__setmetatable");
+   lua_setfield(L,-2,"setmetatable");
    lua_pushcfunction(L,leda_getmetatable);
-   lua_setglobal(L,"__getmetatable");
+   lua_setfield(L,-2,"getmetatable");
    lua_pushcfunction(L,leda_gettime);
-   lua_setglobal(L,"__gettime");
+   lua_setfield(L,-2,"gettime");
+   lua_pushcfunction(L,instance_loadlibs);
+   lua_setfield(L,-2,"loadlibs");
+
+   lua_newtable(L);
    lua_pushcfunction(L,instance_wait_for_event);
-   lua_setglobal(L,"__wait_event");
+   lua_setfield(L,-2,"wait_event");
    lua_pushcfunction(L,instance_peek_for_event);
-   lua_setglobal(L,"__peek_event");
-   
+   lua_setfield(L,-2,"peek_event");
+   lua_setfield(L,-2,"debug");
 }
 
 void register_connector_api(lua_State * L) {
@@ -332,6 +334,8 @@ void register_connector_api(lua_State * L) {
 
    lua_pushcfunction(L,cohort);
    lua_setglobal(L,"__cohort");
+   lua_newtable(L);
+   lua_setfield(L,-2,"output");
 }
 
 /* Try to aquire an instance. 
@@ -388,6 +392,9 @@ instance instance_aquire(stage_id s) {
 	lua_setfield( ret->L, LUA_REGISTRYINDEX, "__SELF" );
    if(luaL_loadbuffer( ret->L, instance_chunk, sizeof(instance_chunk), "@instance.lua"))
 			return NULL; //"luaL_loadbuffer() failed";   // LUA_ERRMEM
+   
+   lua_newtable(ret->L);
+  
    //Create a stage representation
    lua_newtable(ret->L); //Table holds all information
 
@@ -405,13 +412,13 @@ instance instance_aquire(stage_id s) {
    lua_settable(ret->L,-3); //Set __init
    */
    //Push the init and handler chunks into the table
-   lua_pushliteral(ret->L,"__init"); //key
-   lua_pushlstring (ret->L, STAGE(s)->init, STAGE(s)->init_len); //value
+   lua_pushliteral(ret->L,"__env"); //key
+   lua_pushlstring (ret->L, STAGE(s)->env, STAGE(s)->env_len); //value
    lua_settable(ret->L,-3); //Set __init
    
-   lua_pushliteral(ret->L,"__handler"); //key
-   lua_pushlstring (ret->L, STAGE(s)->handler, STAGE(s)->handler_len); //value
-   lua_settable(ret->L,-3); //Set __handler
+//   lua_pushliteral(ret->L,"__handler"); //key
+//   lua_pushlstring (ret->L, STAGE(s)->handler, STAGE(s)->handler_len); //value
+//   lua_settable(ret->L,-3); //Set __handler
    
    //push output table __output[id]={sendf,{ids}}
    lua_pushliteral(ret->L,"__output"); //key
@@ -451,25 +458,26 @@ instance instance_aquire(stage_id s) {
    lua_settable(ret->L,-3); //Set __output
    
    /* Push the kernel C API functions to the newly created lua_State */
-   lua_setglobal(ret->L,"__stage");
+   lua_setfield(ret->L,-2,"stage");
 
    /* C methods for passing control to instances */
    register_connector_api(ret->L);
    
    /* Push the endcode for this instance, for now is only an integer*/
    lua_pushinteger(ret->L,ENDED);   
-   lua_setglobal(ret->L,"__end_code");
+   lua_setfield(ret->L,-2,"__end_code");
    /* Push the endcode for this instance, for now is only an integer*/
    lua_pushinteger(ret->L,NICE);   
-   lua_setglobal(ret->L,"__yield_code");
+   lua_setfield(ret->L,-2,"__yield_code");
 
    /* load api with assorted functions useful for concurrency*/
    register_debug_api(ret->L);
    register_io_api(ret->L);
    register_aio_api(ret->L);
-   register_mutex_api(ret->L);
+//   register_mutex_api(ret->L);
    register_marshal_api(ret->L);
-     
+
+   lua_setglobal(ret->L,"leda");
    /* Call the lua_chunk loaded in the luaL_loadbuffer */
 //   dump_stack(ret->L);
    

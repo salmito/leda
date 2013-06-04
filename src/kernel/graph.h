@@ -29,11 +29,13 @@ typedef struct {
 /* leda stage structure */ 
 typedef struct stage_data {
    char const * name;
-   char const * handler;
-   char const * init;
+   char const * env;
+//   char const * handler;
+//   char const * init;
    size_t name_len;
-   size_t init_len;
-   size_t handler_len;
+   size_t env_len;
+//   size_t init_len;
+//   size_t handler_len;
    key * output;
    size_t n_out;
    bool_t serial;
@@ -78,6 +80,7 @@ typedef struct graph_data {
    size_t n_d;
    char const * name;
    size_t name_len;
+   char finalized;
 } * graph;
 
 extern graph main_graph;

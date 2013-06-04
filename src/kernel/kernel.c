@@ -45,7 +45,7 @@ THE SOFTWARE.
 
 #include <event2/event.h>
 
-#define __VERSION "0.2.9"
+#define __VERSION "0.3.0-rc1"
 
 #define CONNECTOR_TIMEOUT 2.0
 
@@ -63,11 +63,9 @@ char has_error_cb=0,
      has_destroy_cb=0,
      has_create_cb=0,
      has_active_cb=0;
-/* initialized flag, 'true' if already initialized */
+
 bool_t initialized=FALSE;
 
-SIGNAL_T queue_used_cond;
-MUTEX_T queue_used_lock;
 extern queue ready_queue;
 extern queue * event_queues;
 extern queue * recycle_queues;
@@ -491,17 +489,12 @@ int luaopen_leda_kernel (lua_State *L) {
 	
 	/* Load main library functions */
    _DEBUG("Kernel: Loading leda main API\n");
-	dump_stack(L);	
 	REGISTER_LEDA(L, LEDA_NAME, leda_funcs);
-	dump_stack(L);
 	set_leda_info (L);
-	dump_stack(L);
  	/* Create the thread metatable */
    thread_createmetatable(L);
- 	dump_stack(L);
  	/* Create the graph metatable */
    graph_createmetatable(L);
-	dump_stack(L);
    _DEBUG("Kernel: Leda's kernel loaded successfully.\n");
  	return 1;
 }

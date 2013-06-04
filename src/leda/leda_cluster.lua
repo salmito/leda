@@ -1,5 +1,5 @@
 -----------------------------------------------------------------------------
--- Leda Graph Lua API
+-- Leda Cluster Lua API
 -- @author Tiago Salmito, Noemi Rodriguez, Ana Lucia de Moura
 -----------------------------------------------------------------------------
 
@@ -8,7 +8,7 @@ local tostring,type,assert,pairs,setmetatable,getmetatable,print,error,ipairs,to
       tostring,type,assert,pairs,setmetatable,getmetatable,print,error,ipairs,tonumber
 local string,table,kernel,io=string,table,leda.kernel,io
 local debug=require("leda.debug")
-local dbg = debug.get_debug("Graph: ")
+local dbg = debug.get_debug("Cluster: ")
 local leda_connector = require("leda.leda_connector")
 local is_connector=leda_connector.is_connector
 local leda_stage = require("leda.leda_stage")

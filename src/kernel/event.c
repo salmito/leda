@@ -132,12 +132,13 @@ int restore_event_to_lua_state(lua_State * L, event *e_t) {
    event e=*e_t;
    
    if(e->packed) {
+   	_DEBUG("Event: Receiving packed event\n");
       int begin=lua_gettop(L);
       lua_getglobal(L,"unpack"); //Push unpack function
       lua_pushcfunction(L,mar_decode);
       lua_pushlstring(L,e->data,e->data_len);
       destroy_event(e);
-      dump_stack(L);
+//      dump_stack(L);
       lua_call(L,1,1); //decode event
       lua_call(L,1,LUA_MULTRET); //Unpack event
       return lua_gettop(L)-begin;

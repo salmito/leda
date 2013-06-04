@@ -7,73 +7,6 @@ leda.utils={}
 local utils=leda.utils
 
 -----------------------------------------------------------------------------
--- Switch stage selects an specific output and send pushed 'data'
--- param:   'n':     output key to push other arguments
---          '...':   data to be sent
------------------------------------------------------------------------------
-utils.switch={
-   name="Switch",
-   handler=function (output_key,...)
-      local args={...}
-      local out=leda.get_output(output_key)
-      if out then 
-         out:send(...) 
-       else
-         error(string.format("Output '%s' does not exist",tostring(output_key)))
-      end
-   end
-}
-
------------------------------------------------------------------------------
--- Broadcast stage select send pushed 'data' to all of its outputs
--- param:   '...': data to be broadcasted
------------------------------------------------------------------------------
-utils.broadcast={
-   name="Broadcast",
-   handler=function (...)
-   for _,connector in pairs(leda.output) do
-           connector:send(...)
-      end 
-   end
-}
-
------------------------------------------------------------------------------
--- 
--- param:   '...': data to be sent
------------------------------------------------------------------------------
-utils.roundrobbin={
-   name="RoundRobbin",
-   handler=function(...)
-      coroutine.resume(c,...)
-   end,
-   init=function()
-      local f=function()
-         while true do
-            for k in pairs(leda.output) do
-               leda.send(k,coroutine.yield())
-            end
-         end
-      end
-      c=coroutine.create(f)
-      coroutine.resume(c)
-   end,
-   stateful=true
-
-}
-
------------------------------------------------------------------------------
--- Load  and execute a lua chunk
--- param:   'str'    chunk to be loaded
--- param:   '...':   parameters passed when calling chunk
------------------------------------------------------------------------------
-utils.eval={
-   name="Eval",
-   handler=function (chunk,...)
-      assert(loadstring(chunk))(...)
-   end,
-}
-
------------------------------------------------------------------------------
 -- Print received data and pass it if connected
 -- param:   '...':   data to be printed
 -----------------------------------------------------------------------------
@@ -83,27 +16,6 @@ utils.print={
       print(...)
       leda.send(1,...)
    end
-}
-
-
-utils.deflate={
-   name='Lossless compressor',
-   handler=function(str,...)
-      local stream = zlib.deflate()
-      local compressed_str,eof,bytes_in,bytes_out=stream(str,'full')
-      leda.send('data',compressed_str,...)
-   end,
-   init="require 'zlib'"
-}
-
-utils.inflate={
-   name='Lossless decompressor',
-   handler=function(str,...)
-      local stream = zlib.inflate()
-      local decompressed_str,eof,bytes_in,bytes_out=stream(str);
-      leda.send('data',decompressed_str,...)
-   end,
-   init="require 'zlib'"
 }
 
 utils.quit={
@@ -150,8 +62,8 @@ utils.get_copy_stage=function (n,cpy_func)
    		   end
 
 		end,
-   		bind=function(self) 
-      		assert(self[1],"Copy must have an output at [1]") 
+   		bind=function(self,out) 
+      		assert(out[1],"Copy must have an output at [1]") 
    		end,
    		name="Event copy ("..tostring(n)..")"
 	}

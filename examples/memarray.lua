@@ -26,6 +26,7 @@ local s1=leda.stage{name="S1",
 local s3=leda.stage{name="S3",
 	handler=function(c)
 		print("s3",c[499],c)
+		leda.quit()
 	end
 }
 
@@ -33,6 +34,7 @@ local s3=leda.stage{name="S3",
 local s2=leda.stage{name="S2",
 	handler=function(c)
 		print("s2",c[499],c)
+		leda.quit()
 	end
 }
 

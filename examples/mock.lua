@@ -84,5 +84,5 @@ g=grafo
 
 --g:part(stage1,g:all()-stage1):map('localhost:9999','localhost:8888')
 
-grafo:run{maxpar=maxpar,controller=leda.controller.interactive.get(threads)}
+grafo:run{maxpar=maxpar,controller=leda.controller.interactive}
 
