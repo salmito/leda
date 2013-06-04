@@ -20,15 +20,13 @@ local fib=leda.stage"Fibonacci"{
       --print("I'm connected to: ",output.value.consumer)
       graph:add(self:connect('loopback',self))
 	end,
-   autostart=1467
+   autostart=1477
 }
 
 local printer=leda.stage{
    handler=function(...) 
-      print(...) 
-      
+      print(...)
    end,
-   init={}
    name="Accumulator",
    serial=true
 }

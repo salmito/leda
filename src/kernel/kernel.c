@@ -63,11 +63,9 @@ char has_error_cb=0,
      has_destroy_cb=0,
      has_create_cb=0,
      has_active_cb=0;
-/* initialized flag, 'true' if already initialized */
+
 bool_t initialized=FALSE;
 
-SIGNAL_T queue_used_cond;
-MUTEX_T queue_used_lock;
 extern queue ready_queue;
 extern queue * event_queues;
 extern queue * recycle_queues;

@@ -28,6 +28,6 @@ s2=leda.stage(leda.utils.print)
 
 g=leda.graph{leda.connect(s1,'line',s2),leda.connect(s0,'file',s1)}
 
-s0:send("Makefile")
+s0:send("/etc/passwd")
 
 g:run()
