@@ -47,19 +47,3 @@ local c=controller or leda.controller.thread_pool.get(th)
 
 
 g:run{maxpar=16,controller=c}
-
-do 
-local sock=require 'socket'
-	local function inline(seed,time)
-	   math.randomseed( seed )
-	   for i=1,n do
-	      local data=math.random(1,1024)
-	      local sqrt=math.sqrt(data)
-	      
-	      if interval>0 then
-				socket.select(nil,nil,time)
-	      end
-	   end
-	end
-
-end

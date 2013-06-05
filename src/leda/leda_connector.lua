@@ -53,16 +53,16 @@ function t.is_connector(c)
    return false
 end
 
-coupled="local"
-cohort="cohort"
-decoupled="decoupled"
+t.coupled="local"
+t.cohort="cohort"
+t.decoupled="decoupled"
 
 
 function index.get_type(c)
-   if c.type==coupled or c.type==decoupled or c.type==cohort then
+   if c.type==t.coupled or c.type==t.decoupled or c.type==t.cohort then
       return c.type
    end
-   error("Unkown connector type")
+   error(string.format("Unkown connector type '%s'",tostring(c.type)))
 end
 
 -----------------------------------------------------------------------------
@@ -73,7 +73,7 @@ function t.new_connector(prod,port,cons,ctype)
    assert(leda.leda_stage.is_stage(prod) or prod==nil,string.format("Parameter #1 must be a stage (got %s)",type(prod)))
    assert(type(port)=="string" or type(port)=="number",string.format("Parameter #2 must be a string or number (got %s)",type(port)))
    assert(leda.leda_stage.is_stage(cons),string.format("Parameter #3 must be a stage (got %s)",type(cons)))
-   ctype=ctype or decoupled
+   ctype=ctype or t.decoupled
    
    local c=setmetatable({}, connector)
 

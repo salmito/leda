@@ -13,28 +13,28 @@ function leda.get_output(key)
 end
 function leda.send(key,...)
    if not leda.output[key] then return nil, "Output key not found: "..tostring(key) end
-   return leda.output[key]:send(...)
+   return leda.output[key].send(...)
 end
 local __cohort_f=__cohort __cohort=nil
 local __emmit_f=__emmit __emmit=nil
 for key,connector in pairs(stage.__output) do
    local c,err={}
+   local func=nil
    if connector.__sendf=="cohort" then 
-      c.sendf=__cohort_f
+      func=__cohort_f
    else
-      c.sendf=__emmit_f
+      func=__emmit_f
    end
-   assert(type(c.sendf)=="function","Sendf field must be a function")
-   c.consumer=connector.__consumer;
-   c.id=connector.__id;
-   c.send=function(self,...) return self.sendf(c.consumer,c.id,...) end
+   assert(type(func)=="function","Sendf field must be a function")
+   local consumer=connector.__consumer;
+   local id=connector.__id;
+   c.send=function(...) return func(consumer,id,...) end
    leda.output[key]=c
 end
 local stage_env=leda.decode(leda.stage.__env)
 setmetatable(stage_env,{__index=_G})
 leda.stage.__handler=stage_env.handler
 leda.stage.__init=stage_env.init
-
 local __handler=leda.decode(leda.stage.__handler)
 if not (type(__handler)=='function' or type(__handler)=='string') then 
    error("Error loading handler function for stage: "..tostring(leda.stage.name).." type:"..type(__handler))
@@ -58,6 +58,7 @@ if leda.stage.__init and leda.stage.__init~="" then
 	      local debug=require 'debug'
          local upname,old_env = debug.getupvalue (init, 1)
          if upname == '_ENV' then
+           local debug=require 'debug'
            debug.setupvalue (init, 1,_ENV)
          end
       end
