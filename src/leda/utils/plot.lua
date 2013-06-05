@@ -74,7 +74,7 @@ function t.plot_graph(leda_graph,out)
       local color=nil
       local style=nil
       local arrowType=nil
-      if c:get_type()==leda.coupled then
+      if c:get_type()==leda.couple then
          color="#FF0000"
          arrowType="dot"
       elseif c:get_type()==leda.decoupled then

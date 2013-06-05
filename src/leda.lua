@@ -89,8 +89,8 @@ t.setmetatable=t.kernel.setmetatable
 
 
 t.couple=leda_connector.coupled
---t.cohort=leda_connector.cohort
-
+t.cohort=leda_connector.cohort
+t.decouple=leda_connector.decoupled
 --Exporting stage related functions
 ------------------------------------------------------------------------
 -- Create a new stage

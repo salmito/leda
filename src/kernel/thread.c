@@ -247,6 +247,7 @@ int leda_quit(lua_State * L) {
  */
 void emmit_cohort(instance caller) {
 //   dump_stack(caller->L);
+	_DEBUG("Thread: COHORTING through stages\n");
    time_d comunication_time=now_secs();
    stage_id dst_id=lua_tointeger(caller->L,1);
    connector_id con_id=lua_tointeger(caller->L,2);
@@ -308,6 +309,7 @@ void emmit_cohort(instance caller) {
  *             the aquired instance 
  */
 void emmit_remote(instance caller) {
+	_DEBUG("Thread: Emmit async remote event\n");
    time_d communication_time=now_secs(); //TODO
    stage_id dst_id=lua_tointeger(caller->L,1);
    int con_id=lua_tointeger(caller->L,2);
@@ -342,6 +344,7 @@ void emmit_remote(instance caller) {
  *
  */
 int emmit_remote_sync(lua_State * L) { //TODO send event synchronously
+	_DEBUG("Thread: Emmit sync remote event\n");
    time_d comunication_time=now_secs();
    //stage_id dst_id=lua_tointeger(L,1);
    int con_id=lua_tointeger(L,2);
@@ -376,6 +379,7 @@ int emmit_remote_sync(lua_State * L) { //TODO send event synchronously
  * Note: This will not block the thread of caller instance.
  */
 int emmit_packed_event(stage_id dst_id,char * data,size_t len) {
+	_DEBUG("Thread: Emmit packed event\n");
    event e=event_new_packed_event(data,len);
    instance dst=instance_aquire(dst_id);
 
@@ -405,7 +409,7 @@ int emmit(lua_State * L) {
    stage_id dst_id=lua_tointeger(L,1);
    int con_id=lua_tointeger(L,2);
 //   lua_remove(L,2);
-   _DEBUG("Event Emmit to local cluster? %d\n",CLUSTER(STAGE(dst_id)->cluster)->local);
+   _DEBUG("Thread: Event Emmit to local cluster? %d\n",CLUSTER(STAGE(dst_id)->cluster)->local);
    if(!CLUSTER(STAGE(dst_id)->cluster)->local) {
       return emmit_remote_sync(L);
    }
