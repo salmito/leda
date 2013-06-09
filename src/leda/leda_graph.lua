@@ -29,7 +29,7 @@ local localhost = localhost or 'localhost'
 
 local t={}
 
-----------------------------------------------------------------------------
+---------------------------------------------------------------------------
 -- Graph metatable
 -----------------------------------------------------------------------------
 local graph_metatable = { 
@@ -547,5 +547,11 @@ function t.restore_metatables(g)
    end
    return g
 end
+
+leda_stage.metatable().__index.run=function(s1,...)
+	assert(is_stage(s1),"Invalid argument #1, stage expected")
+	new_graph{start=s1}:run(...)
+end
+
 
 return t

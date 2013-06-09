@@ -16,6 +16,7 @@ local new_connector=leda_connector.new_connector
 local dbug=require("leda.debug")
 local dbg = dbug.get_debug("Stage: ")
 local dump = string.dump
+
 --local leda=leda
 
 --module("leda.leda_stage")
@@ -61,6 +62,7 @@ t.is_stage = is_stage
 function index.send(self,...)
    local v={...}
    table.insert(self.pending,v)
+   return self
 end
 
 -----------------------------------------------------------------------------
