@@ -31,7 +31,7 @@ THE SOFTWARE.
 
 #include "instance.h"
 #include "event.h"
-#include "thread.h"
+#include "scheduler.h"
 #include "queue.h"
 #include "mutex.h"
 #include "stats.h"

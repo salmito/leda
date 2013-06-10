@@ -30,7 +30,7 @@ THE SOFTWARE.
 #include <lauxlib.h>
 #include <lualib.h>
 
-#include "thread.h"
+#include "scheduler.h"
 #include "extra/lmarshal.h"
 #include "queue.h"
 #include "instance.h"

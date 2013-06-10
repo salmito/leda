@@ -30,7 +30,7 @@ THE SOFTWARE.
 #include <lualib.h>
 
 #include "graph.h"
-#include "thread.h"
+#include "scheduler.h"
 #include "extra/lmarshal.h"
 
 graph main_graph;

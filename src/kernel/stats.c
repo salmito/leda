@@ -27,7 +27,7 @@ THE SOFTWARE.
 #include <stdio.h>
 
 #include "atomic.h"
-#include "thread.h"
+#include "scheduler.h"
 #include "graph.h"
 #include "instance.h"
 #include "stats.h"

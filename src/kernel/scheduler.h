@@ -1,5 +1,5 @@
-#ifndef _THREAD_H_
-#define _THREAD_H_
+#ifndef _SCHEDULER_H_
+#define _SCHEDULER_H_
 
 #include "extra/threading.h"
 #include "instance.h"
@@ -77,4 +77,4 @@ int leda_getmetatable(lua_State *L);
 int leda_setmetatable(lua_State *L);
 int leda_quit(lua_State *L);
 
-#endif //_THREAD_H_
+#endif //_SCHEDULER_H_

@@ -31,7 +31,7 @@ THE SOFTWARE.
 #include <lualib.h>
 
 #include "mutex.h"
-#include "thread.h"
+#include "scheduler.h"
 
 /*Get a thread descriptor from the lua stack*/
 MUTEX_T * mutex_get (lua_State *L, int i) {

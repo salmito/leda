@@ -34,7 +34,7 @@ THE SOFTWARE.
 #include "event.h"
 #include "stats.h"
 #include "instance.h"
-#include "thread.h"
+#include "scheduler.h"
 #include "extra/lmarshal.h"
 #include "extra/leda-io.h"
 

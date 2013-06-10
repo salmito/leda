@@ -12,7 +12,7 @@ OBJ=  kernel.o \
       graph.o \
       instance.o \
 		mutex.o \
-      thread.o \
+      scheduler.o \
       event.o \
       extra/threading.o \
       extra/memarray.o \

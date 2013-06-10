@@ -34,7 +34,7 @@ THE SOFTWARE.
 #include <lualib.h>
 #include <errno.h>
 
-#include "thread.h"
+#include "scheduler.h"
 #include "graph.h"
 #include "queue.h"
 #include "event.h"

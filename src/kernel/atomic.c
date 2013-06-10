@@ -27,7 +27,7 @@ THE SOFTWARE.
 #include <stdio.h>
 
 #include "atomic.h"
-#include "thread.h"
+#include "scheduler.h"
 
 struct atomicInt {
    long int i;

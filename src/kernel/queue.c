@@ -29,7 +29,7 @@ THE SOFTWARE.
 #include <ctype.h>
 
 #include "queue.h"
-#include "thread.h"
+#include "scheduler.h"
 
 /* Arbitrary pointer type */
 typedef void * __ptr;
