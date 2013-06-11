@@ -21,7 +21,7 @@ s1=leda.stage{
       assert(err=="EOF",err)
       leda.quit()
    end,
-	init=function() require "leda.utils.io" end
+	init=function() require "io" end
 }
 
 s2=leda.stage(leda.utils.print)

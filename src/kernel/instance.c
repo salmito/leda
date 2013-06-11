@@ -107,6 +107,15 @@ static void registerlib(lua_State * L,char const * name, lua_CFunction f) {
 
 int luaopen_lmemarray(lua_State * L);
 
+static int luaopen_leda_io(lua_State * L) {
+      _DEBUG("Instance: Defering Lua IO library\n");
+      lua_getglobal(L,"require");
+      lua_pushliteral(L,"leda.utils.io");
+      lua_call(L,1,1);
+      return 1;
+}
+
+
 static void openlibs(lua_State * L) {
    lua_pushcfunction(L,luaopen_base);
    lua_pcall(L,0,0,0);
@@ -118,7 +127,8 @@ static void openlibs(lua_State * L) {
    lua_pcall(L,0,1,0);
    lua_setglobal(L,"coroutine");  
 #endif
-   registerlib(L,"io", luaopen_io);
+   registerlib(L,"io", luaopen_leda_io);
+   registerlib(L,"iolua", luaopen_io);
    registerlib(L,"os", luaopen_os);
    registerlib(L,"table", luaopen_table);
    registerlib(L,"string", luaopen_string);

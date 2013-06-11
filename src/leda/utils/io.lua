@@ -1,4 +1,4 @@
-local io=require "io"
+local io=require "iolua"
 
 local block=block or false
 
