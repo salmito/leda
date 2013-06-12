@@ -10,17 +10,299 @@ local kernel=leda.kernel
 local table,ipairs,pairs,print=table,ipairs,pairs,print
 local default_thread_pool_size=kernel.cpu()
 local socket=require "socket"
+local mime=require"mime"
 
 local default_port=8080
 
 local t={}
-
 local pool_size=default_thread_pool_size
 local th={}
-
 local server={}
+local init_time=nil
 
-local function get_css()
+local graph=nil
+
+local auth=nil
+
+local get_index,get_css,get_jquery,get_jquery_flot
+
+local last_t={}
+local last_t2={}
+local function get_stats()
+   local cluster=nil
+   local clusters="["
+   local i=0
+   local stats,cstats=kernel.stats()
+   for cl in pairs(graph:clusters()) do
+      if i > 0 then clusters=clusters..',' end i=i+1
+      clusters=clusters..'{"host": "'..cl.process_addr[1].host..
+                         '","port": '..cl.process_addr[1].port..', "local": '
+      if cl:is_local(leda.process.get_localhost(),leda.process.get_localport()) then
+         clusters=clusters..' 1}'
+         cluster=cl
+      else
+         clusters=clusters..' 0}'
+      end
+   end
+   clusters=clusters..']'
+   local connectors="["
+   i=0
+   for key,c in ipairs(cstats) do
+      local last=last_t2[key] or {0,0}
+      last_t2[key]={c.events_pushed,kernel.gettime()}
+      local events=c.events_pushed-last[1]
+      local time=kernel.gettime()-last[2]
+      if i > 0 then connectors=connectors..',' end i=i+1
+      connectors=connectors..string.format('{"name": "%s.%s->%s", "events": %d,"latency": %.6f, "throughput": %.6f}',
+         tostring(c.producer), 
+         tostring(c.key),
+         tostring(c.consumer),
+         c.events_pushed,
+         c.average_latency,
+         events/time
+         )
+   end
+   connectors=connectors..']'
+   
+   local stages="["
+   i=0
+   if cluster then for s in pairs(cluster) do if s~="process_addr" then
+      if i > 0 then stages=stages..',' end i=i+1
+      local k=graph:getid(s)
+      local v=stats[tonumber(k)+1]
+      local last=last_t[k] or {0,0}
+      last_t[k]={v.events_pushed,kernel.gettime()}
+      local events=v.events_pushed-last[1]
+      local time=kernel.gettime()-last[2]
+      stages=stages..string.format(
+      '{"id": %d, "name": "%s", "ready": %d, "maxpar": %d, "events": %d, "queue": %d, "executed": %d, "error": %d, "latency": %.6f, "throughput": %.6f}',
+      k,
+      tostring(v.name),
+      v.active,
+      v.maxpar,
+      v.events_pushed, 
+      v.event_queue_size, 
+      v.times_executed, 
+      v.errors, 
+      v.average_latency, 
+      events/time
+      )
+   end end end
+   stages=stages..']'
+   
+   kernel.stats_latency_reset()
+
+   local now=leda.gettime()-init_time
+   local thread_pool_size=kernel.thread_pool_size()
+   local ready_queue_size,tmp=0,kernel.ready_queue_size()
+   local active_threads=0
+   if tmp<0 then
+      ready_queue_size=0
+      active_threads=thread_pool_size+tmp
+   else
+      active_threads=thread_pool_size 
+      ready_queue_size=tmp 
+   end
+   local ready_queue_capacity=kernel.ready_queue_capacity()
+   
+   --local stats,cstats=kernel.stats()
+   
+	return string.format([[{
+"thread_pool_size": %d,
+"ready_queue_size": %d,
+"ready_queue_capacity": %d,
+"active_threads": %d,
+"uptime": %.6f,
+"clusters": %s,
+"connectors": %s,
+"stages": %s
+}]],
+thread_pool_size,
+ready_queue_size,
+ready_queue_capacity,
+active_threads,
+now,
+clusters,
+connectors,
+stages
+)
+end
+
+function stdresp(str)
+	local res="HTTP/1.1 " ..
+		str ..
+		"\r\n" ..
+		"Date: " .. os.date() .. "\r\n" ..
+		"Server: Leda HTTP controller\r\n"
+	if auth then
+	   res=res..'WWW-Authenticate: Basic realm="Leda"'
+	end
+	return res
+end
+
+local function http_server(port)
+	dbg("Starting HTTP server on port %d addr=%s",port)
+	init_time=kernel.gettime()
+	server.sock=socket.tcp()
+	server.sock:setoption("reuseaddr",true)
+	server.sock:bind("*",port)
+	server.sock:listen(10)
+	server.sock:settimeout(.1)
+	server.list={}
+	server.n=0
+	
+	while true do
+		local list,err,line,clt=nil
+		clt = server.sock:accept()
+		if clt then
+			clt:settimeout(.1)
+			table.insert(server.list, clt)
+		end
+		list, _, err = socket.select(server.list, nil, 0.1)
+		for i, clt in ipairs(list) do
+			line, err = clt:receive()
+			if err then
+				table.remove(server.list, i)
+			else
+				local req = {}
+				local tmp
+				local j
+
+				tmp={string.match(line, "([^%s]+) +([^%s]+) +([^%s]+)")}
+				if tmp[1] == "GET" or tmp[1] == "POST" then
+					req.type = tmp[1]
+				else
+					clt:send(stdresp("405 Method not allowed"))
+					table.remove(server.list, i)
+					clt:close()
+					break
+				end				
+				--print("METHOD",req.type)
+				if tmp[2] ~= nil then
+					req.file = string.gsub(tmp[2], "^/", "")
+				end
+				
+				req.header = {}
+				while 1 do
+					line, err = clt:receive()
+					if err then
+						if req.type == "POST" and line then
+							req.post = line
+						end
+						break
+					end
+					if line == nil then break end
+					tmp = {string.match(line,"([^:]+)%s*:%s*(.+)")}
+					if tmp[1] ~= nil and tmp[2] ~= nil then
+						req.header[tmp[1]] = tmp[2]
+					end
+				end
+				
+				repeat
+				if auth then
+				   if req.header.Authorization~="Basic "..auth then
+				   	local data="<html>Authorization Required</html>"
+						local resp=stdresp("401 Not Authorized")..
+				 						"Content-Type: text/html\r\n"..
+				 						"Content-Length: "..(#data).."\r\n\r\n"..
+				 						data
+						clt:send(resp)
+						break
+				   end
+				end
+				if req.type == "GET" then
+					if req.file == "" then
+						local data=get_index()
+						local resp=stdresp("200 OK")..
+				 						"Content-Type: text/html\r\n"..
+				 						"Content-Length: "..(#data).."\r\n\r\n"..
+				 						data
+						clt:send(resp)
+					elseif req.file == "stats" then
+						local data=get_stats()
+						local resp=stdresp("200 OK")..
+				 						"Content-Type: application/json\r\n"..
+				 						"Content-Length: "..(#data).."\r\n\r\n"..
+				 						data
+						clt:send(resp)
+					elseif req.file == "leda.css" then
+						local data=get_css()
+						local resp=stdresp("200 OK")..
+				 						"Content-Type: text/css\r\n"..
+				 						"Content-Length: "..(#data).."\r\n\r\n"..
+				 						data
+						clt:send(resp)
+					elseif req.file == "jquery.js" then
+						local data=get_jquery()
+						local resp=stdresp("200 OK")..
+				 						"Content-Type: text/javascript\r\n"..
+				 						"Content-Length: "..(#data).."\r\n\r\n"..
+				 						data
+						clt:send(resp)
+					elseif req.file == "jquery.flot.js" then
+						local data=get_jquery_flot()
+						local resp=stdresp("200 OK")..
+				 						"Content-Type: text/javascript\r\n"..
+				 						"Content-Length: "..(#data).."\r\n\r\n"..
+				 						data
+						clt:send(resp)
+					else
+						print("FILE 404",req.file)
+						local data="<html>Not Found</html>"
+						local resp=stdresp("404 Not Found")..
+				 						"Content-Type: text/html\r\n"..
+				 						"Content-Length: "..(#data).."\r\n\r\n"..
+				 						data
+						clt:send(resp)
+					end
+				elseif req.type == "POST" then
+					print('POST',req.post)
+				end
+						
+				if req.header.Connection == "close" then
+					table.remove(server.list, i)
+					clt:close()
+				end
+			until true
+			end
+		end
+	end
+end
+
+local function get_init(n,port,user,pass)
+   if user then
+      assert(pass,"Password must be provided")
+      auth=mime.b64(user..":"..pass)
+   end
+   return   function(g)
+               graph=g
+               pool_size=n
+               for i=1,n do
+                  table.insert(th,kernel.thread_new())
+                  dbg("Thread %d created",i)
+               end
+               http_server(port or default_port)
+            end
+end
+
+t.init=get_init(default_thread_pool_size)
+
+function t.finish()
+   for i=1,#th do
+      th[i]:kill()
+   end
+   dbg "Controller finished"
+end
+
+function t.get(...)
+   return {init=get_init(...),finish=t.finish}
+end
+
+if leda and leda.controller then
+   leda.controller.thread_pool=t
+end
+
+get_css=function()
 	return [[* {	padding: 0; margin: 0; vertical-align: top; }
 
 body {
@@ -120,132 +402,7 @@ input[type=checkbox] {
 }]]
 end
 
-
-
-
-
-local function get_index()
-	return [[<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
-<html>
-<head>
-	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-	<title>Leda HTTP Controller: Real-time updates</title>
-	<link href="leda.css" rel="stylesheet" type="text/css">
-	<script language="javascript" type="text/javascript" src="jquery.js"></script>
-	<script language="javascript" type="text/javascript" src="jquery.flot.js"></script>
-	<script type="text/javascript">
-
-	$(function() {
-
-		// We use an inline data source in the example, usually data would
-		// be fetched from a server
-
-		var data = [],
-			totalPoints = 300;
-
-		function getRandomData() {
-
-			if (data.length > 0)
-				data = data.slice(1);
-
-			// Do a random walk
-
-			while (data.length < totalPoints) {
-
-				var prev = data.length > 0 ? data[data.length - 1] : 50,
-					y = prev + Math.random() * 10 - 5;
-
-				if (y < 0) {
-					y = 0;
-				} else if (y > 100) {
-					y = 100;
-				}
-
-				data.push(y);
-			}
-
-			// Zip the generated y values with the x values
-
-			var res = [];
-			for (var i = 0; i < data.length; ++i) {
-				res.push([i, data[i] ])
-			}
-
-			return res;
-		}
-
-		// Set up the control widget
-
-		var updateInterval = 30;
-		$("#updateInterval").val(updateInterval).change(function () {
-			var v = $(this).val();
-			if (v && !isNaN(+v)) {
-				updateInterval = +v;
-				if (updateInterval < 1) {
-					updateInterval = 1;
-				} else if (updateInterval > 2000) {
-					updateInterval = 2000;
-				}
-				$(this).val("" + updateInterval);
-			}
-		});
-
-		var plot = $.plot("#placeholder", [ getRandomData() ], {
-			series: {
-				shadowSize: 0	// Drawing is faster without shadows
-			},
-			yaxis: {
-				min: 0,
-				max: 100
-			},
-			xaxis: {
-				show: false
-			}
-		});
-
-		function update() {
-
-			plot.setData([getRandomData()]);
-
-			// Since the axes don't change, we don't need to call plot.setupGrid()
-
-			plot.draw();
-			setTimeout(update, updateInterval);
-		}
-
-		update();
-
-		// Add the Flot version string to the footer
-
-		$("#footer").prepend("Flot " + $.plot.version + " &ndash; ");
-	});
-
-	</script>
-</head>
-<body>
-
-	<div id="header">
-		<h2>Real-time updates</h2>
-	</div>
-
-	<div id="content">
-
-		<div class="demo-container">
-			<div id="placeholder" class="demo-placeholder"></div>
-		</div>
-
-		<p>You can update a chart periodically to get a real-time effect by using a timer to insert the new data in the plot and redraw it.</p>
-
-		<p>Time between updates: <input id="updateInterval" type="text" value="" style="text-align: right; width:5em"> milliseconds</p>
-
-	</div>
-
-</body>
-</html>
-]]
-end
-
-local function get_jquery()
+get_jquery=function()
 	return [===[
 	/*!
  * jQuery JavaScript Library v1.8.3
@@ -9722,7 +9879,7 @@ if ( typeof define === "function" && define.amd && define.amd.jQuery ) {
 ]===]
 end
 
-local function get_jquery_flot()
+get_jquery_flot=function()
 	return [===[
 /* Javascript plotting library for jQuery, version 0.8.1.
 
@@ -12788,161 +12945,145 @@ Licensed under the MIT license.
 ]===]
 end
 
-local function get_stats()
-	return [[<html>
-		<p>Stats</p>
-	</html>]]
-end
+get_index=function()
+	return [===[<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<title>Leda HTTP Controller: Real-time updates</title>
+	<link href="leda.css" rel="stylesheet" type="text/css">
+	<script language="javascript" type="text/javascript" src="jquery.js"></script>
+	<script language="javascript" type="text/javascript" src="jquery.flot.js"></script>
+	<script type="text/javascript">
 
-function stdresp(str)
-	return "HTTP/1.1 " ..
-		str ..
-		"\r\n" ..
-		"Date: " .. os.date() .. "\r\n" ..
-		"Server: Leda HTTP controller\r\n"
-end
+	$(function() {
 
-local function http_server(port,host)
-	dbg("Starting HTTP server on port %d addr=%s",port,host)
-	server.sock=socket.tcp()
-	server.sock:setoption("reuseaddr",true)
-	server.sock:bind(host,port)
-	server.sock:listen(10)
-	server.sock:settimeout(.1)
-	server.list={}
-	server.n=0
-	
-	while true do
-		local list,err,line,clt=nil
-		clt = server.sock:accept()
-		if clt then
-			clt:settimeout(.1)
-			table.insert(server.list, clt)
-		end
-		list, _, err = socket.select(server.list, nil, 0.1)
-		for i, clt in ipairs(list) do
-			line, err = clt:receive()
-			if err then
-				table.remove(server.list, i)
-			else
-				local req = {}
-				local tmp
-				local j
+		// We use an inline data source in the example, usually data would
+		// be fetched from a server
 
-				tmp={string.match(line, "([^%s]+) +([^%s]+) +([^%s]+)")}
-				if tmp[1] == "GET" or tmp[1] == "POST" then
-					req.type = tmp[1]
-				else
-					clt:send(stdresp("405 Method not allowed"))
-					table.remove(server.list, i)
-					clt:close()
-					break
-				end				
-				--print("METHOD",req.type)
-				if tmp[2] ~= nil then
-					req.file = string.gsub(tmp[2], "^/", "")
-					print("FILE",req.file,tmp[2])
-				end
-				
-				req.header = {}
-				while 1 do
-					line, err = clt:receive()
-					if err then
-						if req.type == "POST" and line then
-							req.post = line
-						end
-						break
-					end
-					if line == nil then break end
-					tmp = {string.match(line,"([^:]+)%s*:%s*(.+)")}
-					if tmp[1] ~= nil and tmp[2] ~= nil then
-						req.header[tmp[1]] = tmp[2]
-					end
-				end
-				
-				if req.type == "GET" then
-					if req.file == "" then
-						local data=get_index()
-						local resp=stdresp("200 OK")..
-				 						"Content-Type: text/html\n"..
-				 						"Content-Length: "..(#data).."\n\n"..
-				 						data
-						clt:send(resp)
-					elseif req.file == "stats" then
-						local data=get_stats()
-						local resp=stdresp("200 OK")..
-				 						"Content-Type: text/html\n"..
-				 						"Content-Length: "..(#data).."\n\n"..
-				 						data
-						clt:send(resp)
-					elseif req.file == "leda.css" then
-						local data=get_css()
-						local resp=stdresp("200 OK")..
-				 						"Content-Type: text/css\n"..
-				 						"Content-Length: "..(#data).."\n\n"..
-				 						data
-						clt:send(resp)
-					elseif req.file == "jquery.js" then
-						local data=get_jquery()
-						local resp=stdresp("200 OK")..
-				 						"Content-Type: text/javascript\n"..
-				 						"Content-Length: "..(#data).."\n\n"..
-				 						data
-						clt:send(resp)
-					elseif req.file == "jquery.flot.js" then
-						local data=get_jquery_flot()
-						local resp=stdresp("200 OK")..
-				 						"Content-Type: text/javascript\n"..
-				 						"Content-Length: "..(#data).."\n\n"..
-				 						data
-						clt:send(resp)
-					else
-						local data="<html>Not Found</html>"
-						local resp=stdresp("404 Not Found")..
-				 						"Content-Type: text/html\n"..
-				 						"Content-Length: "..(#data).."\n\n"..
-				 						data
-						clt:send(resp)
-					end
-				elseif req.type == "POST" then
-					print('POST',req.post)
-				end
-						
-				if req.header.Connection == "close" then
-					table.remove(server.list, i)
-					clt:close()
-				end
-			end
-		end
-	end
-end
+		var data = [],
+			totalPoints = 300;
 
-local function get_init(n,port,host)
-   return   function()
-               pool_size=n
-               for i=1,n do
-                  table.insert(th,kernel.thread_new())
-                  dbg("Thread %d created",i)
-               end
-               http_server(port or default_port,host or "*")
-            end
-end
+		function getRandomData() {
 
-t.init=get_init(default_thread_pool_size,port,host)
+			if (data.length > 0)
+				data = data.slice(1);
 
-function t.finish()
-   for i=1,#th do
-      th[i]:kill()
-   end
-   dbg "Controller finished"
-end
+			// Do a random walk
 
-function t.get(n)
-   return {init=get_init(n),finish=t.finish}
-end
+			while (data.length < totalPoints) {
 
-if leda and leda.controller then
-   leda.controller.thread_pool=t
+				var prev = data.length > 0 ? data[data.length - 1] : 50,
+					y = prev + Math.random() * 10 - 5;
+
+				if (y < 0) {
+					y = 0;
+				} else if (y > 100) {
+					y = 100;
+				}
+
+				data.push(y);
+			}
+
+			// Zip the generated y values with the x values
+
+			var res = [];
+			for (var i = 0; i < data.length; ++i) {
+				res.push([i, data[i] ])
+			}
+
+			return res;
+		}
+
+		// Set up the control widget
+
+		var updateInterval = 30;
+		$("#updateInterval").val(updateInterval).change(function () {
+			var v = $(this).val();
+			if (v && !isNaN(+v)) {
+				updateInterval = +v;
+				if (updateInterval < 1) {
+					updateInterval = 1;
+				} else if (updateInterval > 2000) {
+					updateInterval = 2000;
+				}
+				$(this).val("" + updateInterval);
+			}
+		});
+
+		var plot = $.plot("#placeholder", [ getRandomData() ], {
+			series: {
+				shadowSize: 0	// Drawing is faster without shadows
+			},
+			yaxis: {
+				min: 0,
+				max: 100
+			},
+			xaxis: {
+				show: false
+			}
+		});
+
+		function update() {
+
+			plot.setData([getRandomData()]);
+
+			// Since the axes don't change, we don't need to call plot.setupGrid()
+
+			plot.draw();
+			setTimeout(update, updateInterval);
+		}
+
+		update();
+
+		// Add the Flot version string to the footer
+
+		$("#footer").prepend("Flot " + $.plot.version + " &ndash; ");
+	});
+
+function updateData() {
+
+            function onDataReceived(series) {
+               alert('Thread_pool_size: '+series.thread_pool_size)
+            }
+
+            function onDataError(error,i,str) {
+					alert('ERROR: '+str)
+            }
+
+				$.ajax({
+					url: "stats",
+					type: "GET",
+					dataType: "json",
+					success: onDataReceived,
+					error: onDataError
+				});
+}
+
+updateData()
+	</script>
+</head>
+<body>
+
+	<div id="header">
+		<h2>Real-time updates</h2>
+	</div>
+
+	<div id="content">
+
+		<div class="demo-container">
+			<div id="placeholder" class="demo-placeholder"></div>
+		</div>
+
+		<p>You can update a chart periodically to get a real-time effect by using a timer to insert the new data in the plot and redraw it.</p>
+
+		<p>Time between updates: <input id="updateInterval" type="text" value="" style="text-align: right; width:5em"> milliseconds</p>
+
+	</div>
+
+</body>
+</html>
+]===]
 end
 
 return t
