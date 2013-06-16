@@ -34,6 +34,13 @@ THE SOFTWARE.
 #include <lualib.h>
 #include <errno.h>
 
+#include <sys/types.h>
+#include <ifaddrs.h>
+#include <netinet/in.h> 
+#include <string.h> 
+#include <arpa/inet.h>
+
+
 #include "scheduler.h"
 #include "graph.h"
 #include "queue.h"
@@ -70,7 +77,7 @@ extern queue ready_queue;
 extern queue * event_queues;
 extern queue * recycle_queues;
 
-int leda_send(lua_State *L) {
+static int leda_send(lua_State *L) {
    int i,id=lua_tointeger(L,1),args=lua_gettop(L)-1;
    if(id<0 || id>main_graph->n_s) {
       lua_pushnil(L);
@@ -104,7 +111,7 @@ void kernel_error_event(evutil_socket_t fd, short events, void *arg) {
    }
  }
  
- void kernel_event_event(evutil_socket_t fd, short events, void *arg) {
+void kernel_event_event(evutil_socket_t fd, short events, void *arg) {
    lua_getfield(L_main, 3,"on_event");
    if(lua_type(L_main,-1)==LUA_TFUNCTION) {
       struct kernel_event_t * ev=arg;
@@ -139,7 +146,7 @@ void kernel_release_event(evutil_socket_t fd, short events, void *arg){
 //void kernel_create_event(evutil_socket_t fd, short events, void *arg);
 //void kernel_active_event(evutil_socket_t fd, short events, void *arg);
 
- void kernel_null_event(evutil_socket_t fd, short events, void *arg) {
+void kernel_null_event(evutil_socket_t fd, short events, void *arg) {
 //    printf("NULL OCCURED\n");
  }
 
@@ -155,7 +162,7 @@ void kernel_timer_event(evutil_socket_t fd, short events, void *arg) {
    }
  }
 
-int add_timer(lua_State * L) {
+static int add_timer(lua_State * L) {
    double t;
    int n;
    t = lua_tonumber(L,1);
@@ -173,7 +180,7 @@ int add_timer(lua_State * L) {
 * Returns: 'true' in case of sucess
 *          'nil' in case of error, with an error message
 */
-int leda_run(lua_State * L) {
+static int leda_run(lua_State * L) {
    evthread_use_pthreads();
    kernel_event_base = event_base_new();
    if (!kernel_event_base) {
@@ -313,17 +320,17 @@ int leda_run(lua_State * L) {
 }
 
 /* Kernel Lua function to get the size of the ready queue*/
-int leda_ready_queue_size(lua_State * L) {
+static int leda_ready_queue_size(lua_State * L) {
    lua_pushinteger(L,queue_size(ready_queue));
    return 1;
 }
 
-int leda_ready_queue_capacity(lua_State * L) {
+static int leda_ready_queue_capacity(lua_State * L) {
    lua_pushinteger(L,queue_capacity(ready_queue));
    return 1;
 }
 
-int leda_ready_queue_isempty(lua_State * L) {
+static int leda_ready_queue_isempty(lua_State * L) {
    lua_pushboolean(L,queue_isempty(ready_queue));
    return 1;
 }
@@ -354,7 +361,7 @@ int leda_setmetatable(lua_State *L) {
  * adapted from:
  * http://stackoverflow.com/questions/4586405/get-number-of-cpus-in-linux-using-c
  */
-int leda_number_of_cpus(lua_State *L) {
+static int leda_number_of_cpus(lua_State *L) {
    long nprocs = -1;
    long nprocs_max = -1;
    #ifdef _WIN32
@@ -385,7 +392,7 @@ int leda_number_of_cpus(lua_State *L) {
    #endif
 }
 /* Kernel Lua function to sleep for a time in miliseconds*/
-int leda_sleep_(lua_State * L) {
+static int leda_sleep_(lua_State * L) {
    lua_Number n=lua_tonumber(L,1);
    usleep((useconds_t)(n*1000000.0));
    return 0;
@@ -394,23 +401,58 @@ int leda_sleep_(lua_State * L) {
 /* Kernel Lua function to get the pointer of a lua value as a string
  * (used as a unique name for objects)
  */
-int leda_to_pointer(lua_State * L) {
+static int leda_to_pointer(lua_State * L) {
    lua_pushfstring(L,"%p",lua_topointer(L,1));
    return 1;
 }
 
-int leda_get_stats(lua_State * L) {
+static int leda_get_stats(lua_State * L) {
    STATS_PUSH(L);
    return 2;
 }
 
+static int leda_default_hostname(lua_State * L) {
+	lua_newtable(L);
+	lua_newtable(L);
+	lua_newtable(L);
+   struct ifaddrs * ifAddrStruct=NULL;
+   struct ifaddrs * ifa=NULL;
+   void * tmpAddrPtr=NULL;
+
+   getifaddrs(&ifAddrStruct);
+
+   for (ifa = ifAddrStruct; ifa != NULL; ifa = ifa->ifa_next) {
+        if (ifa ->ifa_addr->sa_family==AF_INET) { // check it is IP4
+            //IP4 Address
+            tmpAddrPtr=&((struct sockaddr_in *)ifa->ifa_addr)->sin_addr;
+            char addressBuffer[INET_ADDRSTRLEN];
+            inet_ntop(AF_INET, tmpAddrPtr, addressBuffer, INET_ADDRSTRLEN);
+				lua_pushstring(L, ifa->ifa_name);
+				lua_pushstring(L, addressBuffer);
+				lua_settable(L,-4);
+        } else if (ifa->ifa_addr->sa_family==AF_INET6) { // check it is IP6
+            //IP6 Address
+            tmpAddrPtr=&((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr;
+            char addressBuffer[INET6_ADDRSTRLEN];
+            inet_ntop(AF_INET6, tmpAddrPtr, addressBuffer, INET6_ADDRSTRLEN);
+				lua_pushstring(L, ifa->ifa_name);
+				lua_pushstring(L, addressBuffer);
+				lua_settable(L,-3);
+        } 
+    }
+    if (ifAddrStruct!=NULL) freeifaddrs(ifAddrStruct);
+    lua_setfield(L,-3,"ipv6");
+    lua_setfield(L,-2,"ipv4");
+    return 1;
+}
+
 /* Get the size of the thread pool */
-int leda_get_thread_pool_size(lua_State * L) {
+static int leda_get_thread_pool_size(lua_State * L) {
    lua_pushinteger(L,READ(pool_size));
    return 1;
 }
 
-int leda_set_capacity(lua_State * L) {
+static int leda_set_capacity(lua_State * L) {
    queue q=NULL;
    int i=lua_tointeger(L,1);
    if(i<0) {
@@ -473,6 +515,8 @@ int luaopen_leda_kernel (lua_State *L) {
   	   {"set_capacity", leda_set_capacity},
  	   {"ready_queue_capacity", leda_ready_queue_capacity},
   	   {"thread_pool_size", leda_get_thread_pool_size},
+  	   {"ready_queue_isempty", leda_ready_queue_isempty},
+  	   {"hostname", leda_default_hostname},
 		{NULL, NULL},
 	};
 	
