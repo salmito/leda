@@ -15,8 +15,6 @@ local socket=require("socket")
 local debug=require("leda.debug")
 local dbg = debug.get_debug("Process: ")
 local default_p=9999
-local localhost=localhost or "127.0.0.1"
-localhost=socket.dns.toip(localhost) or localhost
 local l_localport=localport or default_p
 l_localport=tonumber(l_localport)
 local processes={}
@@ -33,6 +31,18 @@ require('leda.controller.profiler')
 local t={}
 
 t.default_port=l_localport
+
+local function get_default_localhost()
+	local h=kernel.hostname()
+	for ifname,ip in pairs(h.ipv4) do
+		if ifname~='lo' then
+			return ip
+		end
+	end
+end
+
+local localhost=localhost or get_default_localhost()
+localhost=socket.dns.toip(localhost) or localhost
 
 function t.get_process(host,port)
    if not host and not port then
@@ -99,7 +109,7 @@ local function start(p_port,p_host,controller,maxpar,has_graph)
    process_socket=assert(socket.bind("*", l_localport))
    local ip, port = process_socket:getsockname()
    if has_graph~=true then
-      io.stderr:write(string.format("Waiting for graph on port '%s'\n",tostring(port)))
+      io.stderr:write(string.format("Host '%s:%d' Waiting for graph\n",localhost,tostring(port)))
       local client=process_socket:accept()
       local peer_ip,peer_port=client:getpeername()
 --      client:settimeout(10)
