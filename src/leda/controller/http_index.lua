@@ -85,51 +85,50 @@ function getInfo() {
 }
 
 var info=getInfo()
-var latencyData=[]
+latencyData={}
 var stages=[]
 
 info.stages.forEach(function(entry) {
-   latencyData[entry.name]=[entry.latency]
+   latencyData[entry.name]=[[info.uptime,entry.latency]]
 	stages.push({label: entry.name,data: latencyData[entry.name]})
 });
 
-alert(info.stages[0].name)
+//alert(info.stages[0].name)
 
-		var plot = $.plot("#placeholder", stages, {
+plot = $.plot("#placeholder", stages, {
 			series: {
 				shadowSize: 0	// Drawing is faster without shadows
 			},
 			yaxis: {
-				min: 0,
-				max: 100
+				min: 0
+				//max: 100
 			},
 			xaxis: {
 				show: false
 			}
 		});
 
-		function update() {
-
-			plot.setData([getData()]);
-
-			// Since the axes don't change, we don't need to call plot.setupGrid()
-
-			plot.draw();
-			setTimeout(update, updateInterval);
-		}
-
-		update();
-
 		// Add the Flot version string to the footer
 
 		$("#footer").prepend("Flot " + $.plot.version + " &ndash; ");
 	});
 
+var update=0;
 
-function updateData() {
-
+var updateData=function () {
+				
             function onDataReceived(series) {
-               alert('Thread_pool_size: '+series.thread_pool_size)
+            	var data=[]
+   	         series.stages.forEach(function(entry) {
+   	            latencyData[entry.name].push([series.uptime,entry.latency])
+	   	         data.push({label: entry.name,data: latencyData[entry.name]})
+					});
+					
+					plot.setData(data);
+					
+					// Since the axes don't change, we don't need to call plot.setupGrid()
+					plot.draw();
+					setTimeout(updateData, updateInterval);
             }
 
             function onDataError(error,i,str) {
@@ -145,8 +144,9 @@ function updateData() {
 				});
 }
 
-updateData()
-	</script>
+updateData();
+
+</script>
 </head>
 <body>
 
