@@ -33,7 +33,7 @@ local t={}
 t.default_port=l_localport
 
 
-local localhost=localhost or get_default_localhost()
+local localhost=localhost or '127.0.0.1'--get_default_localhost()
 localhost=socket.dns.toip(localhost) or localhost
 
 function t.get_process(host,port)

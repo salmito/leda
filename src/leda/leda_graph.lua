@@ -69,7 +69,7 @@ function t.get_localhost(interface)
 	return "127.0.0.1"
 end
 
-local localhost = localhost or t.get_localhost()
+local localhost = localhost or '127.0.0.1'--t.get_localhost()
 -----------------------------------------------------------------------------
 -- Verify if parameter 'g' is a graph
 -- (i.e. has the graph metatable)

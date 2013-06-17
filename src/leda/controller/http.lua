@@ -140,6 +140,18 @@ function stdresp(str)
 	return res
 end
 
+local function send(clt,resp)
+				 		local sent,a,err=0,nil,nil
+				 		local lsent=0
+				 		while sent<#resp do
+						   a,err,lsent=clt:send(string.sub(resp,sent))
+						   --print(lsent,err,sent,#resp,a)
+						   if lsent==nil and err~='timeout' then break end
+			            if type(lsent)=='number' then		   sent=sent+lsent end
+						end
+
+end
+
 local function http_server(port)
 	dbg("Starting HTTP server on port %d addr=%s",port)
 	init_time=kernel.gettime()
@@ -147,7 +159,7 @@ local function http_server(port)
 	assert(server.sock:setoption("reuseaddr",true))
 	assert(server.sock:bind("*",port))
 	assert(server.sock:listen(10))
-	assert(server.sock:settimeout(.1))
+	assert(server.sock:settimeout(0.1))
 	server.list={}
 	server.n=0
 	
@@ -155,7 +167,7 @@ local function http_server(port)
 		local list,err,line,clt=nil
 		clt = server.sock:accept()
 		if clt then
-			clt:settimeout(.1)
+			clt:settimeout(0.1)
 			table.insert(server.list, clt)
 		end
 		list, _, err = socket.select(server.list, nil, 0.1)
@@ -217,35 +229,35 @@ local function http_server(port)
 				 						"Content-Type: text/html\r\n"..
 				 						"Content-Length: "..(#data).."\r\n\r\n"..
 				 						data
-						clt:send(resp)
+				 		send(clt,resp)
 					elseif req.file == "stats" then
 						local data=get_stats()
 						local resp=stdresp("200 OK")..
 				 						"Content-Type: application/json\r\n"..
 				 						"Content-Length: "..(#data).."\r\n\r\n"..
 				 						data
-						clt:send(resp)
+				 		send(clt,resp)
 					elseif req.file == "leda.css" then
 						local data=get_css()
 						local resp=stdresp("200 OK")..
 				 						"Content-Type: text/css\r\n"..
 				 						"Content-Length: "..(#data).."\r\n\r\n"..
 				 						data
-						clt:send(resp)
+				 		send(clt,resp)
 					elseif req.file == "jquery.js" then
 						local data=get_jquery()
 						local resp=stdresp("200 OK")..
 				 						"Content-Type: text/javascript\r\n"..
 				 						"Content-Length: "..(#data).."\r\n\r\n"..
 				 						data
-						clt:send(resp)
+				 		send(clt,resp)
 					elseif req.file == "jquery.flot.js" then
 						local data=get_jquery_flot()
 						local resp=stdresp("200 OK")..
 				 						"Content-Type: text/javascript\r\n"..
 				 						"Content-Length: "..(#data).."\r\n\r\n"..
 				 						data
-						clt:send(resp)
+				 		send(clt,resp)
 					else
 						print("FILE 404",req.file)
 						local data="<html>Not Found</html>"
@@ -253,7 +265,7 @@ local function http_server(port)
 				 						"Content-Type: text/html\r\n"..
 				 						"Content-Length: "..(#data).."\r\n\r\n"..
 				 						data
-						clt:send(resp)
+				 		send(clt,resp)
 					end
 				elseif req.type == "POST" then
 					print('POST',req.post)

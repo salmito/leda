@@ -49,7 +49,7 @@ return [===[<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org
 
 		// Set up the control widget
 
-		var updateInterval = 30;
+		var updateInterval = 1000;
 		$("#updateInterval").val(updateInterval).change(function () {
 			var v = $(this).val();
 			if (v && !isNaN(+v)) {
@@ -115,8 +115,7 @@ plot = $.plot("#placeholder", stages, {
 
 var update=0;
 
-var updateData=function () {
-				
+var updateData=function () {				
             function onDataReceived(series) {
             	var data=[]
    	         series.stages.forEach(function(entry) {
@@ -126,7 +125,8 @@ var updateData=function () {
 					
 					plot.setData(data);
 					
-					// Since the axes don't change, we don't need to call plot.setupGrid()
+					// Since the axes don't change, we don't need to call 
+					plot.setupGrid()
 					plot.draw();
 					setTimeout(updateData, updateInterval);
             }
@@ -159,9 +159,6 @@ updateData();
 		<div class="demo-container">
 			<div id="placeholder" class="demo-placeholder"></div>
 		</div>
-
-		<p>You can update a chart periodically to get a real-time effect by using a timer to insert the new data in the plot and redraw it.</p>
-
 		<p>Time between updates: <input id="updateInterval" type="text" value="" style="text-align: right; width:5em"> milliseconds</p>
 
 	</div>
