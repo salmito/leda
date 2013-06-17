@@ -16,7 +16,7 @@ return [===[<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org
 		var data = [],
 			totalPoints = 300;
 
-		function getRandomData() {
+		function getData() {
 
 			if (data.length > 0)
 				data = data.slice(1);
@@ -62,8 +62,40 @@ return [===[<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org
 				$(this).val("" + updateInterval);
 			}
 		});
+		
+function getInfo() {
+	var stage={}
+  
+	function onDataReceived(series) {
+       stage=series
+   }
+   function onError(error,i,str) {
+		alert('ERROR: '+str)
+   }
 
-		var plot = $.plot("#placeholder", [ getRandomData() ], {
+	$.ajax({
+			url: "stats",
+			type: "GET",
+			dataType: "json",
+			success: onDataReceived,
+			error: onError,
+			async: false
+	});
+	return stage
+}
+
+var info=getInfo()
+var latencyData=[]
+var stages=[]
+
+info.stages.forEach(function(entry) {
+   latencyData[entry.name]=[entry.latency]
+	stages.push({label: entry.name,data: latencyData[entry.name]})
+});
+
+alert(info.stages[0].name)
+
+		var plot = $.plot("#placeholder", stages, {
 			series: {
 				shadowSize: 0	// Drawing is faster without shadows
 			},
@@ -78,7 +110,7 @@ return [===[<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org
 
 		function update() {
 
-			plot.setData([getRandomData()]);
+			plot.setData([getData()]);
 
 			// Since the axes don't change, we don't need to call plot.setupGrid()
 
@@ -92,6 +124,7 @@ return [===[<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org
 
 		$("#footer").prepend("Flot " + $.plot.version + " &ndash; ");
 	});
+
 
 function updateData() {
 

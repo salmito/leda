@@ -43,7 +43,7 @@ local g=graph{"Producer-consumer",
 
 local th = th or tonumber(arg[3]) or leda.kernel.cpu()
 
-local c=require "leda.controller.http"
+local c=require "leda.controller.http".get(th,8081)
 
 
 g:run{maxpar=16,controller=c}

@@ -143,11 +143,11 @@ end
 local function http_server(port)
 	dbg("Starting HTTP server on port %d addr=%s",port)
 	init_time=kernel.gettime()
-	server.sock=socket.tcp()
-	server.sock:setoption("reuseaddr",true)
-	server.sock:bind("*",port)
-	server.sock:listen(10)
-	server.sock:settimeout(.1)
+	server.sock=assert(socket.tcp())
+	assert(server.sock:setoption("reuseaddr",true))
+	assert(server.sock:bind("*",port))
+	assert(server.sock:listen(10))
+	assert(server.sock:settimeout(.1))
 	server.list={}
 	server.n=0
 	
@@ -270,6 +270,7 @@ local function http_server(port)
 end
 
 local function get_init(n,port,user,pass)
+	assert(n,"Number of threads required")
    if user then
       assert(pass,"Password must be provided")
       auth=mime.b64(user..":"..pass)

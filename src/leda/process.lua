@@ -10,7 +10,7 @@ local getmetatable,setmetatable,type,tostring,assert,print,pairs,ipairs,tonumber
       
 local leda_graph=require 'leda.leda_graph'
 local is_graph=leda_graph.is_graph
-
+local get_default_localhost=leda_graph.get_localhost
 local socket=require("socket")
 local debug=require("leda.debug")
 local dbg = debug.get_debug("Process: ")
@@ -32,14 +32,6 @@ local t={}
 
 t.default_port=l_localport
 
-local function get_default_localhost()
-	local h=kernel.hostname()
-	for ifname,ip in pairs(h.ipv4) do
-		if ifname~='lo' then
-			return ip
-		end
-	end
-end
 
 local localhost=localhost or get_default_localhost()
 localhost=socket.dns.toip(localhost) or localhost

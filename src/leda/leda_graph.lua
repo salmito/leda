@@ -24,7 +24,7 @@ local is_stage=leda_stage.is_stage
 local leda_cluster = require("leda.leda_cluster")
 local is_cluster=leda_cluster.is_cluster
 local leda=leda
-local localhost = localhost or 'localhost'
+local kernel=require 'leda.kernel'
 --module("leda.leda_graph")
 
 local t={}
@@ -49,7 +49,27 @@ function graph_metatable.__tostring(g)
    end
 end
 
+function t.get_localhost(interface)
+	local h=kernel.hostname()
+	if interface then
+		return h.ipv4.interface
+	end
+	for ifname,ip in pairs(h.ipv4) do
+		if ifname~='lo' then
+			return ip
+		end
+	end
+	--IPv4 interface not found, searching for IPv6
+	for ifname,ip in pairs(h.ipv6) do
+		if ifname~='lo' then
+			return ip
+		end
+	end
+	--Nothing found, returning localhost
+	return "127.0.0.1"
+end
 
+local localhost = localhost or t.get_localhost()
 -----------------------------------------------------------------------------
 -- Verify if parameter 'g' is a graph
 -- (i.e. has the graph metatable)
