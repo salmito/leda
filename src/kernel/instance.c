@@ -316,6 +316,7 @@ void register_aio_api(lua_State * L) {
    lua_setfield(L,-2,"aio");
 }
 
+
 void register_debug_api(lua_State * L) {
    lua_pushcfunction(L,leda_sleep);
    lua_setfield(L,-2,"sleep");
@@ -329,7 +330,8 @@ void register_debug_api(lua_State * L) {
    lua_setfield(L,-2,"gettime");
    lua_pushcfunction(L,instance_loadlibs);
    lua_setfield(L,-2,"loadlibs");
-
+	lua_pushcfunction(L,leda_raise_yield_event);
+   lua_setfield(L,-2,"yield");
    lua_newtable(L);
    lua_pushcfunction(L,instance_wait_for_event);
    lua_setfield(L,-2,"wait_event");

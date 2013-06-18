@@ -77,6 +77,8 @@ extern queue ready_queue;
 extern queue * event_queues;
 extern queue * recycle_queues;
 
+
+
 static int leda_send(lua_State *L) {
    int i,id=lua_tointeger(L,1),args=lua_gettop(L)-1;
    if(id<0 || id>main_graph->n_s) {
@@ -99,6 +101,17 @@ static int leda_send(lua_State *L) {
  lua_State * L_main;
  
  #include <event2/thread.h>
+ 
+void kernel_yield_event(evutil_socket_t fd, short events, void *arg) {
+	event_base_loopexit(kernel_event_base,NULL);
+}
+
+int leda_raise_yield_event(lua_State * L) {
+	struct event *yield_event = event_new(kernel_event_base, -1, 0, kernel_yield_event, L);
+	event_add(yield_event, NULL);
+   event_active(yield_event,0,0);
+	return 0;
+}
  
 void kernel_error_event(evutil_socket_t fd, short events, void *arg) {
    lua_getfield(L_main, 3,"on_error");
