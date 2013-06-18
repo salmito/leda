@@ -258,6 +258,13 @@ local function http_server(port)
 				 						"Content-Length: "..(#data).."\r\n\r\n"..
 				 						data
 				 		send(clt,resp)
+					elseif req.file == "jquery.flot.navigate.js" then
+						local data=get_jquery_flot_navigate()
+						local resp=stdresp("200 OK")..
+				 						"Content-Type: text/javascript\r\n"..
+				 						"Content-Length: "..(#data).."\r\n\r\n"..
+				 						data
+				 		send(clt,resp)
 					else
 						print("FILE 404",req.file)
 						local data="<html>Not Found</html>"
@@ -326,6 +333,11 @@ end
 get_jquery_flot=function()
 	return require 'leda.controller.http_flot' 
 end
+
+get_jquery_flot_navigate=function()
+	return require 'leda.controller.http_flot_navigate' 
+end
+
 
 get_index=function()
 	return require 'leda.controller.http_index'

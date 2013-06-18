@@ -544,20 +544,6 @@ int instance_release(instance i) {
          
          has_event=TRY_POP(event_queues[i->stage],e);
       }
-      if(has_event) {
-         //There are still pending events waiting for this instance to finish     
-         lua_settop(i->L,0);
-         //Get the  main coroutine of the instance's handler
-         lua_getglobal(i->L, "handler");
-         //push arguments to instance
-         i->args=restore_event_to_lua_state(i->L,&e);
-         i->init_time=now_secs();
-         push_ready_queue(i);
-         
-         _DEBUG("Instance: Instance %d of stage '%s' popped a pending event.\n",
-            i->instance_number,STAGE(i->stage)->name);
-        return 0;
-      }
    }
    STATS_INACTIVE(i->stage);
    if(!TRY_PUSH(recycle_queues[i->stage],i)) {
