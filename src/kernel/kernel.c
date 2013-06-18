@@ -98,18 +98,44 @@ static int leda_send(lua_State *L) {
 /**
  * Event system callbacks using libvevent
  */
- lua_State * L_main;
+static lua_State * L_main;
+static int L_main_args;
  
  #include <event2/thread.h>
  
 void kernel_yield_event(evutil_socket_t fd, short events, void *arg) {
+	event e=arg;
+	L_main_args=restore_event_to_lua_state(L_main, &e);
 	event_base_loopexit(kernel_event_base,NULL);
 }
 
 int leda_raise_yield_event(lua_State * L) {
-	struct event *yield_event = event_new(kernel_event_base, -1, 0, kernel_yield_event, L);
+//	dump_stack(L);
+	int args=lua_gettop(L),i=0;
+ 	lua_pushcfunction(L,mar_encode);
+   lua_newtable(L);
+   for(i=1;i<=args;i++) {
+      lua_pushvalue(L,i);
+      lua_rawseti(L,-2,i);
+   }
+   lua_pushnil(L);
+   lua_pushboolean(L,TRUE);
+//	dump_stack(L);
+   lua_call(L,3,1); //propagate error
+   if(lua_type(L,-1)!=LUA_TSTRING) {     
+   	luaL_error(L,"Error serializing yield event");
+   }
+   size_t len; const char *payload=lua_tolstring(L,-1,&len); 
+   lua_pop(L,1);
+   char * pp=malloc(len*sizeof(char));
+
+   memcpy(pp,payload,len);
+   event e=event_new_packed_event(pp,len);
+   
+	struct event *yield_event = event_new(kernel_event_base, -1, 0, kernel_yield_event, e);
 	event_add(yield_event, NULL);
    event_active(yield_event,0,0);
+// 	dump_stack(L);
 	return 0;
 }
  
@@ -329,7 +355,20 @@ static int leda_run(lua_State * L) {
    #else
       while(1) sleep(1000);
    #endif
-   return 0;
+   
+    //call the finish function of a controller, if defined
+   lua_getfield(L, 3,"finish");
+   if(lua_type(L,-1)==LUA_TFUNCTION) {
+      _DEBUG("Kernel: Calling controller finish function\n");
+//      lua_pop(L,1);
+      lua_call(L,0,0);
+   } else {
+      lua_pop(L,1);
+      _DEBUG("Controller does not defined an finish method\n");
+   }
+   
+   close(process_fd);
+   return  L_main_args;
 }
 
 /* Kernel Lua function to get the size of the ready queue*/

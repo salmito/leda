@@ -84,7 +84,7 @@ local function init(g,ro_g,host,port,controller,maxpar)
       end
    end
    
-   leda.kernel.run(g,ro_g,controller or default_controller,maxpar,process_socket:getfd())
+   return leda.kernel.run(g,ro_g,controller or default_controller,maxpar,process_socket:getfd())
 end
 t.init=init
 
@@ -123,7 +123,7 @@ local function start(p_port,p_host,controller,maxpar,has_graph)
       local ro_gr=kernel.build_graph(gr,localhost,l_localport)
       client:send("ACCEPTED\n")
       client:close()
-      init(gr,ro_gr,localhost,l_localport,controller,maxpar)
+      return init(gr,ro_gr,localhost,l_localport,controller,maxpar)
    end
 end
 t.start=start
@@ -211,7 +211,7 @@ function t.run(g,localport,maxpar,controller)
       end
    end
    start(l_localport,nil,nil,nil,true)   
-   init(g,ro_graph,localhost,l_localport,controller,maxpar)
+   return init(g,ro_graph,localhost,l_localport,controller,maxpar)
 end
 
 
