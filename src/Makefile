@@ -22,7 +22,7 @@ debug:
 	cd kernel && make LUA_INCDIR="$(LUA_5_2_INCDIR)" EXTRA_FLAGS="-ggdb -DDEBUG"
 
 opt:
-	cd kernel && make LUA_INCDIR="$(LUA_INCDIR)" EXTRA_FLAGS="-Wall -s -O9 -msse4.2 -ffast-math -ftree-vectorize -funroll-loops"
+	cd kernel && make LUA_INCDIR="$(LUA_INCDIR)" EXTRA_FLAGS="-Wall -s -O9 -msse4.2 -ffast-math -ftree-vectorize -funroll-loops $(EXTRA_FLAGS)"
 
 clean:
 	cd kernel && make clean 
