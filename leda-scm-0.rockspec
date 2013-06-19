@@ -1,11 +1,10 @@
 package="leda"
-version="0.2.9-1"
+version="scm-0"
 
 source= {
-	url= "git://github.com/Salmito/leda.git",
-	branch= "unstable"
+	url= "https://github.com/salmito/leda/archive/master.zip",
+	dir= "leda-master"
 }
-
 
 description = {
   summary = "Leda",
