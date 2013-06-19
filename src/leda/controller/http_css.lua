@@ -68,7 +68,7 @@ input[type=checkbox] {
 .stages {
 	box-sizing: border-box;
 	width: 900px;
-	height: 500px;
+	height: 550px;
 	padding: 20px 15px 15px 15px;
 	margin: 15px auto 30px auto;
 	border: 1px solid #ddd;
@@ -88,7 +88,7 @@ input[type=checkbox] {
 .connectors {
 	box-sizing: border-box;
 	width: 900px;
-	height: 250px;
+	height: 275px;
 	padding: 20px 15px 15px 15px;
 	margin: 15px auto 30px auto;
 	border: 1px solid #ddd;
@@ -124,8 +124,48 @@ input[type=checkbox] {
 	-moz-box-shadow: 0 3px 10px rgba(0,0,0,0.1);
 	-webkit-box-shadow: 0 3px 10px rgba(0,0,0,0.1);
 }
+.div-text-1 {
+    font-size: 14px;
+    height: 25px;
+    line-height: 1.2em;
+    margin-left: 230px;
+    margin-top: 45px;
+    position: absolute;
+    width: 450px;
+}
+
+.div-text-2 {
+    font-size: 14px;
+    height: 25px;
+    line-height: 1.2em;
+    margin-left: 670px;
+    margin-top: 45px;
+    position: absolute;
+    width: 450px;
+}
+
+.div-text-4 {
+    font-size: 14px;
+    height: 25px;
+    line-height: 1.2em;
+    margin-left: 670px;
+    margin-top: 325px;
+    position: absolute;
+    width: 450px;
+}
+
+.div-text-3 {
+    font-size: 14px;
+    height: 25px;
+    line-height: 1.2em;
+    margin-left: 220px;
+    margin-top: 325px;
+    position: absolute;
+    width: 450px;
+}
 
 .connector-graph {
+	top: 25px;
 	width: 450px;
 	height: 250px;
 	font-size: 14px;
@@ -134,7 +174,7 @@ input[type=checkbox] {
 
 .connector-graph-2 {
 	left: 450px;
-	top: -250px;
+	top: -225px;
 	width: 450px;
 	height:	250px;
 	font-size: 14px;
@@ -149,6 +189,15 @@ input[type=checkbox] {
 }
 
 .stage-graph {
+	top: 25px;
+	width: 450px;
+	height: 250px;
+	font-size: 14px;
+	line-height: 1.2em;
+}
+
+.stage-graph-1 {
+	top: 50px;
 	width: 450px;
 	height: 250px;
 	font-size: 14px;
@@ -156,7 +205,7 @@ input[type=checkbox] {
 }
 
 .stage-graph-2 {
-	top: -500px;
+	top: -475px;
 	left: 450px;
 	width: 450px;
 	height:	250px;
@@ -165,7 +214,7 @@ input[type=checkbox] {
 }
 
 .stage-graph-3 {
-	top: -500px;
+	top: -450px;
 	left: 450px;
 	width: 450px;
 	height: 250px;

@@ -292,15 +292,20 @@ return [===[<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org
 		<p>Time between updates: <input id="updateInterval" type="text" value="" style="text-align: right; width:5em"> milliseconds</p>
 		Stages:
 		<div id="stage_choices" class="choices">Stages</div>
+				<div class="div-text-1">Latency</div>
+				<div class="div-text-2">Queue size</div>
+				<div class="div-text-3">Throughput</div>
+				<div class="div-text-4">Instances</div>
 		<div class="stages">
-
 			<div id="stage_latency" class="stage-graph"></div>
-			<div id="stage_throughput" class="stage-graph"></div>
+			<div id="stage_throughput" class="stage-graph-1"></div>
 			<div id="stage_queue" class="stage-graph-2"></div>
 			<div id="stage_instances" class="stage-graph-3"></div>
 		</div> 
 		Connectors:
 		<div id="connector_choices" class="choices">Connectors</div>
+				<div class="div-text-1">Latency</div>
+				<div class="div-text-2">Throughput</div>
 		<div class="connectors">
 			<div id="connectors_latency" class="connector-graph"></div>
 			<div id="connectors_throughput" class="connector-graph-2"></div>
