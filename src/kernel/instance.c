@@ -526,26 +526,30 @@ int instance_release(instance i) {
    STATS_UPDATE_TIME(i->stage,(long int)(t*1000000));
    
    event e;
+   _DEBUG("Instance: Releasing instance, event queue size=%d\n",queue_size(event_queues[i->stage]));
    bool_t has_event=TRY_POP(event_queues[i->stage],e);
-   instance new=NULL; 
    if(has_event) {
-      while(has_event) { 
-         new=instance_aquire(i->stage);
-         if(!new) break;
-         //There are pending events waiting and parallel instances available   
-         lua_settop(new->L,0);
+//      while(has_event) {
+         //There are pending events waiting and parallel instances available
+         STATS_INACTIVE(i->stage);
+         STATS_ACTIVE(i->stage);
+         i->init_time=now_secs();
+   
+         lua_settop(i->L,0);
          
          //Get the  main coroutine of the instance's handler
-         lua_getglobal(new->L, "handler");
+         lua_getglobal(i->L, "handler");
          //push arguments to instance
-         new->args=restore_event_to_lua_state(new->L,&e);
-         new->init_time=now_secs();
-         push_ready_queue(new);
+         i->args=restore_event_to_lua_state(i->L,&e);
+         i->init_time=now_secs();
          _DEBUG("Instance: Instance %d of stage '%s' popped a pending event.\n",
-            new->instance_number,STAGE(new->stage)->name);
+            i->instance_number,STAGE(i->stage)->name);
+
+         thread_resume_instance(i);
          
-         has_event=TRY_POP(event_queues[i->stage],e);
-      }
+//         has_event=TRY_POP(event_queues[i->stage],e);
+//      }
+			return 0;
    }
    STATS_INACTIVE(i->stage);
    if(!TRY_PUSH(recycle_queues[i->stage],i)) {

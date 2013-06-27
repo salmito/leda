@@ -65,13 +65,14 @@ int thread_new (lua_State *L);
 int thread_createmetatable (lua_State *L);
 int thread_kill (lua_State *L);
 int thread_rawkill (lua_State *L);
-
 int wait_io(lua_State * L);
 int do_file_aio(lua_State * L);
 int emmit(lua_State * L);
 int emmit_sync(lua_State * L);
 int emmit_packed_event(stage_id dst_id,char * data,size_t len);
 int cohort(lua_State * L);
+
+void thread_resume_instance(instance i); 
 
 int leda_getmetatable(lua_State *L);
 int leda_setmetatable(lua_State *L);

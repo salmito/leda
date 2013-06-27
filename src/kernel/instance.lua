@@ -4,45 +4,45 @@ local __yield_code_l=leda.__yield_code leda.__yield_code=nil
 local __end_code_l=leda.__end_code leda.__end_code=nil
 leda.nice=function (...) return coroutine.yield(__yield_code_l,...) end
 function leda.get_output(key)
-   key = key or 1
-   --try to get the provided key
-   if leda.output[key] then 
-      return leda.output[key]
-   end
-   return nil,"Output key not found"
+key = key or 1
+if leda.output[key] then 
+return leda.output[key]
+end
+return nil,"Output key not found"
 end
 function leda.send(key,...)
-   if not leda.output[key] then return nil, "Output key not found: "..tostring(key) end
-   return leda.output[key].send(...)
+if not leda.output[key] then return nil, "Output key not found: "..tostring(key) end
+return leda.output[key].send(...)
 end
 local __cohort_f=__cohort __cohort=nil
 local __emmit_f=__emmit __emmit=nil
 for key,connector in pairs(stage.__output) do
-   local c,err={}
-   local func=nil
-   if connector.__sendf=="cohort" then 
-      func=__cohort_f
-   else
-      func=__emmit_f
-   end
-   assert(type(func)=="function","Sendf field must be a function")
-   local consumer=connector.__consumer;
-   local id=connector.__id;
-   c.send=function(...) return func(consumer,id,...) end
-   leda.output[key]=c
+local c,err={}
+local func=nil
+if connector.__sendf=="cohort" then 
+func=__cohort_f
+else
+func=__emmit_f
+end
+assert(type(func)=="function","Sendf field must be a function")
+local consumer=connector.__consumer;
+local id=connector.__id;
+c.send=function(...) return func(consumer,id,...) end
+leda.output[key]=c
 end
 local stage_env=leda.decode(leda.stage.__env)
-setmetatable(stage_env,{__index=_G})
-leda.stage.__handler=stage_env.handler
-leda.stage.__init=stage_env.init
+local global_env=_G
+setmetatable(stage_env,{__index=global_env})
+leda.stage.__handler=stage_env.handler stage_env.handler=nil
+leda.stage.__init=stage_env.init stage_env.init=nil
 local __handler=leda.decode(leda.stage.__handler)
 if not (type(__handler)=='function' or type(__handler)=='string') then 
-   error("Error loading handler function for stage: "..tostring(leda.stage.name).." type:"..type(__handler))
+error("Error loading handler function for stage: "..tostring(leda.stage.name).." type:"..type(__handler))
 end
 if type(__handler)=="string" then
-	__handler,err=loadstring(__handler)
-	if not __handler then 
-	   error("Error loading handler function for stage "..tostring(leda.stage.name).."': "..tostring(err))
+__handler,err=loadstring(__handler)
+if not __handler then 
+   error("Error loading handler function for stage "..tostring(leda.stage.name).."': "..tostring(err))
 	end
 end
 leda.stage.handler=__handler
@@ -81,7 +81,9 @@ if not setfenv then
    debug=require('debug')
 end
 local coroutine=coroutine
-local env=setmetatable({},{__index=stage_env})
+local env=setmetatable({},{__index=global_env})
+self=stage_env
+ --	setfenv(0,stage_env)
 if setfenv then       
 	setfenv(stage.handler,env)
 else
