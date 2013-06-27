@@ -3,7 +3,7 @@ require "leda"
 local hello=leda.stage"Self"{
    handler=function()
       print(self.str)
-      leda.yield()
+      leda.quit()
    end,
    str="Hello world from self",
    autostart=true
