@@ -167,7 +167,7 @@ local function send_graph(g,d)
    if not client then 
       error(string.format("Error connecting to '%s:%d': %s",d.host,d.port,err))
    end
-   client:settimeout(10)
+   --client:settimeout(10)
    local t=prepare_graph(g,d)
    local serialized_graph=leda.kernel.encode(g)
    restore_graph(g,t)
