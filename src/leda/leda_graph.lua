@@ -324,6 +324,7 @@ function index.map(g,...)
          if type(t)=='string' then t={t} end
          assert(type(t)=="table",string.format("Invalid parameter #%d type (table expected, got %s)",i,type(t)))
          for j,proc in ipairs(t) do
+            if g.cluster[i]==nil then break end
             if j==1 then
                g.cluster[i]:set_process(proc)
             else
