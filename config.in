@@ -1,7 +1,13 @@
-LUA_INSTALL_PATH=/home/tsalmito/lua/share/
-LIB_INSTALL_PATH=/home/tsalmito/lua/lib/
+#Lua install paths
+LUA_INSTALL_PATH=/usr/local/share/lua/5.1
+LIB_INSTALL_PATH=/usr/local/lib/lua/5.1
 
-LUA_INCDIR=/home/tsalmito/lua/lua-5.1.5/src/ -I/home/tsalmito/intel/tbb/include -I/home/tsalmito/include
+#Lua include directory
+LUA_INCDIR=/usr/include/lua5.1
 
-export EXTRA_FLAGS=-L/home/tsalmito/lua/lib/ -L/home/tsalmito/lib/ -L/home/tsalmito/intel/tbb/lib/
+#Lua 5.2 install paths
+LUA_INSTALL_PATH_5_2=/usr/local/share/lua/5.2
+LIB_INSTALL_PATH_5_2=/usr/local/lib/lua/5.2
 
+#Lua 5.2 include directory
+LUA_5_2_INCDIR=/usr/include/lua5.2
