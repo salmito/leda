@@ -1,6 +1,6 @@
 require "leda"
 
-local hello=leda.stage"Self"{
+local test=leda.stage"Self"{
    handler=function()
       print(self.str)
       leda.quit()
