@@ -8,6 +8,7 @@ local it=it or 100000
 
 local s1=leda.stage{name="S1",
 	handler=function()
+   	memarray=require 'leda.utils.memarray'
       local c=memarray('uint',500)
       for i=0,499 do
          c[i]=4000000000
@@ -19,7 +20,6 @@ local s1=leda.stage{name="S1",
 --   	print(c) --raise error
    end,
    init=function () 
-   	memarray=require 'leda.utils.memarray'
    end
 }
 

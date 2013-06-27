@@ -88,7 +88,7 @@ void destroy_event(event e) {
          case LUA_TSTRING:
          case LUA_TFUNCTION:
          case LUA_TTABLE:
-         case LUA_TUSERDATA:
+       //  case LUA_TUSERDATA:
 		//	case LUA_TLIGHTUSERDATA:
          if(e->payload[i].data.str) 
             free(e->payload[i].data.str);
