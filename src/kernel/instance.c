@@ -545,7 +545,7 @@ int instance_release(instance i) {
          _DEBUG("Instance: Instance %d of stage '%s' popped a pending event.\n",
             i->instance_number,STAGE(i->stage)->name);
 
-         thread_resume_instance(i);
+         push_ready_queue(i);
          
 //         has_event=TRY_POP(event_queues[i->stage],e);
 //      }
