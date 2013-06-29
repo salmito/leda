@@ -7,7 +7,7 @@ local base = _G
 local debug=require("leda.debug")
 local dbg = debug.get_debug("Controller: Fixed-thread-pool: ")
 local kernel=leda.kernel
-local table,ipairs,pairs,print=table,ipairs,pairs,print
+local table=table
 local default_thread_pool_size=kernel.cpu()
 
 local t={}
@@ -31,8 +31,12 @@ end
 t.init=get_init(default_thread_pool_size)
 
 function t.finish()
-   for i=1,#th do
-      th[i]:kill()
+   for i,thread in ipairs(th) do
+      thread:kill()
+   end
+	for i,thread in ipairs(th) do
+      thread:join()
+      dbg("Thread %d killed",i)
    end
    dbg "Controller finished"
 end

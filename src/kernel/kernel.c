@@ -537,6 +537,85 @@ static void set_leda_info (lua_State *L) {
 	lua_settable (L, -3);
 }
 
+#if defined(PLATFORM_LINUX)
+
+struct smaps_sizes {
+    char * name;
+    int KernelPageSize;
+    int MMUPageSize;
+    int Private_Clean;
+    int Private_Dirty;
+    int Pss;
+    int Referenced;
+    int Rss;
+    int Shared_Clean;
+    int Shared_Dirty;
+    int Size;
+    int Swap;
+    int total;
+};
+
+static int leda_get_smaps(lua_State *L) {
+	FILE *file = fopen("/proc/self/smaps", "r");
+	if (!file) {
+	 	lua_pushnil(L);
+      lua_pushfstring(L,"Could not read memory status: %s", 
+      strerror (errno));
+	   return 2;
+  }
+  char line [BUFSIZ];
+  struct smaps_sizes sizes;
+  memset(&sizes, 0, sizeof sizes);
+  lua_newtable(L);
+  int i=0;
+  while (fgets(line, sizeof line, file)) {
+	   char substr[32];
+       int n;
+      if (sscanf(line, "%32[^:]: %d kB", substr, &n) == 2) {
+         if      (strcmp(substr, "KernelPageSize") == 0) { sizes.KernelPageSize += n; }
+         else if (strcmp(substr, "MMUPageSize") == 0)    { sizes.MMUPageSize += n; }
+         else if (strcmp(substr, "Private_Clean") == 0)  { sizes.Private_Clean += n; }
+         else if (strcmp(substr, "Private_Dirty") == 0)  { sizes.Private_Dirty += n; }
+         else if (strcmp(substr, "Pss") == 0)            { sizes.Pss += n; }
+         else if (strcmp(substr, "Referenced") == 0)     { sizes.Referenced += n; }
+         else if (strcmp(substr, "Rss") == 0)            { sizes.Rss += n; }
+         else if (strcmp(substr, "Shared_Clean") == 0)   { sizes.Shared_Clean += n; }
+         else if (strcmp(substr, "Shared_Dirty") == 0)   { sizes.Shared_Dirty += n; }
+         else if (strcmp(substr, "Size") == 0)           { sizes.Size += n; }
+         else if (strcmp(substr, "Swap") == 0)           { sizes.Swap += n; }
+         sizes.total += n;
+      }
+//   	lua_pushstring(L,line);
+//		lua_rawseti(L,-2,++i);
+   }
+
+	lua_pushliteral(L,"KernelPageSize"); lua_pushinteger(L,sizes.KernelPageSize); lua_rawset(L,-3);
+   lua_pushliteral(L,"MMUPageSize"); lua_pushinteger(L,sizes.MMUPageSize); lua_rawset(L,-3);
+  	lua_pushliteral(L,"Private_Clean"); lua_pushinteger(L,sizes.Private_Clean); lua_rawset(L,-3);
+  	lua_pushliteral(L,"Private_Dirty"); lua_pushinteger(L,sizes.Private_Dirty); lua_rawset(L,-3);
+  	lua_pushliteral(L,"Pss"); lua_pushinteger(L,sizes.Pss); lua_rawset(L,-3);  	
+  	lua_pushliteral(L,"Referenced"); lua_pushinteger(L,sizes.Referenced); lua_rawset(L,-3);
+  	lua_pushliteral(L,"Rss"); lua_pushinteger(L,sizes.Rss); lua_rawset(L,-3);
+  	lua_pushliteral(L,"Shared_Clean"); lua_pushinteger(L,sizes.Shared_Clean); lua_rawset(L,-3);
+  	lua_pushliteral(L,"Shared_Dirty"); lua_pushinteger(L,sizes.Shared_Dirty); lua_rawset(L,-3);
+  	lua_pushliteral(L,"Size"); lua_pushinteger(L,sizes.Size); lua_rawset(L,-3);
+  	lua_pushliteral(L,"Swap"); lua_pushinteger(L,sizes.Swap); lua_rawset(L,-3);
+  	lua_pushliteral(L,"Total"); lua_pushinteger(L,sizes.total); lua_rawset(L,-3); 	 	
+   
+   fclose(file);
+   return 1;
+}
+
+static int leda_get_system_memory(lua_State * L) {
+    long pages = sysconf(_SC_PHYS_PAGES);
+    long page_size = sysconf(_SC_PAGE_SIZE);
+	 lua_pushinteger(L,pages * page_size);
+    lua_pushinteger(L,pages);
+    lua_pushinteger(L,page_size);
+    return 3;
+}
+#endif
+
 /* Load the Leda's kernel C API into a lua_State
  */
 int luaopen_leda_kernel (lua_State *L) {
@@ -569,6 +648,10 @@ int luaopen_leda_kernel (lua_State *L) {
   	   {"thread_pool_size", leda_get_thread_pool_size},
   	   {"ready_queue_isempty", leda_ready_queue_isempty},
   	   {"hostname", leda_default_hostname},
+#if defined(PLATFORM_LINUX)
+  	   {"smaps", leda_get_smaps},
+  	   {"memory",leda_get_system_memory},
+#endif
 		{NULL, NULL},
 	};
 	

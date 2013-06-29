@@ -569,7 +569,12 @@ int thread_kill (lua_State *L) {
    return 0;
 }
 
-
+/* Join with a thread from Lua*/
+int thread_join (lua_State *L) {
+	thread t=thread_get(L,1);
+   pthread_join(t->thread,NULL);
+   return 0;
+}
 
 /* Deallocate the thread handle pointer */
 int thread_gc (lua_State *L) {
@@ -598,6 +603,11 @@ int thread_createmetatable (lua_State *L) {
   	lua_pushliteral(L,"kill");
    lua_pushcfunction(L,thread_kill);
    lua_rawset(L,-3);
+
+  	lua_pushliteral(L,"join");
+   lua_pushcfunction(L,thread_join);
+   lua_rawset(L,-3);
+
 
 	/* define metamethods */
 	lua_pushliteral (L, "__index");

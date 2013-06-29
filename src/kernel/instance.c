@@ -105,7 +105,7 @@ static void registerlib(lua_State * L,char const * name, lua_CFunction f) {
 //	return 0;
 //}
 
-int luaopen_lmemarray(lua_State * L);
+int luaopen_leda_lmemarray(lua_State * L);
 
 static int luaopen_leda_io(lua_State * L) {
       _DEBUG("Instance: Defering Lua IO library\n");
@@ -134,7 +134,7 @@ static void openlibs(lua_State * L) {
    registerlib(L,"string", luaopen_string);
    registerlib(L,"math", luaopen_math);
    registerlib(L,"debug", luaopen_debug);   
-   registerlib(L,"lmemarray", luaopen_lmemarray); 
+   registerlib(L,"lmemarray", luaopen_leda_lmemarray); 
 }
 
 /*Create an empty new lua_state and returns it */
@@ -529,27 +529,44 @@ int instance_release(instance i) {
    _DEBUG("Instance: Releasing instance, event queue size=%d\n",queue_size(event_queues[i->stage]));
    bool_t has_event=TRY_POP(event_queues[i->stage],e);
    if(has_event) {
+		instance new=instance_aquire(i->stage);
+		while(new) {
+		   event e2;
+			has_event=TRY_POP(event_queues[i->stage],e2);
+			if(!has_event) {
+				if(!TRY_PUSH(recycle_queues[i->stage],new)) {
+    			  instance_destroy(new);
+			   }
+				break;
+			}
+			
+         lua_settop(new->L,0);
+         lua_getglobal(new->L, "handler");
+         new->args=restore_event_to_lua_state(new->L,&e2);
+         _DEBUG("Instance: Instance %d of stage '%s' popped a pending event.\n",
+         new->instance_number,STAGE(new->stage)->name);
+         push_ready_queue(new);
+		}
 //      while(has_event) {
          //There are pending events waiting and parallel instances available
          STATS_INACTIVE(i->stage);
          STATS_ACTIVE(i->stage);
-         i->init_time=now_secs();
    
          lua_settop(i->L,0);
-         
+         i->init_time=now_secs();         
          //Get the  main coroutine of the instance's handler
          lua_getglobal(i->L, "handler");
          //push arguments to instance
          i->args=restore_event_to_lua_state(i->L,&e);
-         i->init_time=now_secs();
          _DEBUG("Instance: Instance %d of stage '%s' popped a pending event.\n",
-            i->instance_number,STAGE(i->stage)->name);
+         i->instance_number,STAGE(i->stage)->name);
 
          push_ready_queue(i);
          
 //         has_event=TRY_POP(event_queues[i->stage],e);
 //      }
-			return 0;
+
+		return 0;
    }
    STATS_INACTIVE(i->stage);
    if(!TRY_PUSH(recycle_queues[i->stage],i)) {

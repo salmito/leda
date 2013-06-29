@@ -38,7 +38,7 @@ endif
 
 _SO=.so
 
-MODULE=../leda/kernel$(_SO)
+MODULE=../leda$(_SO)
 
 all: $(MODULE)
 
@@ -63,5 +63,5 @@ clean:
 	rm -f *.o extra/*.o instance.lo
 	
 ultraclean: clean
-	rm -f ../leda/kernel.so
+	rm -f ../leda.so
 

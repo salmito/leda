@@ -101,7 +101,7 @@ local function start(p_port,p_host,controller,maxpar,has_graph)
    process_socket=assert(socket.bind("*", l_localport))
    local ip, port = process_socket:getsockname()
    if has_graph~=true then
-      io.stderr:write(string.format("Host '%s:%d' Waiting for graph\n",localhost,tostring(port)))
+      io.stderr:write(string.format("Process '%s:%d' Waiting for graph\n",localhost,tostring(port)))
       local client=process_socket:accept()
       local peer_ip,peer_port=client:getpeername()
 --      client:settimeout(10)

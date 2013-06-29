@@ -6,6 +6,7 @@ return [===[<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org
 	<link href="leda.css" rel="stylesheet" type="text/css">
 	<script language="javascript" type="text/javascript" src="jquery.js"></script>
 	<script language="javascript" type="text/javascript" src="jquery.flot.js"></script>
+	<script language="javascript" type="text/javascript" src="jquery.arbor.js"></script>
 	<script language="javascript" type="text/javascript" src="jquery.flot.navigate.js"></script>
 	<script type="text/javascript">
 

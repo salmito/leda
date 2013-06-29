@@ -64,6 +64,7 @@ thread thread_get (lua_State *L, int i);
 int thread_new (lua_State *L);
 int thread_createmetatable (lua_State *L);
 int thread_kill (lua_State *L);
+int thread_join (lua_State *L);
 int thread_rawkill (lua_State *L);
 int wait_io(lua_State * L);
 int do_file_aio(lua_State * L);

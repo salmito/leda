@@ -1,6 +1,7 @@
-local memarray=require "lmemarray"
+local leda=require 'leda'
+local memarray=require "leda.lmemarray"
 
-local mt,err=leda.getmetatable('memarray*')
+local mt,err=leda.getmetatable('leda_memarray*')
 
 if mt then
    mt.__wrap=function(array)
@@ -9,7 +10,7 @@ if mt then
       local ptr=array:to_ptr()
       --print('wraping')
       return function()
-	      local memarray=require 'lmemarray'
+	      local memarray=require 'leda.memarray'
 	      local f=memarray.from_ptr(ptr,type_t,length)
          return f
       end
@@ -20,7 +21,7 @@ if mt then
       local length=array:length()
       --print('persisting')
       return function()
-         local memarray=require 'lmemarray'
+         local memarray=require 'leda.memarray'
          return memarray(type_t,length):from_str(str)
       end
    end
