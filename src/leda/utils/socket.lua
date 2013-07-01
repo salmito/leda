@@ -14,7 +14,8 @@ if tcp_client_mt then
          if err then
             return nil,err
          end
-         local container_sock=socket.tcp() --luasock is required
+         local container_sock=assert(socket.tcp()) --luasock is required
+	 container_sock:close()
          container_sock:setfd(sockfd)
          return leda.setmetatable(container_sock,client_mt)     
       end
