@@ -1,4 +1,3 @@
-local leda=require 'leda'
 local memarray=require "leda.lmemarray"
 
 local mt,err=leda.getmetatable('leda_memarray*')
