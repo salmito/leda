@@ -529,9 +529,9 @@ static int leda_set_capacity(lua_State * L) {
 
 /* Leda's kernel info  */
 static void set_leda_info (lua_State *L) {
-	lua_pushliteral (L, "_DESCRIPTION");
+/*	lua_pushliteral (L, "_DESCRIPTION");
 	lua_pushliteral (L, "Leda");
-	lua_settable (L, -3);
+	lua_settable (L, -3);*/
 	lua_pushliteral (L, "_VERSION");
 	lua_pushliteral (L, __VERSION);
 	lua_settable (L, -3);
@@ -567,7 +567,7 @@ static int leda_get_smaps(lua_State *L) {
   struct smaps_sizes sizes;
   memset(&sizes, 0, sizeof sizes);
   lua_newtable(L);
-  int i=0;
+//  int i=0;
   while (fgets(line, sizeof line, file)) {
 	   char substr[32];
        int n;

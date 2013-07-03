@@ -8,6 +8,10 @@ all:
 %:
 	cd $(SRC_DIR) && make $@
 
+ultraclean:
+	cd $(SRC_DIR) %% make ultraclean
+	rm -f `find -iname *~`
+
 tar tgz: ultraclean
 ifeq "$(VERSION)" ""
 	echo "Usage: make tar VERSION=x.x"; false

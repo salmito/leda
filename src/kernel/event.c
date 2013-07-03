@@ -77,6 +77,7 @@ static THREAD_T event_thread;
  * If an element is a string, it will be freed as well
  */
 void destroy_event(event e) {
+	_DEBUG("Event: Destroying event");
    size_t i;
    if(e->packed) {
       free(e->data);

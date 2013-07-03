@@ -51,12 +51,6 @@ atomic * recycle_queue_limits;
 atomic * number_of_instances;
 queue ready_queue;
 
-/* defining external signal */
-//extern SIGNAL_T queue_used_cond;
-
-/* Graph read-only gobal representation of the running graph */
-//g=NULL;
-
 /* Lua code for the instance states (baked in).
  * Contanins a byte array for automatic
  * loading with 'lua_dobuffer'.
@@ -140,7 +134,7 @@ static void openlibs(lua_State * L) {
 /*Create an empty new lua_state and returns it */
 lua_State * new_lua_state(bool_t libs) {
    lua_State * L = luaL_newstate();
-   lua_gc( L, LUA_GCSTOP, 0);
+   lua_gc(L, LUA_GCSTOP, 0);
    if(libs) {
       openlibs(L);
 //      serialize_require(L);
@@ -247,7 +241,7 @@ int instance_wait_for_event(lua_State *L) {
 }
 
 int instance_peek_for_event(lua_State *L) {
-   lua_getfield( L, LUA_REGISTRYINDEX, "__SELF" );
+   lua_getfield(L, LUA_REGISTRYINDEX, "__SELF" );
    instance i=lua_touserdata(L,-1);
    lua_pop(L,1);
    
