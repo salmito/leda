@@ -52,7 +52,7 @@ if leda.stage.__init and leda.stage.__init~="" then
 		if type(init)=="string" then
 			init,err=loadstring(init)
 			if not init then 
-			   error(string.format("Error loading init function for stage '%s': %s", stage.__name,err))
+			   error("Error loading init function for stage "..tostring(leda.stage.name).."': "..tostring(err))
 	   	end
 	   elseif not setfenv and type(init)=="function" then
 	      local debug=require 'debug'

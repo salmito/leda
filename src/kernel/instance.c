@@ -33,7 +33,7 @@ THE SOFTWARE.
 #include "event.h"
 #include "scheduler.h"
 #include "queue.h"
-#include "mutex.h"
+//#include "mutex.h"
 #include "stats.h"
 #include "extra/leda-io.h"
 #include "extra/lmarshal.h"
@@ -316,6 +316,8 @@ void register_debug_api(lua_State * L) {
    lua_setfield(L,-2,"sleep");
    lua_pushcfunction(L,leda_quit);
    lua_setfield(L,-2,"quit");
+   lua_pushcfunction(L,leda_destroy);
+   lua_setfield(L,-2,"destroy");
    lua_pushcfunction(L,leda_setmetatable);
    lua_setfield(L,-2,"setmetatable");
    lua_pushcfunction(L,leda_getmetatable);

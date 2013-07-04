@@ -100,11 +100,21 @@ char const * get_return_status_name(int status) {
          return "EMMIT_REMOTE";
       case NICE:
          return "NICE";
+      case WAIT_IO:
+			return "WAIT_IO";
+		case FILE_IO:
+         return "FILE_IO";
+		case SLEEP:
+	      return "SLEEP";
+      case DESTROY:
+         return "DESTROY";
       default:
          return "UNKNOWN";
    }
    return "UNKNOWN";
 }
+
+   
 
 /* Call an instance loaded with 'args' values at the top of its stack */
 void thread_resume_instance(instance i) {
@@ -139,6 +149,11 @@ void thread_resume_instance(instance i) {
          
       case PCALL_ERROR:
          STATS_UPDATE_ERROR(i->stage,1);
+         STATS_INACTIVE(i->stage);
+         instance_destroy(i);
+         break;
+
+      case DESTROY:
          STATS_INACTIVE(i->stage);
          instance_destroy(i);
          break;
@@ -223,6 +238,16 @@ int leda_sleep(lua_State * L) {
    int args=lua_gettop(L);
    //Yield current instance handler
    _DEBUG("Thread: Yielding to sleep\n");
+   return lua_yield(L,args);
+}
+
+int leda_destroy(lua_State * L) {
+   //Push status code SLEEP to the bottom of the stack
+   lua_pushinteger(L,DESTROY);
+   lua_insert(L,1);
+   int args=lua_gettop(L);
+   //Yield current instance handler
+   _DEBUG("Thread: Yielding to selfdestroy\n");
    return lua_yield(L,args);
 }
 

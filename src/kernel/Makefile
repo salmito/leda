@@ -11,13 +11,13 @@ G_PLUS_PLUS=$(CC)
 OBJ=  kernel.o \
       graph.o \
       instance.o \
-		mutex.o \
       scheduler.o \
       event.o \
       extra/threading.o \
       extra/memarray.o \
       extra/leda-io.o \
       extra/lmarshal.o \
+#		extra/mutex.o \
       
 ifdef DISABLE_TBB
 OBJ+= queue.o \

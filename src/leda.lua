@@ -14,7 +14,7 @@ leda=t
 --Table to hold connectors
 t.controller={}
 
-t.kernel=t.kernel or assert(require("leda.kernel"))
+t.kernel=t.kernel or require("leda.kernel")
 t._VERSION=t.kernel._VERSION
 t.debug=require("leda.debug")
 
@@ -44,7 +44,7 @@ t.connect=leda_stage.connect
 t.process=process
 
 function leda.require(stage)
-	return assert(is_stage(require(stage)))
+	return assert(leda_stage.is_stage(require(stage)))
 end
 
 local print,pairs=print,pairs
