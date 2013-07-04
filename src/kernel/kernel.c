@@ -135,8 +135,13 @@ int leda_raise_yield_event(lua_State * L) {
 	struct event *yield_event = event_new(kernel_event_base, -1, 0, kernel_yield_event, e);
 	event_add(yield_event, NULL);
    event_active(yield_event,0,0);
-// 	dump_stack(L);
-	return 0;
+
+	lua_pushinteger(L,DESTROY);
+   lua_insert(L,1);
+   args=lua_gettop(L);
+   //Yield current instance handler
+   _DEBUG("Thread: Yielding to selfdestroy\n");
+   return lua_yield(L,args);
 }
  
 void kernel_error_event(evutil_socket_t fd, short events, void *arg) {
