@@ -113,19 +113,23 @@ index.add_connector=add
 local add_table=nil
 
 local function add_item(gr,i,v)
-      if i=='start' then
-         assert(is_stage(gr.start),string.format("Graph 'start' field must be a stage (got %s)",type(gr.start)))
-         local c=new_connector(nil,'start',gr.start)
+	--print(i,v)
+		if i=='start' then
+         assert(is_stage(v),string.format("Graph 'start' field must be a stage (got %s)",type(gr.start)))
+         local c=new_connector(nil,'start',v)
          gr:add(c)
-         assert(gr:contains(gr.start),"Graph start field is not a stage in the graph")
+         assert(gr:contains(v),"Graph start field is not a stage in the graph")
       elseif is_connector(v) then
          gr:add(v)
       elseif type(v)=='function' then
          local c=v(gr)
-         assert(is_connector(c),string.format("Connector constructor returned an invalid value (%s)",type(c)))
-         gr[i]=c
-         gr:add(c)
+      elseif is_stage(v) then
+      	gr:add_stage(v)
       elseif type(v)=='table' then
+	      local v_mt=getmetatable(v)
+      	if v_mt and type(v_mt.__call)=="function" then
+      		add_item(gr,i,v_mt.__call)
+      	end
       	add_table(gr,v)
       else --ignore other values
          dbg("WARNING: Ignoring parameter of graph '%s' (type %s)\n",gr.name,type(v))
@@ -134,7 +138,7 @@ end
   
 add_table=function (gr,t)
 	assert(not is_stage(t),"Error, trying to add a stage to a graph without a connector")
-	for i,v in ipairs(t) do
+	for i,v in pairs(t) do
 		add_item(gr,i,v)
 	end
 end
@@ -142,10 +146,6 @@ end
 local function new_graph(...)
    local p={...}
 
-   if type(p[1])=='table' then
-      p=p[1]
-   end
-   
    if type(p[1])=="string" then
 --      p.name=p.name or p[1]
       table.remove(p,1)
@@ -155,7 +155,6 @@ local function new_graph(...)
    gr.conns={}
    gr.outputs={}
    gr.name=gr.name or tostring(gr)
-
 
    for i, v in pairs(gr) do
       --if value is a connector, add it to graph
@@ -182,11 +181,12 @@ index.is_graph=is_graph
 -- @param s Stage to be used as the start of the pipeline
 -----------------------------------------------------------------------------
 function index.set_start(g,s)
+	print("AQUI")
    assert(is_stage(s),string.format("Invalid parameter (stage expected, got %s)",type(s)))
 --   if not g:contains(s) then error(string.format("Stage '%s' not defined on graph '%s'",s,g)) end
    for c in pairs(g:connectors()) do
-      if c.producer == nil then
-         c.consumer=stage
+      if c.producer == nil and c.port=='start' then
+         c.consumer=s
          return true
      end
    end
@@ -195,6 +195,17 @@ function index.set_start(g,s)
    g.start=s
    return true
 end
+
+
+function index.add_stage(g,s)
+   assert(is_stage(s),string.format("Invalid parameter (stage expected, got %s)",type(s)))
+--   if not g:contains(s) then error(string.format("Stage '%s' not defined on graph '%s'",s,g)) end
+   if g:contains(s) then return end
+   local c=new_connector(nil,tostring(s),s)
+   g:add(c)
+   return g
+end
+
 
 ----------------------------------------------------------------------------
 -- Checks if a stage or a connector is present on a graph
@@ -421,8 +432,11 @@ function index.count_clusters(g)
 end
 
 function index.send(g,...)
-   if g.start and is_stage(g.start) then 
-      return g.start:send(...)
+	for c in pairs(g:connectors()) do
+      if c.producer == nil and c.port=='start' then
+         c.consumer:send(...)
+         return true
+     end
    end
    error(string.format("Start stage not defined for graph '%s'",tostring(g)))
 end

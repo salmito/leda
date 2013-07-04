@@ -42,7 +42,6 @@ end
 -- Stage __index metamethod
 -----------------------------------------------------------------------------
 local index=stage.__index
-
 -----------------------------------------------------------------------------
 -- Verify if parameter 's' is a stage
 -- (i.e. has the stage metatable)
@@ -55,6 +54,20 @@ local function is_stage(s)
    return false
 end
 t.is_stage = is_stage
+
+--concat metamethod
+function stage.__concat(s1,s2)
+	assert(is_stage(s1),"Invalid parameter #1, (stage expected, got "..type(s1))
+	assert(is_stage(s2),"Invalid parameter #2, (stage expected, got "..type(s2))
+	return s1:connect(s2)
+end
+
+--concat metamethod
+function stage.__call(s1,p)
+	assert(is_stage(s1),"Invalid parameter #1, (stage expected, got "..type(s1))
+	return setmetatable({},{__concat=function(t,s2) return s1:connect(p,s2) end})
+end
+
 
 -----------------------------------------------------------------------------
 -- Add pending data to the stage
@@ -74,7 +87,14 @@ end
 -- method on the new connector output port
 -----------------------------------------------------------------------------
 function index.connect(head,key,tail,method)
-   return function (g) return g:connect(head,key,tail,method) end
+   return setmetatable({head=head},{__index={
+   	run=function(...) 
+			print("Running")
+   		return leda.graph(function(g) return g:connect(head,key,tail,method) end):run(...)
+   	end
+   },
+   __call=function(g) return g:connect(head,key,tail,method) end})
+   --function (g) return g:connect(head,key,tail,method) end
 end
 t.connect=index.connect
 
@@ -96,6 +116,11 @@ local function new_stage_t(...)--t,init,name,bind,serial)
    local s={...}
    if type(s[1])=="table" then
       s=s[1]
+   elseif type(s[1])=="function" then
+   	s.handler=s[1]
+   	if select('#',...) > 1 then
+	   	s.autostart={select(2,...)}   	
+   	end
    end
    if is_stage(s) then
       local ns={}
@@ -104,13 +129,8 @@ local function new_stage_t(...)--t,init,name,bind,serial)
       end
       s=ns
    end
-   s.handler=s.handler or s[1]
-   s.init=s.init or s[2]
-   s.bind=s.bind or s[3]
-   s.serial=s.serial or s.stateful or s[4]
-   s.autostart=s.autostart or s[5]
+   s.serial=s.serial or s.stateful
    s.pending={}
-   s[1],s[2],s[3],s[4],s[5]=nil
    
    assert(type(s.handler)=="function" or type(s.handler)=="string","Invalid handler type (function or string expected)")
    assert(type(s.init)=="function" or type(s.init)=="string" or s.init==nil,"Invalid init type (function or string expected)")

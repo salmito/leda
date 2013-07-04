@@ -66,6 +66,7 @@ t.gettime=t.kernel.gettime
 -- @return graph: A table associated with a graph object.
 ------------------------------------------------------------------------
 t.graph=leda_graph.graph
+t.g=leda_graph.graph
 ------------------------------------------------------------------------
 -- Test if the parameter is a graph object
 -- @class function
@@ -113,6 +114,7 @@ t.decouple=leda_connector.decoupled
 -- &nbsp;&nbsp;&nbsp;autostart=true <br /> }
 ------------------------------------------------------------------------
 t.stage=leda_stage.new_stage
+t.s=leda_stage.new_stage
 
 ------------------------------------------------------------------------
 -- Test if the parameter is a stage object
