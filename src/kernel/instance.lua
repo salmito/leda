@@ -3,6 +3,7 @@ local stage=leda.stage
 local __yield_code_l=leda.__yield_code leda.__yield_code=nil
 local __end_code_l=leda.__end_code leda.__end_code=nil
 leda.nice=function (...) return coroutine.yield(__yield_code_l,...) end
+leda.push=function (...) return leda.send(1,...) end
 function leda.get_output(key)
 key = key or 1
 if leda.output[key] then 
@@ -52,7 +53,7 @@ if leda.stage.__init and leda.stage.__init~="" then
 		if type(init)=="string" then
 			init,err=loadstring(init)
 			if not init then 
-			   error(string.format("Error loading init function for stage '%s': %s", stage.__name,err))
+			   error("Error loading init function for stage "..tostring(leda.stage.name).."': "..tostring(err))
 	   	end
 	   elseif not setfenv and type(init)=="function" then
 	      local debug=require 'debug'

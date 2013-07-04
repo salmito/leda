@@ -100,11 +100,21 @@ char const * get_return_status_name(int status) {
          return "EMMIT_REMOTE";
       case NICE:
          return "NICE";
+      case WAIT_IO:
+			return "WAIT_IO";
+		case FILE_IO:
+         return "FILE_IO";
+		case SLEEP:
+	      return "SLEEP";
+      case DESTROY:
+         return "DESTROY";
       default:
          return "UNKNOWN";
    }
    return "UNKNOWN";
 }
+
+   
 
 /* Call an instance loaded with 'args' values at the top of its stack */
 void thread_resume_instance(instance i) {
@@ -139,6 +149,11 @@ void thread_resume_instance(instance i) {
          
       case PCALL_ERROR:
          STATS_UPDATE_ERROR(i->stage,1);
+         STATS_INACTIVE(i->stage);
+         instance_destroy(i);
+         break;
+
+      case DESTROY:
          STATS_INACTIVE(i->stage);
          instance_destroy(i);
          break;
@@ -223,6 +238,16 @@ int leda_sleep(lua_State * L) {
    int args=lua_gettop(L);
    //Yield current instance handler
    _DEBUG("Thread: Yielding to sleep\n");
+   return lua_yield(L,args);
+}
+
+int leda_destroy(lua_State * L) {
+   //Push status code SLEEP to the bottom of the stack
+   lua_pushinteger(L,DESTROY);
+   lua_insert(L,1);
+   int args=lua_gettop(L);
+   //Yield current instance handler
+   _DEBUG("Thread: Yielding to selfdestroy\n");
    return lua_yield(L,args);
 }
 
@@ -569,7 +594,12 @@ int thread_kill (lua_State *L) {
    return 0;
 }
 
-
+/* Join with a thread from Lua*/
+int thread_join (lua_State *L) {
+	thread t=thread_get(L,1);
+   pthread_join(t->thread,NULL);
+   return 0;
+}
 
 /* Deallocate the thread handle pointer */
 int thread_gc (lua_State *L) {
@@ -598,6 +628,11 @@ int thread_createmetatable (lua_State *L) {
   	lua_pushliteral(L,"kill");
    lua_pushcfunction(L,thread_kill);
    lua_rawset(L,-3);
+
+  	lua_pushliteral(L,"join");
+   lua_pushcfunction(L,thread_join);
+   lua_rawset(L,-3);
+
 
 	/* define metamethods */
 	lua_pushliteral (L, "__index");

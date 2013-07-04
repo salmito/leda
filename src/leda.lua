@@ -14,7 +14,7 @@ leda=t
 --Table to hold connectors
 t.controller={}
 
-t.kernel=t.kernel or assert(require("leda.kernel"))
+t.kernel=t.kernel or require("leda.kernel")
 t._VERSION=t.kernel._VERSION
 t.debug=require("leda.debug")
 
@@ -44,7 +44,7 @@ t.connect=leda_stage.connect
 t.process=process
 
 function leda.require(stage)
-	return assert(is_stage(require(stage)))
+	return assert(leda_stage.is_stage(require(stage)))
 end
 
 local print,pairs=print,pairs
@@ -66,6 +66,7 @@ t.gettime=t.kernel.gettime
 -- @return graph: A table associated with a graph object.
 ------------------------------------------------------------------------
 t.graph=leda_graph.graph
+t.g=leda_graph.graph
 ------------------------------------------------------------------------
 -- Test if the parameter is a graph object
 -- @class function
@@ -113,6 +114,7 @@ t.decouple=leda_connector.decoupled
 -- &nbsp;&nbsp;&nbsp;autostart=true <br /> }
 ------------------------------------------------------------------------
 t.stage=leda_stage.new_stage
+t.s=leda_stage.new_stage
 
 ------------------------------------------------------------------------
 -- Test if the parameter is a stage object

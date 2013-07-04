@@ -77,6 +77,7 @@ static THREAD_T event_thread;
  * If an element is a string, it will be freed as well
  */
 void destroy_event(event e) {
+	_DEBUG("Event: Destroying event");
    size_t i;
    if(e->packed) {
       free(e->data);
@@ -88,7 +89,7 @@ void destroy_event(event e) {
          case LUA_TSTRING:
          case LUA_TFUNCTION:
          case LUA_TTABLE:
-       //  case LUA_TUSERDATA:
+         case LUA_TUSERDATA:
 		//	case LUA_TLIGHTUSERDATA:
          if(e->payload[i].data.str) 
             free(e->payload[i].data.str);

@@ -11,8 +11,8 @@
 #include <lua.h>
 #include <lauxlib.h>
 
-#define MYNAME "memarray"
-#define MYTYPE "memarray*"
+#define MYNAME "leda_memarray"
+#define MYTYPE "leda_memarray*"
 #define VERSION "0.5"
 
 #define MEMARRAY_TCHAR        0
@@ -571,7 +571,7 @@ static const luaL_Reg reg_memarray_ptr[] =
    { NULL,           NULL        }
 };
 
-LUALIB_API int luaopen_lmemarray(lua_State * L)
+LUALIB_API int luaopen_leda_lmemarray(lua_State * L)
 {
    /* we discover endianness here */
    int one = 1;

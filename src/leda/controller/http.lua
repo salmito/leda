@@ -24,7 +24,24 @@ local graph=nil
 
 local auth=nil
 
-local get_index,get_css,get_jquery,get_jquery_flot
+local get_index,get_css,get_jquery,get_jquery_flot, get_jquery_arbor
+
+local totmem=kernel.memory()
+
+local get_smaps=function()
+	local mem=kernel.smaps()
+	local str={'{'}
+	local pref=nil
+	for k,v in pairs(mem) do
+		table.insert(str,(pref or '')..'"')
+		table.insert(str,k)
+		table.insert(str,'":'..v)
+		pref=','
+	end
+	table.insert(str,',"total":'..(totmem/1024)..',"percentage":'..((mem.Rss*100/(totmem/1024)))..'}')
+	return table.concat(str)
+end
+
 
 local last_t={}
 local last_t2={}
@@ -244,6 +261,13 @@ local function http_server(port)
 				 						"Content-Length: "..(#data).."\r\n\r\n"..
 				 						data
 				 		send(clt,resp)
+					elseif req.file == "smaps.json" then
+						local data=get_smaps()
+						local resp=stdresp("200 OK")..
+				 						"Content-Type: application/json\r\n"..
+				 						"Content-Length: "..(#data).."\r\n\r\n"..
+				 						data
+				 		send(clt,resp)
 					elseif req.file == "jquery.js" then
 						local data=get_jquery()
 						local resp=stdresp("200 OK")..
@@ -253,6 +277,13 @@ local function http_server(port)
 				 		send(clt,resp)
 					elseif req.file == "jquery.flot.js" then
 						local data=get_jquery_flot()
+						local resp=stdresp("200 OK")..
+				 						"Content-Type: text/javascript\r\n"..
+				 						"Content-Length: "..(#data).."\r\n\r\n"..
+				 						data
+				 		send(clt,resp)
+					elseif req.file == "jquery.arbor.js" then
+						local data=get_jquery_arbor()
 						local resp=stdresp("200 OK")..
 				 						"Content-Type: text/javascript\r\n"..
 				 						"Content-Length: "..(#data).."\r\n\r\n"..
@@ -326,12 +357,18 @@ get_css=function()
 	return require 'leda.controller.http_css'
 end
 
+
+
 get_jquery=function()
 	return require 'leda.controller.http_jq'
 end
 
 get_jquery_flot=function()
 	return require 'leda.controller.http_flot' 
+end
+
+get_jquery_arbor=function()
+	return require 'leda.controller.http_arbor' 
 end
 
 get_jquery_flot_navigate=function()

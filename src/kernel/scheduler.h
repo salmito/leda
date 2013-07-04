@@ -30,6 +30,7 @@ enum return_status{
    FILE_IO,
    SLEEP,
    PCALL_ERROR,
+   DESTROY,
    NICE
 };
 
@@ -64,6 +65,7 @@ thread thread_get (lua_State *L, int i);
 int thread_new (lua_State *L);
 int thread_createmetatable (lua_State *L);
 int thread_kill (lua_State *L);
+int thread_join (lua_State *L);
 int thread_rawkill (lua_State *L);
 int wait_io(lua_State * L);
 int do_file_aio(lua_State * L);
@@ -77,5 +79,6 @@ void thread_resume_instance(instance i);
 int leda_getmetatable(lua_State *L);
 int leda_setmetatable(lua_State *L);
 int leda_quit(lua_State *L);
+int leda_destroy(lua_State *L);
 
 #endif //_SCHEDULER_H_

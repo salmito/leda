@@ -19,13 +19,13 @@ local l_localport=localport or default_p
 l_localport=tonumber(l_localport)
 local processes={}
 local process_socket=nil
-local magicbyte='\027'
+local magicbyte='\024'
 local default_controller=require("leda.controller.default")
 
 --preload some controllers
 require('leda.controller.thread_pool')
 require('leda.controller.singlethread')
-require('leda.controller.profiler')
+--require('leda.controller.profiler')
 
 --module("leda.process")
 local t={}
@@ -84,7 +84,7 @@ local function init(g,ro_g,host,port,controller,maxpar)
       end
    end
    
-   return leda.kernel.run(g,ro_g,controller or default_controller,maxpar,process_socket:getfd())
+   return leda.kernel.run(g,ro_g,controller and leda.controller.default  or default_controller,maxpar,process_socket:getfd())
 end
 t.init=init
 
@@ -101,7 +101,7 @@ local function start(p_port,p_host,controller,maxpar,has_graph)
    process_socket=assert(socket.bind("*", l_localport))
    local ip, port = process_socket:getsockname()
    if has_graph~=true then
-      io.stderr:write(string.format("Host '%s:%d' Waiting for graph\n",localhost,tostring(port)))
+      io.stderr:write(string.format("Process '%s:%d' Waiting for graph\n",localhost,tostring(port)))
       local client=process_socket:accept()
       local peer_ip,peer_port=client:getpeername()
 --      client:settimeout(10)
@@ -184,7 +184,7 @@ function t.run(g,localport,maxpar,controller)
    assert(type(localhost)=="string",string.format("Invalid local hostname (string expected, got %s)",type(localhost)))
    if type(localport)=="table" then
       local t=localport
-      localport=t.localport
+      localport=t.port
       maxpar=t.maxpar
       controller=t.controller
    end

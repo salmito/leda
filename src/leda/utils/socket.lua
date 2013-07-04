@@ -9,12 +9,13 @@ if tcp_client_mt then
       sock:setfd(-1) --do not collect on local instance
       sock:close()
       return function()
-	require 'leda.utils.socket'
+			require 'leda.utils.socket'
          local client_mt,err=leda.getmetatable("tcp{client}")
          if err then
             return nil,err
          end
-         local container_sock=socket.tcp() --luasock is required
+         local container_sock=assert(socket.tcp()) --luasock is required
+         container_sock:close()
          container_sock:setfd(sockfd)
          return leda.setmetatable(container_sock,client_mt)     
       end

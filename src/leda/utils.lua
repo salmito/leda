@@ -81,7 +81,8 @@ utils.event_recorder=function(file,head,key,tail,meth)
 		out:awrite(#event..event)
 	end
 	local init=function()
-		require "leda.utils.io"
+		async=true
+		require "io"
 		init_time=leda.gettime()
 		out=io.open(file,"w")
 	end
@@ -111,7 +112,7 @@ utils.event_replayer=function(file,timed,key,tail)
 		end
 	end
 	local init=function()
-		require "leda.utils.io"
+		require "io"
 		input=assert(io.open(file,"r"))
 		init_time=leda.gettime()
 	end

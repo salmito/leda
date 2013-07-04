@@ -5,7 +5,7 @@ SRC_DIR=leda/
 MODULE=leda
 
 LUA_FILES=$(SRC_DIR)/*.lua
-LIB_FILES=$(SRC_DIR)/kernel.so
+LIB_FILE=leda.so
 
 all: 5.1
 
@@ -16,7 +16,7 @@ all: 5.1
 	cd kernel && make LUA_INCDIR="$(LUA_5_2_INCDIR)"
 
 debug:
-	cd kernel && make EXTRA_FLAGS="-ggdb -DDEBUG" LUA_INCDIR="$(LUA_INCDIR)"
+	cd kernel && make EXTRA_FLAGS="-ggdb -DDEBUG $(EXTRA_FLAGS)" LUA_INCDIR="$(LUA_INCDIR)"
 
 5.2-debug: 
 	cd kernel && make LUA_INCDIR="$(LUA_5_2_INCDIR)" EXTRA_FLAGS="-ggdb -DDEBUG"
@@ -49,10 +49,10 @@ install: all
 	install $(SRC_DIR)/controller/*.lua $(LUA_INSTALL_PATH)/leda/controller/
 	install $(SRC_DIR)/utils/*.lua $(LUA_INSTALL_PATH)/leda/utils/
 	install $(LUA_FILES) $(LUA_INSTALL_PATH)/leda
-	mkdir -p $(LIB_INSTALL_PATH)/leda
-	install $(LIB_FILES) $(LIB_INSTALL_PATH)/leda
+#	mkdir -p $(LIB_INSTALL_PATH)/leda
+	install $(LIB_FILE) $(LIB_INSTALL_PATH)/
 	
 uninstall:
 	rm -f $(LUA_INSTALL_PATH)/leda.lua
 	rm -rf $(LUA_INSTALL_PATH)/leda
-	rm -rf $(LIB_INSTALL_PATH)/leda
+	rm -f $(LIB_INSTALL_PATH)/leda.so
