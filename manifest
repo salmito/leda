@@ -1,0 +1,46 @@
+commands = {}
+modules = {}
+repository = {
+   leda = {
+      ['scm-0'] = {
+         {
+            arch = "rockspec"
+         }
+      }
+   },
+   ['leda-compress'] = {
+      ['1.0-1'] = {
+         {
+            arch = "rockspec"
+         }
+      }
+   },
+   ['leda-net'] = {
+      ['1.0-1'] = {
+         {
+            arch = "rockspec"
+         }
+      }
+   },
+   ['leda-stage'] = {
+      ['1.0-1'] = {
+         {
+            arch = "rockspec"
+         }
+      }
+   },
+   ['leda-util'] = {
+      ['1.0-1'] = {
+         {
+            arch = "rockspec"
+         }
+      }
+   },
+   ['leda-window'] = {
+      ['1.0-1'] = {
+         {
+            arch = "rockspec"
+         }
+      }
+   }
+}
