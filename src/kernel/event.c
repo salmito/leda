@@ -90,7 +90,6 @@ void destroy_event(event e) {
          case LUA_TFUNCTION:
          case LUA_TTABLE:
          case LUA_TUSERDATA:
-		//	case LUA_TLIGHTUSERDATA:
          if(e->payload[i].data.str) 
             free(e->payload[i].data.str);
          }
@@ -99,6 +98,7 @@ void destroy_event(event e) {
    free(e);
 }
 
+#ifdef DEBUG 
 /* Dump an event for debug purposes */
 void dump_event(lua_State *L, event e) {
    size_t i;
@@ -124,6 +124,7 @@ void dump_event(lua_State *L, event e) {
      _DEBUG("\n");
    }
 }
+#endif
 
 /* restore an event to a Lua stack.
  * The event payload is pushed back to the top of the stack

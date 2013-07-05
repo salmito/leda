@@ -22,6 +22,8 @@ local dump = string.dump
 --module("leda.leda_stage")
 local t={}
 
+t.stages = {}
+
 ----------------------------------------------------------------------------
 -- Stage metatable
 -----------------------------------------------------------------------------
@@ -184,6 +186,7 @@ local function new_stage_t(...)--t,init,name,bind,serial)
    
    s.name=s.name or tostring(s)
    s.pending={}
+   table.insert(t.stages,s)
    return s
 end
 

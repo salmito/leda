@@ -332,7 +332,7 @@ void register_debug_api(lua_State * L) {
    lua_pushcfunction(L,instance_wait_for_event);
    lua_setfield(L,-2,"wait_event");
    lua_pushcfunction(L,instance_peek_for_event);
-   lua_setfield(L,-2,"peek_event");
+   lua_setfield(L,-2,"get_event");
    lua_setfield(L,-2,"debug");
 }
 
