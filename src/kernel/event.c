@@ -90,7 +90,6 @@ void destroy_event(event e) {
          case LUA_TFUNCTION:
          case LUA_TTABLE:
          case LUA_TUSERDATA:
-		//	case LUA_TLIGHTUSERDATA:
          if(e->payload[i].data.str) 
             free(e->payload[i].data.str);
          }
@@ -99,6 +98,7 @@ void destroy_event(event e) {
    free(e);
 }
 
+#ifdef DEBUG 
 /* Dump an event for debug purposes */
 void dump_event(lua_State *L, event e) {
    size_t i;
@@ -124,6 +124,7 @@ void dump_event(lua_State *L, event e) {
      _DEBUG("\n");
    }
 }
+#endif
 
 /* restore an event to a Lua stack.
  * The event payload is pushed back to the top of the stack
@@ -344,7 +345,7 @@ void do_read_ack(evutil_socket_t fd, short events, void *arg) {
 	   if(size<=0) {
       close(fd);
       lua_settop(i->L,0);
-      lua_getglobal(i->L, "handler");
+      GET_HANDLER(i->L);
       lua_pushboolean(i->L,FALSE);
       if(size==0) {
        lua_pushfstring(i->L,"Error sending event to process: Process '%s:%d' closed the connection",PROCESS(dst_id)->host,PROCESS(dst_id)->port);
@@ -358,7 +359,7 @@ void do_read_ack(evutil_socket_t fd, short events, void *arg) {
       _DEBUG("Event: Recicling socket %d %p %d\n",(int)dst_id,sockets[dst_id],fd);
       if(!TRY_PUSH(sockets[dst_id],fd)) close(fd);
       lua_settop(i->L,0);
-      lua_getglobal(i->L, "handler");
+      GET_HANDLER(i->L);
       lua_pushboolean(i->L,TRUE);
       i->args=1;
       _DEBUG("Process: Sent remote event\n");
@@ -370,7 +371,7 @@ void do_read_ack(evutil_socket_t fd, short events, void *arg) {
    }
    lua_settop(i->L,0);
    close(fd);
-   lua_getglobal(i->L, "handler");
+   GET_HANDLER(i->L);
    lua_pushboolean(i->L,FALSE);
    lua_pushfstring(i->L,"Error sending event to process '%s:%d': Event queue is full",PROCESS(dst_id)->host,PROCESS(dst_id)->port);
    i->args=2;
@@ -673,7 +674,7 @@ void io_ready(evutil_socket_t fd, short event, void *arg) {
 	instance i=(instance)arg;
 	lua_settop(i->L,0);
    //Get the  main coroutine of the instance's handler
-   lua_getglobal(i->L, "handler");
+   GET_HANDLER(i->L);
    //Put it on the bottom of the instance's stack
    lua_pushboolean(i->L,TRUE);
    //Set the number of arguments
@@ -709,7 +710,7 @@ void event_do_file_aio(instance i) {
    } else {
       lua_settop(i->L,0);
       //Get the  main coroutine of the instance's handler
-      lua_getglobal(i->L, "handler");
+      GET_HANDLER(i->L);
       //Put it on the bottom of the instance's stack
       lua_pushnil(i->L);
       lua_pushliteral(i->L,"Invalid argument");
@@ -728,7 +729,7 @@ void event_do_file_aio(instance i) {
    	} else {
       	lua_settop(i->L,0);
       	//Get the  main coroutine of the instance's handler
-      	lua_getglobal(i->L, "handler");
+      	GET_HANDLER(i->L);
       	//Put it on the bottom of the instance's stack
       	lua_pushnil(i->L);
       	lua_pushliteral(i->L,"Invalid argument");
@@ -746,7 +747,7 @@ void event_do_file_aio(instance i) {
    	} else {
       	lua_settop(i->L,0);
       	//Get the  main coroutine of the instance's handler
-      	lua_getglobal(i->L, "handler");
+      	GET_HANDLER(i->L);
       	//Put it on the bottom of the instance's stack
       	lua_pushnil(i->L);
       	lua_pushliteral(i->L,"Invalid argument");
@@ -759,7 +760,7 @@ void event_do_file_aio(instance i) {
    else {
        lua_settop(i->L,0);
        //Get the  main coroutine of the instance's handler
-       lua_getglobal(i->L, "handler");
+       GET_HANDLER(i->L);
        //Put it on the bottom of the instance's stack
        lua_pushnil(i->L);
        lua_pushliteral(i->L,"Invalid argument");
@@ -793,7 +794,7 @@ void event_aio_op_ready(evutil_socket_t afd, short libev_event, void *arg) {
 				
 				lua_settop(inst->L,0);
 		   	//Get the  main coroutine of the instance's handler
-   			lua_getglobal(inst->L, "handler");
+   			GET_HANDLER(inst->L);
 				lua_pushlstring(inst->L,(const char *)cb->aio_buf,res);
 				free((void *)cb->aio_buf);
 				free(cb);
@@ -804,7 +805,7 @@ void event_aio_op_ready(evutil_socket_t afd, short libev_event, void *arg) {
 			} else { //if(res==0) {	
 				lua_settop(inst->L,0);
 		   	//Get the  main coroutine of the instance's handler
-   			lua_getglobal(inst->L, "handler");
+   			GET_HANDLER(inst->L);
 				lua_pushnil(inst->L);
 				lua_pushliteral(inst->L,"EOF");
 		 		inst->args=2;
@@ -817,7 +818,7 @@ void event_aio_op_ready(evutil_socket_t afd, short libev_event, void *arg) {
 				
 				lua_settop(inst->L,0);
 		   	//Get the  main coroutine of the instance's handler
-   			lua_getglobal(inst->L, "handler");
+   			GET_HANDLER(inst->L);
 				lua_pushinteger(inst->L,res);
 				free(cb);
 		   	//Set the number of arguments
@@ -827,7 +828,7 @@ void event_aio_op_ready(evutil_socket_t afd, short libev_event, void *arg) {
 			} else { //if(res==0) {	
 				lua_settop(inst->L,0);
 		   	//Get the  main coroutine of the instance's handler
-   			lua_getglobal(inst->L, "handler");
+   			GET_HANDLER(inst->L);
 				lua_pushnil(inst->L);
 				lua_pushliteral(inst->L,"Write error");
 		 		inst->args=2;
@@ -882,7 +883,7 @@ void event_wait_io(instance i) {
    } else {
        lua_settop(i->L,0);
        //Get the  main coroutine of the instance's handler
-       lua_getglobal(i->L, "handler");
+       GET_HANDLER(i->L);
        //Put it on the bottom of the instance's stack
        lua_pushnil(i->L);
        lua_pushliteral(i->L,"Invalid argument");
@@ -898,7 +899,7 @@ void event_wait_io(instance i) {
    } else {
       lua_settop(i->L,0);
       //Get the  main coroutine of the instance's handler
-      lua_getglobal(i->L, "handler");
+      GET_HANDLER(i->L);
       //Put it on the bottom of the instance's stack
       lua_pushnil(i->L);
       lua_pushliteral(i->L,"Invalid argument");
@@ -917,7 +918,7 @@ void event_wait_io(instance i) {
    else {
        lua_settop(i->L,0);
        //Get the  main coroutine of the instance's handler
-       lua_getglobal(i->L, "handler");
+       GET_HANDLER(i->L);
        //Put it on the bottom of the instance's stack
        lua_pushnil(i->L);
        lua_pushliteral(i->L,"Invalid argument");
@@ -940,7 +941,7 @@ void event_sleep(instance i) {
    } else {
        lua_settop(i->L,0);
        //Get the  main coroutine of the instance's handler
-       lua_getglobal(i->L, "handler");
+       GET_HANDLER(i->L);
        //Put it on the bottom of the instance's stack
        lua_pushnil(i->L);
        lua_pushliteral(i->L,"Invalid argument");
@@ -953,7 +954,7 @@ void event_sleep(instance i) {
    if(time<=0.0) {
        lua_settop(i->L,0);
        //Get the  main coroutine of the instance's handler
-       lua_getglobal(i->L, "handler");
+       GET_HANDLER(i->L);
        //Put it on the bottom of the instance's stack
        lua_pushnil(i->L);
        lua_pushliteral(i->L,"Invalid timer");
@@ -969,7 +970,7 @@ void event_sleep(instance i) {
    if(fd < 0) {
        lua_settop(i->L,0);
        //Get the  main coroutine of the instance's handler
-       lua_getglobal(i->L, "handler");
+       GET_HANDLER(i->L);
        //Put it on the bottom of the instance's stack
        lua_pushnil(i->L);
        lua_pushfstring(i->L,"Error creating timer: %s",strerror(errno));
@@ -987,7 +988,7 @@ void event_sleep(instance i) {
        close(fd);
        lua_settop(i->L,0);
        //Get the  main coroutine of the instance's handler
-       lua_getglobal(i->L, "handler");
+       GET_HANDLER(i->L);
        //Put it on the bottom of the instance's stack
        lua_pushnil(i->L);
        lua_pushfstring(i->L,"Error setting timer: %s",strerror(errno));
@@ -1000,7 +1001,7 @@ void event_sleep(instance i) {
 	if(event_base_once(base, fd, EV_READ, timer_ready, i, NULL)) {
    	 lua_settop(i->L,0);
        //Get the  main coroutine of the instance's handler
-       lua_getglobal(i->L, "handler");
+       GET_HANDLER(i->L);
        //Put it on the bottom of the instance's stack
        lua_pushnil(i->L);
        lua_pushliteral(i->L,"Error setting timer event");

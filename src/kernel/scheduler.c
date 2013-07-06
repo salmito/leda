@@ -123,7 +123,7 @@ void thread_resume_instance(instance i) {
    
    if(i->packed) {
       _DEBUG("Thread: Unpacking event for stage '%s'\n",main_graph->s[i->stage]->name);
-      lua_getglobal(i->L, "handler");
+      GET_HANDLER(i->L);
       i->packed=0;
       i->args=restore_event_to_lua_state(i->L,&i->packed_event);
    }
@@ -202,7 +202,7 @@ void emmit_self(instance i) {
    //clear the stack (throw out yield arguments)
    lua_settop(i->L,0);
    //Get the  main coroutine of the instance's handler
-   lua_getglobal(i->L, "handler");
+   GET_HANDLER(i->L);
    //Put it on the bottom of the instance's stack
    lua_pushboolean(i->L,TRUE);
    //Set the previous number of arguments
@@ -290,7 +290,7 @@ void emmit_cohort(instance caller) {
          _DEBUG("Thread: ERROR: Cannot get an instance for the stage '%s'.\n",
          main_graph->s[dst_id]->name);
          lua_settop(caller->L,0);
-         lua_getglobal(caller->L, "handler");
+         GET_HANDLER(caller->L);
          lua_pushnil(caller->L);
          lua_pushfstring(caller->L,"Cannot get a parallel instance of the stage '%s'.",
             STAGE(dst_id)->name);
@@ -300,14 +300,14 @@ void emmit_cohort(instance caller) {
    //if got the instance, pass the thread to it and emmit an event for self
 
    //Get the  main coroutine of the callee's handler
-   lua_getglobal(callee->L, "handler");
+   GET_HANDLER(callee->L);
    //push arguments from caller to callee instance
    copy_values_directly(callee->L, caller->L, 2, args);
    callee->args=args;
    
    lua_settop(caller->L,0);
    //Get the  main coroutine of the caller's handler
-   lua_getglobal(caller->L, "handler");
+   GET_HANDLER(caller->L);
    //push the resume value (TRUE) to the caller instance
    lua_pushboolean(caller->L,TRUE);
    //results
@@ -352,7 +352,7 @@ void emmit_remote(instance caller) {
    lua_call(caller->L,3,1); //propagate error
    if(lua_type(caller->L,-1)!=LUA_TSTRING) {     
       lua_settop(caller->L,0);
-      lua_getglobal(caller->L, "handler");
+      GET_HANDLER(caller->L);
       lua_pushboolean(caller->L,FALSE);
       lua_pushliteral(caller->L,"Error serializing event");
       caller->args=2;
@@ -468,7 +468,7 @@ int emmit(lua_State * L) {
    _DEBUG("Thread: Emmit: got an idle instance (%d) of stage '%s'\n",dst->instance_number,STAGE(dst_id)->name);   
    //got an idle instance from recycle queue  
    //Get the  main coroutine of the instance's handler
-   lua_getglobal(dst->L, "handler");
+   GET_HANDLER(dst->L);
    //push arguments to instance
    copy_values_directly(dst->L, L, 2, args);
    dst->args=args;
@@ -518,9 +518,9 @@ static THREAD_RETURN_T THREAD_CALLCONV thread_main(void *t_val) {
 
 /*Get a thread descriptor from the lua stack*/
 thread thread_get (lua_State *L, int i) {
-  thread t = luaL_checkudata (L, i, THREAD_METATABLE);
-  luaL_argcheck (L, t != NULL, i, "not a Thread or killed already killed");
-  return t;
+//  thread t = luaL_checkudata (L, i, THREAD_METATABLE);
+//  luaL_argcheck (L, t != NULL, i, "not a Thread or killed already killed");
+	return lua_touserdata(L,i);
 }
 
 /*tostring method*/

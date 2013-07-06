@@ -23,6 +23,8 @@ typedef struct instance_data {
 //   long int recycled; //count the number of time this instance was recycled
 } * instance;
 
+#define GET_HANDLER(L) lua_getfield((L), LUA_REGISTRYINDEX, "handler")
+
 lua_State * new_lua_state(bool_t libs);
 void instance_init(size_t recycle_limit_t,size_t pending_limit_t);
 instance instance_aquire(stage_id s);
