@@ -109,6 +109,44 @@ static int luaopen_leda_io(lua_State * L) {
       return 1;
 }
 
+static int ledaopen_os(lua_State * L) {
+	lua_pushcfunction(L,luaopen_os);
+	lua_pcall(L,0,1,0);
+	lua_pushvalue(L,-1);
+	lua_setglobal(L,"os");
+	return 1;
+}
+
+static int ledaopen_table(lua_State * L) {
+	lua_pushcfunction(L,luaopen_table);
+	lua_pcall(L,0,1,0);
+	lua_pushvalue(L,-1);
+	lua_setglobal(L,"table");
+	return 1;
+}
+
+static int ledaopen_string(lua_State * L) {
+	lua_pushcfunction(L,luaopen_string);
+	lua_pcall(L,0,1,0);
+	lua_pushvalue(L,-1);
+	lua_setglobal(L,"string");
+	return 1;
+}
+static int ledaopen_math(lua_State * L) {
+	lua_pushcfunction(L,luaopen_math);
+	lua_pcall(L,0,1,0);
+	lua_pushvalue(L,-1);
+	lua_setglobal(L,"math");
+	return 1;
+}
+
+static int ledaopen_debug(lua_State * L) {
+	lua_pushcfunction(L,luaopen_debug);
+	lua_pcall(L,0,1,0);
+	lua_pushvalue(L,-1);
+	lua_setglobal(L,"debug");
+	return 1;
+}
 
 static void openlibs(lua_State * L) {
    lua_pushcfunction(L,luaopen_base);
@@ -123,11 +161,11 @@ static void openlibs(lua_State * L) {
 #endif
    registerlib(L,"io", luaopen_leda_io);
    registerlib(L,"iolua", luaopen_io);
-   registerlib(L,"os", luaopen_os);
-   registerlib(L,"table", luaopen_table);
-   registerlib(L,"string", luaopen_string);
-   registerlib(L,"math", luaopen_math);
-   registerlib(L,"debug", luaopen_debug);   
+   registerlib(L,"os", ledaopen_os);
+   registerlib(L,"table", ledaopen_table);
+   registerlib(L,"string", ledaopen_string);
+   registerlib(L,"math", ledaopen_math);
+   registerlib(L,"debug", ledaopen_debug);   
    registerlib(L,"lmemarray", luaopen_leda_lmemarray); 
 }
 
@@ -489,12 +527,13 @@ instance instance_aquire(stage_id s) {
    /* Call the lua_chunk loaded in the luaL_loadbuffer */
 //   dump_stack(ret->L);
    
-   if(lua_pcall( ret->L, 0 , 0, 0)) {
+   if(lua_pcall( ret->L, 0 , 1, 0)) {
       const char * err=lua_tostring(ret->L,-1);
       fprintf(stderr,"Error in call to init function of stage '%s': %s\n",STAGE(s)->name,err);
       instance_destroy(ret);
       return NULL;
    }
+   lua_setfield(ret->L,LUA_REGISTRYINDEX,"handler");
    _DEBUG("Instance created for stage '%d' name='%s'\n",(int)s,STAGE(s)->name);
 
    ret->init_time=now_secs();
@@ -537,7 +576,7 @@ int instance_release(instance i) {
 			}
 			
          lua_settop(new->L,0);
-         lua_getglobal(new->L, "handler");
+         GET_HANDLER(new->L);
          new->args=restore_event_to_lua_state(new->L,&e2);
          _DEBUG("Instance: Instance %d of stage '%s' popped a pending event.\n",
          new->instance_number,STAGE(new->stage)->name);
@@ -551,7 +590,7 @@ int instance_release(instance i) {
          lua_settop(i->L,0);
          i->init_time=now_secs();         
          //Get the  main coroutine of the instance's handler
-         lua_getglobal(i->L, "handler");
+         GET_HANDLER(i->L);
          //push arguments to instance
          i->args=restore_event_to_lua_state(i->L,&e);
          _DEBUG("Instance: Instance %d of stage '%s' popped a pending event.\n",

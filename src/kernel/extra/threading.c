@@ -435,7 +435,7 @@ bool_t THREAD_WAIT_IMPL( THREAD_T *ref, double secs)
     // 'pthread_timedjoin()', but does offer other benefits (s.a. earlier 
     // freeing of the thread's resources).
     //
-    PT_CALL( pthread_attr_setdetachstate(a,PTHREAD_CREATE_DETACHED) );
+    //PT_CALL( pthread_attr_setdetachstate(a,PTHREAD_CREATE_DETACHED) );
 #endif
 
     // Use this to find a system's default stack size (DEBUG)
