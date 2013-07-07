@@ -9,7 +9,7 @@ all:
 	cd $(SRC_DIR) && make $@
 
 ultraclean:
-	cd $(SRC_DIR) %% make ultraclean
+	cd $(SRC_DIR) && make ultraclean
 	rm -f `find -iname *~`
 
 tar tgz: ultraclean
