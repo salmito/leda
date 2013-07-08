@@ -135,6 +135,10 @@ static int Lrealloc(lua_State * L)
    char errmsg[128];
 
    m = memarray_get(L, 1);
+   if(lua_type(L,2)==LUA_TNUMBER && lua_gettop(L)==2) {
+   	lua_pushliteral(L,"double");
+   	lua_insert(L,2);
+   }
    typename = luaL_optstring(L, 2, "uchar");
 
    if ( (type = get_memtype(typename)) < 0 ) {
@@ -218,7 +222,7 @@ static int L__index(lua_State * L)
 
    switch (lua_type(L, 2)) {
       case LUA_TNUMBER:
-         index = (size_t) lua_tonumber(L, 2);
+         index = (size_t) lua_tonumber(L, 2)-1;
          if ( /*(index < 0) ||*/ (index >= m->length) ) {
             lua_pushnil(L);
             luaL_error(L, "index out of range");
@@ -257,7 +261,7 @@ static int L__newindex(lua_State * L)
 
    switch (lua_type(L, 2)) {
       case LUA_TNUMBER:
-         index = (size_t) lua_tonumber(L, 2);
+         index = (size_t) lua_tonumber(L, 2)-1;
          value = lua_tonumber(L, 3);
          if ( /*(index < 0) ||*/ (index >= m->length) ) {
             luaL_error(L, "index out of range");
@@ -558,6 +562,7 @@ static const luaL_Reg reg_memarray_ptr[] =
    { "__newindex",   L__newindex },
    { "__tostring",   L__tostring },
    { "__gc",         L__gc       },
+   { "__len",        Llength     },
    { "size",         Lsize       },
    { "length",       Llength     },
    { "ptr",          Lptr        },

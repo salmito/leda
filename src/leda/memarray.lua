@@ -24,6 +24,9 @@ if mt then
          return memarray(type_t,length):from_str(str)
       end
    end
+   mt.clone=function(array)
+   	return memarray(array:type(),array:length()):from_str(array:to_str())
+   end
 end
 
 return memarray
