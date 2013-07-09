@@ -100,6 +100,11 @@ local index=graph_metatable.__index
 function index.add(self,c)
    if type(c)=='function' then
       c=c(self)
+   elseif type(c)=='table' then
+      local v_mt=getmetatable(c)
+      if v_mt and type(v_mt.__call)=="function" then
+         c=v_mt.__call(self)
+      end
    end
    assert(is_graph(self),string.format("Invalid parameter #1 ('graph' expected, got '%s')",type(self)))
    assert(is_connector(c),string.format("Invalid parameter #2 ('connector' expected, got '%s')",type(c)))
@@ -181,7 +186,6 @@ index.is_graph=is_graph
 -- @param s Stage to be used as the start of the pipeline
 -----------------------------------------------------------------------------
 function index.set_start(g,s)
-	print("AQUI")
    assert(is_stage(s),string.format("Invalid parameter (stage expected, got %s)",type(s)))
 --   if not g:contains(s) then error(string.format("Stage '%s' not defined on graph '%s'",s,g)) end
    for c in pairs(g:connectors()) do
