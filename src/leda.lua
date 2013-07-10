@@ -15,6 +15,7 @@ leda=t
 t.controller={}
 
 t.kernel=t.kernel or require("leda.kernel")
+t.scheduler=t.kernel
 t._VERSION=t.kernel._VERSION
 t.debug=require("leda.debug")
 
