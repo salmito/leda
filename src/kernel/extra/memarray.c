@@ -205,10 +205,11 @@ static int Lsizeof(lua_State * L)
 /* dst, src, size(in bytes) */
 static int Lmemcpy(lua_State * L)
 {
-   void * dst = (void *) check_lightuserdata(L, 1);
+   unsigned char * dst = (unsigned char *) check_lightuserdata(L, 1);
    const void * src = check_lightuserdata(L, 2);
    size_t size = (size_t) luaL_checknumber(L, 3);
-   memcpy(dst, src, size);
+   int offset=luaL_optint(L, 4, 0);
+   memcpy((dst+offset), src, size);
    return 1;
 }
 
