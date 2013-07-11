@@ -80,5 +80,6 @@ int leda_getmetatable(lua_State *L);
 int leda_setmetatable(lua_State *L);
 int leda_quit(lua_State *L);
 int leda_destroy(lua_State *L);
+int leda_get_self_process(lua_State *L);
 
 #endif //_SCHEDULER_H_

@@ -503,6 +503,9 @@ instance instance_aquire(stage_id s) {
    }
    lua_settable(ret->L,-3); //Set __output
    
+   lua_pushcfunction(ret->L,leda_get_self_process);
+   lua_setfield(ret->L,-2,"process");
+   
    /* Push the kernel C API functions to the newly created lua_State */
    lua_setfield(ret->L,-2,"stage");
 

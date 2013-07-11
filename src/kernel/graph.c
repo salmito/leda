@@ -57,6 +57,7 @@ stage graph_get_stage(graph g,stage_id id) {
    return g->s[id];
 }
 
+
 /** Build an internal representation for the graph defined in
  * in the stack on 'index'
  */

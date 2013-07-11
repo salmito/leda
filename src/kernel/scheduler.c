@@ -196,6 +196,16 @@ void thread_resume_instance(instance i) {
    }
 }
 
+int leda_get_self_process(lua_State *L) {
+   lua_getfield(L, LUA_REGISTRYINDEX, "__SELF" );
+   instance self=lua_touserdata(L,-1);
+   lua_pop(L,1);
+   cluster c=CLUSTER(STAGE(self->stage)->cluster);
+   process_id p=c->processes[0];
+   lua_pushfstring(L,"%s:%d",PROCESS(p)->host,PROCESS(p)->port);
+   return 1;
+}
+
 /* Put the current executing instance in the tail of the ready queue */
 void emmit_self(instance i) {
    _DEBUG("Thread: Stage '%d' yielded itself top=%d\n",(int)i->stage,lua_gettop(i->L));

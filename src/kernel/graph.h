@@ -88,5 +88,8 @@ extern graph main_graph;
 int graph_createmetatable (lua_State *L);
 graph to_graph(lua_State *L,int i);
 int graph_build(lua_State * L);
+cluster graph_get_cluster(graph g,cluster_id id);
+stage graph_get_stage(graph g,stage_id id);
+connector graph_get_connector(graph g,connector_id id);
 
 #endif //_GRAPH_H_
