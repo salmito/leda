@@ -567,13 +567,19 @@ int instance_release(instance i) {
    _DEBUG("Instance: Releasing instance, event queue size=%d\n",queue_size(event_queues[i->stage]));
    bool_t has_event=TRY_POP(event_queues[i->stage],e);
    if(has_event) {
-		instance new=instance_aquire(i->stage);
-		while(new) {
+		//instance new=instance_aquire(i->stage);
+		/*while(new!=NULL) {
 		   event e2;
 			has_event=TRY_POP(event_queues[i->stage],e2);
 			if(!has_event) {
 				if(!TRY_PUSH(recycle_queues[i->stage],new)) {
+    			 printf("Instance: Instance %d of stage '%s' DESTROYED.\n",
+              new->instance_number,STAGE(new->stage)->name);
     			  instance_destroy(new);
+			   } else {
+				   printf("Instance: Instance %d of stage '%s' PUT BACK.\n",
+         		new->instance_number,STAGE(new->stage)->name);
+    			   instance_destroy(new);
 			   }
 				break;
 			}
@@ -581,10 +587,11 @@ int instance_release(instance i) {
          lua_settop(new->L,0);
          GET_HANDLER(new->L);
          new->args=restore_event_to_lua_state(new->L,&e2);
-         _DEBUG("Instance: Instance %d of stage '%s' popped a pending event.\n",
+         printf("Instance: Instance 2 %d of stage '%s' popped a pending event.\n",
          new->instance_number,STAGE(new->stage)->name);
          push_ready_queue(new);
-		}
+         new=instance_aquire(i->stage);
+		}*/
 //      while(has_event) {
          //There are pending events waiting and parallel instances available
          STATS_INACTIVE(i->stage);

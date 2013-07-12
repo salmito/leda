@@ -4,6 +4,7 @@
 -----------------------------------------------------------------------------
 
 local base = _G
+local leda=require 'leda'
 local debug=require("leda.debug")
 local dbg = debug.get_debug("Controller: HTTP: ")
 local kernel=leda.kernel
@@ -327,6 +328,30 @@ local function http_server(port)
 				 						"Content-Length: "..(#data).."\r\n\r\n"..
 				 						data
 				 		send(clt,resp)
+					elseif req.file == "trim" then
+				 		leda.kernel.trim()
+						local data="OK"
+						local resp=stdresp("200 OK")..
+				 						"Content-Type: text/plain\r\n"..
+				 						"Content-Length: "..(#data).."\r\n\r\n"..
+				 						data
+				 		send(clt,resp)
+				 	elseif req.file == "increase_threads" then
+				 		leda.kernel.thread_new()
+						local data="OK"
+						local resp=stdresp("200 OK")..
+				 						"Content-Type: text/plain\r\n"..
+				 						"Content-Length: "..(#data).."\r\n\r\n"..
+				 						data
+				 		send(clt,resp)
+				 	elseif req.file == "decrease_threads" then
+				 		leda.kernel.thread_kill() 
+						local data="OK"
+						local resp=stdresp("200 OK")..
+				 						"Content-Type: text/plain\r\n"..
+				 						"Content-Length: "..(#data).."\r\n\r\n"..
+				 						data
+				 		send(clt,resp)
 					else
 						dbg("FILE 404 - %s",req.file)
 						local data="<html>Not Found</html>"
@@ -359,6 +384,7 @@ local function get_init(n,port,user,pass)
    return   function(g)
                graph=g
                pool_size=n
+               leda.kernel.maxpar(10)
                for i=1,n do
                   table.insert(th,kernel.thread_new())
                   dbg("Thread %d created",i)

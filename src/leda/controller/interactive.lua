@@ -140,7 +140,7 @@ local function get_init(n)
 --         stderr:write("\027[2J")
          stderr:write("Thread created...\n")
       elseif line == '-' then 
-         kernel.kill_thread() 
+         kernel.thread_kill() 
 --            stderr:write("\027[2J")
          stderr:write("Thread killed...\n")
       elseif line~="" then

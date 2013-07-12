@@ -543,6 +543,7 @@ static void set_leda_info (lua_State *L) {
 }
 
 #if defined(PLATFORM_LINUX)
+#include <malloc.h>
 
 struct smaps_sizes {
     char * name;
@@ -619,6 +620,11 @@ static int leda_get_system_memory(lua_State * L) {
     lua_pushinteger(L,page_size);
     return 3;
 }
+
+static int leda_trim_memory(lua_State * L) {
+	malloc_trim(0);
+	return 0;
+}
 #endif
 
 /* Load the Leda's kernel C API into a lua_State
@@ -656,6 +662,7 @@ int luaopen_leda_kernel (lua_State *L) {
 #if defined(PLATFORM_LINUX)
   	   {"smaps", leda_get_smaps},
   	   {"memory",leda_get_system_memory},
+  	   {"trim",leda_trim_memory},
 #endif
 		{NULL, NULL},
 	};

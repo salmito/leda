@@ -301,6 +301,56 @@ return [===[<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org
 				});
 	}
 
+	trim_memory=function () {	
+            function onDataReceived(series) {
+            }
+
+            function onDataError(error,i,str) {
+					$("#status-text")[0].innerHTML="Offline"
+					$("#status-text")[0].style.color="#770000"
+            }
+
+				$.ajax({
+					url: "trim",
+					type: "GET",
+					success: onDataReceived,
+					error: onDataError
+				});
+	}
+
+	inc_threads=function () {	
+            function onDataReceived(series) {
+            }
+
+            function onDataError(error,i,str) {
+					$("#status-text")[0].innerHTML="Offline"
+					$("#status-text")[0].style.color="#770000"
+            }
+
+				$.ajax({
+					url: "increase_threads",
+					type: "GET",
+					success: onDataReceived,
+					error: onDataError
+				});
+	}
+	dec_threads=function () {	
+            function onDataReceived(series) {
+            }
+
+            function onDataError(error,i,str) {
+					$("#status-text")[0].innerHTML="Offline"
+					$("#status-text")[0].style.color="#770000"
+            }
+
+				$.ajax({
+					url: "decrease_threads",
+					type: "GET",
+					success: onDataReceived,
+					error: onDataError
+				});
+	}
+
 
 	//GRAPH
 
@@ -540,8 +590,8 @@ $(main);
 	<div id="commands">
 		<h2>Application: <span id="app-name"></span></h2>
 		<p>Controller status: <span id="status-text" style="color: #007700;">Online</span></p>
-		<p>Memory usage: <span id="memory-usage"></span></p>
-		<p>Active threads: <span id="threads-text"></span></p>
+		<p>Memory usage: <span id="memory-usage"></span> - <a href="#" onCLick="trim_memory(); return false;">Trim</a></p>
+		<p>Active threads: <span id="threads-text"></span> - <a href="#" onCLick="inc_threads(); return false;">Increase</a> <a href="#" onCLick="dec_threads(); return false;">Decrease</a></p>
 		<p>Graphs: <a href="#" onCLick="clear_graphs(); return false;">Clear data</a> <a href="#" onCLick="clear_pan(); return false;">Reset pan</a></p>
 	</div>
 
