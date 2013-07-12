@@ -384,7 +384,6 @@ local function get_init(n,port,user,pass)
    return   function(g)
                graph=g
                pool_size=n
-               leda.kernel.maxpar(10)
                for i=1,n do
                   table.insert(th,kernel.thread_new())
                   dbg("Thread %d created",i)
