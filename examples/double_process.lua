@@ -1,9 +1,9 @@
-local exec=[[lua -l leda -e "leda.start{port=8888}"&]]
+local exec=[[lua -l leda -e "leda.start{port=8888,controller=require'leda.controller.http'.get(4,8081)}"&]]
 os.execute(exec)
 require 'leda'
 leda.kernel.sleep(1)
 
-local n=n or 100
+local n=n  or 100
 local it=it or 100000
 
 local s1=leda.stage{name="S1",
@@ -33,4 +33,4 @@ local g=leda.graph{s1:connect(1,s2)}
 
 g:part(s2,s1):map('localhost','localhost:8888')
 
-g:run{maxpar=leda.kernel.cpu()}
+g:run{maxpar=leda.kernel.cpu(),controller=require'leda.controller.http'}

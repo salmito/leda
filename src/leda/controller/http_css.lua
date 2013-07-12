@@ -1,7 +1,6 @@
 return [[* {	padding: 0; margin: 0; vertical-align: top; }
 
 body {
-	background: url(background.png) repeat-x;
 	font: 18px/1.5em "proxima-nova", Helvetica, Arial, sans-serif;
 }
 
@@ -38,7 +37,7 @@ input[type=checkbox] {
 
 #header {
 	position: relative;
-	width: 900px;
+	width: 90%;
 	margin: auto;
 }
 
@@ -52,7 +51,13 @@ input[type=checkbox] {
 }
 
 #content {
-	width: 880px;
+	width: 90%;
+	margin: 0 auto;
+	padding: 10px;
+}
+
+#commands {
+	width: 90%;
 	margin: 0 auto;
 	padding: 10px;
 }
@@ -67,8 +72,8 @@ input[type=checkbox] {
 
 .stages {
 	box-sizing: border-box;
-	width: 900px;
-	height: 550px;
+	width: 100%;
+	height: 750px;
 	padding: 20px 15px 15px 15px;
 	margin: 15px auto 30px auto;
 	border: 1px solid #ddd;
@@ -87,8 +92,8 @@ input[type=checkbox] {
 
 .connectors {
 	box-sizing: border-box;
-	width: 900px;
-	height: 275px;
+	width: 100%;
+	height: 400px;
 	padding: 20px 15px 15px 15px;
 	margin: 15px auto 30px auto;
 	border: 1px solid #ddd;
@@ -128,8 +133,8 @@ input[type=checkbox] {
     font-size: 14px;
     height: 25px;
     line-height: 1.2em;
-    margin-left: 230px;
-    margin-top: 45px;
+    margin-left: 20%;
+    margin-top: 40px;
     position: absolute;
     width: 450px;
 }
@@ -138,8 +143,8 @@ input[type=checkbox] {
     font-size: 14px;
     height: 25px;
     line-height: 1.2em;
-    margin-left: 670px;
-    margin-top: 45px;
+    margin-left: 65%;
+    margin-top: 40px;
     position: absolute;
     width: 450px;
 }
@@ -148,8 +153,8 @@ input[type=checkbox] {
     font-size: 14px;
     height: 25px;
     line-height: 1.2em;
-    margin-left: 670px;
-    margin-top: 325px;
+    margin-left: 65%;
+    margin-top: 415px;
     position: absolute;
     width: 450px;
 }
@@ -158,66 +163,63 @@ input[type=checkbox] {
     font-size: 14px;
     height: 25px;
     line-height: 1.2em;
-    margin-left: 220px;
-    margin-top: 325px;
+    margin-left: 20%;
+    margin-top: 415px;
     position: absolute;
     width: 450px;
 }
 
 .connector-graph {
 	top: 25px;
-	width: 450px;
-	height: 250px;
+	width: 50%;
+	height: 350px;
 	font-size: 14px;
 	line-height: 1.2em;
 }
 
 .connector-graph-2 {
-	left: 450px;
-	top: -225px;
-	width: 450px;
-	height:	250px;
+	left: 50%;
+	top: -325px;
+	width: 50%;
+	height:	350px;
 	font-size: 14px;
 	line-height: 1.2em;
 }
 
 .choices {
-	float:left;
-	margin-top: 40px;
-	margin-left: 950px;
-	width: 60%;
+
 }
 
 .stage-graph {
 	top: 25px;
-	width: 450px;
-	height: 250px;
+	width: 50%;
+	height: 350px;
 	font-size: 14px;
 	line-height: 1.2em;
 }
 
 .stage-graph-1 {
 	top: 50px;
-	width: 450px;
-	height: 250px;
+	width: 50%;
+	height: 350px;
 	font-size: 14px;
 	line-height: 1.2em;
 }
 
 .stage-graph-2 {
-	top: -475px;
-	left: 450px;
-	width: 450px;
-	height:	250px;
+	top: -675px;
+	left: 50%;
+	width: 50%;
+	height:	350px;
 	font-size: 14px;
 	line-height: 1.2em;
 }
 
 .stage-graph-3 {
-	top: -450px;
-	left: 450px;
-	width: 450px;
-	height: 250px;
+	top: -650px;
+	left: 50%;
+	width: 50%;
+	height: 350px;
 	font-size: 14px;
 	line-height: 1.2em;
 }
