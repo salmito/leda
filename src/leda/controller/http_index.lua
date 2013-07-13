@@ -1,3 +1,4 @@
+local cpus=require'leda'.scheduler.cpu()
 return [===[<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <html>
 <head>
@@ -245,10 +246,20 @@ return [===[<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org
 	}
 
 	var update=0;
-
+	
+	var onDataError=function(error,i,str) {
+					$("#status-text")[0].innerHTML="Offline"
+					$("#status-text")[0].style.color="#770000"
+					$("#uptime-text")[0].style.color="#770000"
+					$(".links").each(function (i,e) {
+						e.style.display="none"
+					});
+   }
+   
 	var updateData=function () {	
             function onDataReceived(series) {
 					info.uptime=series.uptime
+					$("#uptime-text")[0].innerHTML=(series.uptime).toFixed(3)+"s"
 					$("#threads-text")[0].innerHTML=series.active_threads+"/"+series.thread_pool_size
 					$("#memory-usage")[0].innerHTML=(series.mem.Rss/1024).toFixed(2)+"MB / "+(series.mem.total/(1024*1024)).toFixed(2)+"GB ("+series.mem.percentage.toFixed(2)+"%)"
    	         series.stages.forEach(function(entry) {
@@ -269,11 +280,6 @@ return [===[<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org
 					setTimeout(updateData, updateInterval);
             }
 
-            function onDataError(error,i,str) {
-					$("#status-text")[0].innerHTML="Offline"
-					$("#status-text")[0].style.color="#770000"
-            }
-
 				$.ajax({
 					url: "stats",
 					type: "GET",
@@ -282,17 +288,14 @@ return [===[<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org
 					error: onDataError
 				});
 	}
+
+
 	
 	increase_threads=function () {	
             function onDataReceived(series) {
             }
 
-            function onDataError(error,i,str) {
-					$("#status-text")[0].innerHTML="Offline"
-					$("#status-text")[0].style.color="#770000"
-            }
-
-				$.ajax({
+   			$.ajax({
 					url: "increase_threads",
 					type: "POST",
 					data: "increment=1",
@@ -303,11 +306,6 @@ return [===[<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org
 
 	trim_memory=function () {	
             function onDataReceived(series) {
-            }
-
-            function onDataError(error,i,str) {
-					$("#status-text")[0].innerHTML="Offline"
-					$("#status-text")[0].style.color="#770000"
             }
 
 				$.ajax({
@@ -322,10 +320,6 @@ return [===[<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org
             function onDataReceived(series) {
             }
 
-            function onDataError(error,i,str) {
-					$("#status-text")[0].innerHTML="Offline"
-					$("#status-text")[0].style.color="#770000"
-            }
 
 				$.ajax({
 					url: "increase_threads",
@@ -338,11 +332,7 @@ return [===[<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org
             function onDataReceived(series) {
             }
 
-            function onDataError(error,i,str) {
-					$("#status-text")[0].innerHTML="Offline"
-					$("#status-text")[0].style.color="#770000"
-            }
-
+          
 				$.ajax({
 					url: "decrease_threads",
 					type: "GET",
@@ -589,9 +579,9 @@ $(main);
 
 	<div id="commands">
 		<h2>Application: <span id="app-name"></span></h2>
-		<p>Controller status: <span id="status-text" style="color: #007700;">Online</span></p>
-		<p>Memory usage: <span id="memory-usage"></span> - <a href="#" onCLick="trim_memory(); return false;">Trim</a></p>
-		<p>Active threads: <span id="threads-text"></span> - <a href="#" onCLick="inc_threads(); return false;">Increase</a> <a href="#" onCLick="dec_threads(); return false;">Decrease</a></p>
+		<p>Controller status: <span id="status-text" style="color: #007700;">Online</span>. Uptime: <span id="uptime-text" style="color: #007700;"></span></p>
+		<p>Memory usage: <span id="memory-usage"></span> <div class='links'>- <a href="#" onCLick="trim_memory(); return false;">Trim</a></div></p>
+		<p>Active threads: <span id="threads-text"></span> (]===]..cpus..[===[ cores) <div class='links'>- <a href="#" onCLick="inc_threads(); return false;">Increase</a> <a href="#" onCLick="dec_threads(); return false;">Decrease</a></div></p>
 		<p>Graphs: <a href="#" onCLick="clear_graphs(); return false;">Clear data</a> <a href="#" onCLick="clear_pan(); return false;">Reset pan</a></p>
 	</div>
 

@@ -169,7 +169,7 @@ function stdresp(str)
 		"Date: " .. os.date() .. "\r\n" ..
 		"Server: Leda HTTP controller\r\n"
 	if auth then
-	   res=res..'WWW-Authenticate: Basic realm="Leda"'
+	   res=res..'WWW-Authenticate: Basic realm="Leda"\r\n'
 	end
 	return res
 end

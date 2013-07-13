@@ -6,27 +6,7 @@ require "leda"
 leda.utils={}
 local utils=leda.utils
 
------------------------------------------------------------------------------
--- Print received data and pass it if connected
--- param:   '...':   data to be printed
------------------------------------------------------------------------------
-utils.print={
-   name="Print",
-   handler=function (...)
-      print(...)
-      leda.send(1,...)
-   end
-}
-
-utils.quit={
-   name='Process term',
-   handler=function ()
-       leda.quit()
-   end
-}
-
 --Graph builders
-
 utils.linear_pipeline=function(...)
    local arg={...}
    local g=leda.graph{}

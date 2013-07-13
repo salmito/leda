@@ -68,7 +68,7 @@ if leda.stage.__init and leda.stage.__init~="" then
            debug.setupvalue (init, 1, global_env)
          end
       end
-	   init() 
+	   init()
 	end
 end
 __handler=leda.stage.handler
