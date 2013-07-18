@@ -362,7 +362,7 @@ local function http_server(port)
 				 		send(clt,resp)
 					end
 				elseif req.type == "POST" then
-					print('POST -> %s',req.post)
+					dbg('POST -> %s',req.post)
 				end
 						
 				if req.header.Connection == "close" then
@@ -410,7 +410,7 @@ function t.get(...)
 end
 
 if leda and leda.controller then
-   leda.controller.thread_pool=t
+   leda.controller.http=t
 end
 
 get_css=function()

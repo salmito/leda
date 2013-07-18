@@ -493,7 +493,7 @@ int graph_build(lua_State * L) {
    return 0;
 }
 
-#define NULL_SAFE_FREE(p) if((p)) free((void*)(p))
+#define NULL_SAFE_FREE(p) if((p)) free((void*)(p)); p=NULL
 
 /* destoy a graph representation from the memory */
 int graph_destroy(lua_State* L) {

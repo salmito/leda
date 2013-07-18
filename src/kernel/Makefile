@@ -2,7 +2,7 @@ INCFLAGS=-I$(LUA_INCDIR)
 CFLAGS=-fPIC $(INCFLAGS) -Wall $(EXTRA_FLAGS) -O2
 TBBLIB_FLAG=-ltbb
 LDFLAGS=$(EXTRA_FLAGS) -lpthread -levent -levent_pthreads
-     
+
 LUA=lua
 
 CC=gcc

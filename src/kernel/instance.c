@@ -252,8 +252,8 @@ bool_t instance_try_push_pending_event(stage_id dst, event e) {
 
 /* Push instance to the ready queue */
 void push_ready_queue(instance i) {
-   if(i) _DEBUG("Instance: Pushing instance '%d' of stage '%s' onto the ready queue\n",
-   i->instance_number,STAGE(i->stage)->name);
+//   if(i!=NULL) _DEBUG("Instance: Pushing instance '%d' of stage '%s' onto the ready queue\n",
+//   i->instance_number,STAGE(i->stage)->name); //FIXED DEBUG SIGSEGV
    bool_t ret=TRY_PUSH(ready_queue,i);
    if(!ret) {
        /*   The ready queue is FULL.

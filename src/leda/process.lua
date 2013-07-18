@@ -84,7 +84,7 @@ local function init(g,ro_g,host,port,controller,maxpar)
       end
    end
    
-   return leda.kernel.run(g,ro_g,controller or leda.controller.default  or default_controller,maxpar,process_socket:getfd())
+   return leda.kernel.run(g,ro_g,controller or leda.controller.default or default_controller,maxpar,process_socket:getfd())
 end
 t.init=init
 

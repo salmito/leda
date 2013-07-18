@@ -43,6 +43,6 @@ local g=graph{"Producer-consumer",
 
 local th = th or tonumber(arg[3]) or leda.kernel.cpu()
 
-local c=controller or leda.controller.thread_pool.get(th)
+--local c=controller or leda.controller.thread_pool.get(th)
 
 g:run{maxpar=16,controller=c}

@@ -579,9 +579,10 @@ $(main);
 
 	<div id="commands">
 		<h2>Application: <span id="app-name"></span></h2>
+		<p>Lua version: ]===]..((jit and jit.version) or _VERSION or "Unknown").." Leda version: "..(leda._VERSION or "Unknown")..[===[</p>
 		<p>Controller status: <span id="status-text" style="color: #007700;">Online</span>. Uptime: <span id="uptime-text" style="color: #007700;"></span></p>
-		<p>Memory usage: <span id="memory-usage"></span> <div class='links'>- <a href="#" onCLick="trim_memory(); return false;">Trim</a></div></p>
-		<p>Active threads: <span id="threads-text"></span> (]===]..cpus..[===[ cores) <div class='links'>- <a href="#" onCLick="inc_threads(); return false;">Increase</a> <a href="#" onCLick="dec_threads(); return false;">Decrease</a></div></p>
+		<p>Memory usage: <span id="memory-usage"></span> <span class='links'>- <a href="#" onCLick="trim_memory(); return false;">Trim</a></span></p>
+		<p>Active threads: <span id="threads-text"></span> (]===]..cpus..[===[ cores) <span class='links'>- <a href="#" onCLick="inc_threads(); return false;">Increase</a> <a href="#" onCLick="dec_threads(); return false;">Decrease</a></span></p>
 		<p>Graphs: <a href="#" onCLick="clear_graphs(); return false;">Clear data</a> <a href="#" onCLick="clear_pan(); return false;">Reset pan</a></p>
 	</div>
 

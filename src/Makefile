@@ -16,7 +16,7 @@ all: 5.1
 	cd kernel && make LUA_INCDIR="$(LUA_5_2_INCDIR)"
 
 debug:
-	cd kernel && make EXTRA_FLAGS="-ggdb -DDEBUG $(EXTRA_FLAGS)" LUA_INCDIR="$(LUA_INCDIR)"
+	cd kernel && make EXTRA_FLAGS="-ggdb -DDEBUG" LUA_INCDIR="$(LUA_INCDIR)"
 
 5.2-debug: 
 	cd kernel && make LUA_INCDIR="$(LUA_5_2_INCDIR)" EXTRA_FLAGS="-ggdb -DDEBUG"
