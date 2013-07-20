@@ -52,7 +52,7 @@ THE SOFTWARE.
 
 #include <event2/event.h>
 
-#define __VERSION "0.3.1"
+#define __VERSION "0.3.2-unstable"
 
 #define CONNECTOR_TIMEOUT 2.0
 
