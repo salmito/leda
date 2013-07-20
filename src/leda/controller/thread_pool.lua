@@ -19,13 +19,15 @@ local th={}
 -- Controller init function
 -----------------------------------------------------------------------------
 
-local function get_init(n)
+local function get_init(n,affinity)
    return   function()
                pool_size=n
                for i=1,n do
                	local thread=kernel.thread_new()
+               	if affinity then
+  	                   thread:set_affinity(i)
+               	end
                   table.insert(th,thread)
-                  thread:set_affinity(i)
                   dbg("Thread %d created",i)
                end
             end
@@ -43,8 +45,8 @@ function t.finish()
    dbg "Controller finished"
 end
 
-function t.get(n)
-   return {init=get_init(n),finish=t.finish}
+function t.get(n,a)
+   return {init=get_init(n,a),finish=t.finish}
 end
 
 if leda and leda.controller then
