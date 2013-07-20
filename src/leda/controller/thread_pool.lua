@@ -23,7 +23,9 @@ local function get_init(n)
    return   function()
                pool_size=n
                for i=1,n do
-                  table.insert(th,kernel.thread_new())
+               	local thread=kernel.thread_new()
+                  table.insert(th,thread)
+                  thread:set_affinity(i)
                   dbg("Thread %d created",i)
                end
             end

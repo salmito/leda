@@ -88,9 +88,14 @@ enum e_status { PENDING, RUNNING, WAITING, DONE, ERROR_ST, CANCELLED };
 #else // THREADAPI == THREADAPI_PTHREAD
   // PThread (Linux, OS X, ...)
   //
-  #include <pthread.h>
 
   #ifdef PLATFORM_LINUX
+
+  #define __USE_GNU
+  #include <pthread.h>
+  //#include <sched.h>
+
+
   # define _MUTEX_RECURSIVE PTHREAD_MUTEX_RECURSIVE_NP
   #else
     /* OS X, ... */

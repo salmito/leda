@@ -551,6 +551,27 @@ int thread_rawkill (lua_State *L) {
    return 0;
 }
 
+#ifdef PLATFORM_LINUX
+static int leda_thread_set_affinity(lua_State * L) {
+
+	thread t = luaL_checkudata (L, 1, THREAD_METATABLE);
+	int core_id=lua_tointeger(L,2)-1;
+
+   cpu_set_t cpuset;
+   CPU_ZERO(&cpuset);
+   CPU_SET(core_id, &cpuset);
+
+   lua_pushinteger(L,pthread_setaffinity_np(t->thread, sizeof(cpu_set_t), &cpuset));
+   return 1;
+}
+
+#else
+static int leda_thread_set_affinity(lua_State * L) {
+ 	return lua_error(L,"Not implemented");
+}
+#endif
+
+
 /* Kill a thread from Lua*/
 int thread_destroy (lua_State *L) {
    thread t=thread_get(L,1);
@@ -592,20 +613,20 @@ int thread_new (lua_State *L) {
 }
 
 /* Get the status of a thread from Lua*/
-int thread_status (lua_State *L) {
+static int thread_status (lua_State *L) {
    thread t=thread_get(L,1);
    lua_pushinteger(L,t->status);
    return 1;
 }
 
 /* Kill a thread from Lua*/
-int thread_kill (lua_State *L) {
+static int thread_kill (lua_State *L) {
    push_ready_queue(NULL);
    return 0;
 }
 
 /* Join with a thread from Lua*/
-int thread_join (lua_State *L) {
+static int thread_join (lua_State *L) {
 	thread t=thread_get(L,1);
    pthread_join(t->thread,NULL);
    return 0;
@@ -641,6 +662,10 @@ int thread_createmetatable (lua_State *L) {
 
   	lua_pushliteral(L,"join");
    lua_pushcfunction(L,thread_join);
+   lua_rawset(L,-3);
+
+	lua_pushliteral(L,"set_affinity");
+	lua_pushcfunction(L,leda_thread_set_affinity);
    lua_rawset(L,-3);
 
 

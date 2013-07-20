@@ -646,7 +646,6 @@ int luaopen_leda_kernel (lua_State *L) {
   	   //functions for controllers
   	   {"add_timer", add_timer},
   	   {"thread_new", thread_new},
-  	   {"thread_kill", thread_kill},
   	   {"thread_rawkill", thread_rawkill},
   	   {"stats", leda_get_stats},
   	   {"reset_stats", stats_reset},
