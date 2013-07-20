@@ -17,7 +17,7 @@ s1=leda.stage{ name="s1",
 }
 
 eval=leda.stage(function (str,...) loadstring(str)(...) end)
-printer=leda.stage(utils.print)
+printer=leda.stage(function (...) print(...) end)
 
 s1:send(1)
 

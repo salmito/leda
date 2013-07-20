@@ -14,4 +14,4 @@ for i=1,n do
    printer:send(i)
 end
 
-g:run{maxpar=2}
+g:run{maxpar=leda.scheduler.cpu()}

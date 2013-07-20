@@ -91,7 +91,6 @@ end
 function index.connect(head,key,tail,method)
    return setmetatable({head=head},{__index={
    	run=function(...) 
-			print("Running")
    		return leda.graph(function(g) return g:connect(head,key,tail,method) end):run(...)
    	end
    },
@@ -126,11 +125,12 @@ local function new_stage_t(...)--t,init,name,bind,serial)
    local s={...}
    if type(s[1])=="table" then
       s=s[1]
-   elseif type(s[1])=="function" then
+   elseif type(s[1])=="function" or type(s[1])=='string' then
    	s.handler=s[1]
    	if select('#',...) > 1 then
 	   	s.autostart={select(2,...)}   	
    	end
+   	table.remove(s,1)
    end
    if is_stage(s) then
       local ns={}
@@ -141,7 +141,6 @@ local function new_stage_t(...)--t,init,name,bind,serial)
    end
    s.serial=s.serial or s.stateful
    s.pending={}
-   
    assert(type(s.handler)=="function" or type(s.handler)=="string","Invalid handler type (function or string expected)")
    assert(type(s.init)=="function" or type(s.init)=="string" or s.init==nil,"Invalid init type (function or string expected)")
 
@@ -219,6 +218,8 @@ local function new_stage_t(...)--t,init,name,bind,serial)
    s.name=s.name or tostring(s)
    s.pending={}
    table.insert(t.stages,s)
+--   for k,v in pairs(s) do print(k,v) end
+   
    return s
 end
 

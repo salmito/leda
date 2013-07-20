@@ -203,6 +203,10 @@ function t.run(g,localport,maxpar,controller)
       end
    end
 
+	for s in pairs(g:stages()) do
+		s.bind=nil
+   end
+
    local ro_graph = kernel.build_graph(g,localhost,l_localport)
  
    for d in pairs(d_list) do

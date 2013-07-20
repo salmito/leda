@@ -8,9 +8,9 @@ local it=it or 100000
 
 local s1=leda.stage{name="S1",
 	handler=function()
-   	memarray=require 'leda.utils.memarray'
+   	memarray=require 'leda.memarray'
       local c=memarray('uint',500)
-      for i=0,499 do
+      for i=1,500 do
          c[i]=4e6
    	end
    	print("s1",c[499],c)
@@ -35,7 +35,7 @@ local s3=leda.stage{name="S3",
 local s2=leda.stage{name="S2",
 	handler=function(array)
 		print("s2",array[499],array)
-		leda.yield(array)
+		leda.quit(array)
 	end
 }
 

@@ -32,8 +32,8 @@ local printer=leda.stage{
 }
 
 local graph=leda.graph{
-   fib:connect("value",leda.stage"Print""print(...)"),
-   fib:connect("end",leda.stage"Quit""leda.quit()")
+   fib:connect("value",leda.stage"Print"("print(...)")),
+   fib:connect("end",leda.stage"Quit"("leda.quit()"))
 }
 
 graph:run{controller=leda.controller.thread_pool.get(1)}
