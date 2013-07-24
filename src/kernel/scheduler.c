@@ -620,7 +620,7 @@ static int thread_status (lua_State *L) {
 }
 
 /* Kill a thread from Lua*/
-static int thread_kill (lua_State *L) {
+int thread_kill (lua_State *L) {
    push_ready_queue(NULL);
    return 0;
 }
