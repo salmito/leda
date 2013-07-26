@@ -343,8 +343,7 @@ return [===[<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org
 
 
 	//GRAPH
-
-/*
+	
  Renderer = function(canvas){
     var canvas = $(canvas).get(0)
     var ctx = canvas.getContext("2d");
@@ -455,7 +454,23 @@ return [===[<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org
               ctx.lineTo(-arrowLength * 0.8, -0);
               ctx.closePath();
               ctx.fill();
+              
+//            ctx.restore()
+//            ctx.save()
+               // draw the text
+	          if (edge.data.label){
+   	         ctx.font = "18px Helvetica"
+   	         ctx.textAlign = "left"
+//   	         ctx.fillStyle = "white"
+   	         if (edge.data.color) ctx.fillStyle = edge.data.color;
+   	         ctx.fillStyle = '#333333'
+   	          ctx.translate(-100, 10);
+   	         ctx.fillText(edge.data.label||"", 0, 0)
+   	    //     ctx.fillText(edge.data.label||"", head.x, head.y)
+   	       }
+            
             ctx.restore()
+            
           }
         })
 
@@ -554,18 +569,29 @@ return [===[<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org
 
 	sys.renderer = Renderer("#gviewport") ;
 
-var data = {
-nodes:{
-animals:{'color':'red','shape':'dot','label':'Animals'},
-dog:{'color':'green','shape':'dot','label':'dog'},
-cat:{'color':'blue','shape':'dot','label':'cat'}
-},
-edges:{
-animals:{ dog:{}, cat:{} }
-}
-};
-sys.graft(data);
-*/
+	function getGraph() {
+		var graph={}
+
+		function onDataReceived(series) {
+       graph=series
+   	}
+   	function onError(error,i,str) {
+   	}
+
+		$.ajax({
+			url: "graph",
+			type: "GET",
+			dataType: "json",
+			success: onDataReceived,
+			error: onError,
+			async: false
+		});
+		return graph
+	}
+	
+	var data=getGraph()
+	sys.graft(data);
+
 	updateData();
 }
 $(main); 
@@ -578,15 +604,16 @@ $(main);
 	</div>
 
 	<div id="commands">
-		<h2>Application: <span id="app-name"></span></h2>
+		<h2>Application: <a href="#" onClick="$('#app-graph').toggle(1); return false;"><span id="app-name"></span></a></h2>
+		<div id="app-graph"> 
+			<canvas id="gviewport" width="800" height="600"></canvas> 
+		</div>
 		<p>Lua version: ]===]..((jit and jit.version) or _VERSION or "Unknown").." Leda version: "..(leda._VERSION or "Unknown")..[===[</p>
 		<p>Controller status: <span id="status-text" style="color: #007700;">Online</span>. Uptime: <span id="uptime-text" style="color: #007700;"></span></p>
 		<p>Memory usage: <span id="memory-usage"></span> <span class='links'>- <a href="#" onCLick="trim_memory(); return false;">Trim</a></span></p>
 		<p>Active threads: <span id="threads-text"></span> (]===]..cpus..[===[ cores) <span class='links'>- <a href="#" onCLick="inc_threads(); return false;">Increase</a> <a href="#" onCLick="dec_threads(); return false;">Decrease</a></span></p>
 		<p>Graphs: <a href="#" onCLick="clear_graphs(); return false;">Clear data</a> <a href="#" onCLick="clear_pan(); return false;">Reset pan</a></p>
 	</div>
-
-	<!-- <canvas id="gviewport" width="800" height="600"></canvas> -->
 
 	<div id="content">
 		<p id='status'></p>

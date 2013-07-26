@@ -44,16 +44,42 @@ local get_smaps=function()
 end
 
 local function get_graph()
-	local ret=""
+	local ret={"{\"nodes\":{"}
+	local a=false
 	for s in pairs(graph:stages()) do
-		ret=ret..s.name.." "
+		if a then
+			table.insert(ret,", ")
+		end
+		table.insert(ret,"\""..s.name.."\": {\"label\": \""..s.name.."\"}")
+		a=true
 	end
-	ret=ret..'\n'
+	
+	local st={}
 	for c in pairs(graph:connectors()) do
-		ret=ret..c.producer.name..'.'..c.port.." -> "..c.consumer.name
+		st[c.producer]=st[c.producer] or {}
+		st[c.producer][c.port]=c.consumer
 	end
-
-	return ret
+	table.insert(ret,'},\n"edges":{\n')
+	local a,b=false,false
+	for s,con in pairs(st) do
+		if a then
+			table.insert(ret,", ")
+		end
+		table.insert(ret,'"'..s.name..'":{')
+		b=false
+		for port,consumer in pairs(con) do
+			if b then
+				table.insert(ret,", ")
+			end
+			table.insert(ret,'"'..consumer.name..'":{"directed":"true","label":"'..port..'"}')
+			b=true
+		end
+   	table.insert(ret,'}\n')
+		a=true
+	end
+	
+	table.insert(ret,'}\n}')
+	return table.concat(ret)
 end
 
 local last_t={}

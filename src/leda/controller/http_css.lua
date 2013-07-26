@@ -224,6 +224,11 @@ input[type=checkbox] {
 	line-height: 1.2em;
 }
 
+#app-graph {
+	height: 600px;
+	display: none;
+}
+
 .legend table {
 	border-spacing: 5px;
 }]]

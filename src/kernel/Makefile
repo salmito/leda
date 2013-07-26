@@ -27,7 +27,7 @@ OBJ+= queue.o \
 else
 OBJ+= tbb_queue.o \
       tbb_atomic.o 
-LDFLAGS+=$(TBBLIB_FLAG)
+LDFLAGS+=$(TBBLIB_FLAGS)
 endif
 HEADERS=*.h extra/*.h
 
