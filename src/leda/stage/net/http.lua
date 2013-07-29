@@ -59,6 +59,6 @@ end
 
 stage.serial=false
 
-stage.name="Read URL"
+stage.name="HTTP Client"
 
 return _.stage(stage)
