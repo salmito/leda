@@ -4,6 +4,12 @@ SRC_DIR=leda/
 
 MODULE=leda
 
+STAGES=window\
+		 util\
+		 net\
+		 z\
+		 io\
+
 LUA_FILES=$(SRC_DIR)/*.lua
 LIB_FILE=leda.so
 
@@ -52,7 +58,12 @@ install5.1: all
 	install $(LUA_FILES) $(LUA_INSTALL_PATH)/leda
 #	mkdir -p $(LIB_INSTALL_PATH)/leda
 	install $(LIB_FILE) $(LIB_INSTALL_PATH)/
-	
+	mkdir -p $(LUA_INSTALL_PATH)/leda/stage
+	for module in $(STAGES); do \
+		mkdir -p $(LUA_INSTALL_PATH)/leda/stage/$$module ; \
+		install $(SRC_DIR)/stage/$$module/*.lua $(LUA_INSTALL_PATH)/leda/stage/$$module ; \
+	done
+
 uninstall:
 	rm -f $(LUA_INSTALL_PATH)/leda.lua
 	rm -rf $(LUA_INSTALL_PATH)/leda

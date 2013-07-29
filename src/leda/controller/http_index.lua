@@ -383,7 +383,7 @@ return [===[<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org
 
           // draw a rectangle centered at pt
           if (node.data.color) ctx.fillStyle = node.data.color
-          else ctx.fillStyle = "rgba(0,0,0,.2)"
+          else ctx.fillStyle = "rgba(0,0,0,.2)" 
           if (node.data.color=='none') ctx.fillStyle = "white"
 
           if (node.data.shape=='dot'){
