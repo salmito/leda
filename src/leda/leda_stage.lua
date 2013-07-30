@@ -79,6 +79,7 @@ function index.send(self,...)
    table.insert(self.pending,v)
    return self
 end
+index.push=index.send
 
 -----------------------------------------------------------------------------
 -- method stage:connect([key,]tail,method)
