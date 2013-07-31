@@ -5,8 +5,5 @@ return _.stage{
                print(...)
                leda.send(1,...)
            end,
-   init=function()
-   	print(self.name)
-   end,
    name="Console print",
 }
