@@ -33,6 +33,7 @@ end
 function stage.init()
    table=require 'table'
    string=require 'string'
+   aync=true
    io=require 'io'
 end
 

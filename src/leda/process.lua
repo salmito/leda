@@ -138,7 +138,7 @@ local function prepare_graph(g,process)
       end
       s.name=t[s].name
       s.pending={}
-      s.serial=t[s].serial
+--      s.serial=t[s].serial
       s.stagesid=t[s].stagesid
       s.connectorsid=t[s].connectorsid
       s.clustersid=t[s].clustersid
