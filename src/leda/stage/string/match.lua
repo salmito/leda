@@ -13,5 +13,6 @@ local stage = _.stage{
 		assert(self.pattern,"Pattern field must be defined")
 		assert(output[1],"Default (1) port must be connected")
 	end,
+	name='match'
 }
 return stage
