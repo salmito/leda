@@ -5,5 +5,6 @@ return _.stage{
                print(...)
                leda.send(1,...)
            end,
+   serial=true,
    name="Console print",
 }

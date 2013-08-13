@@ -134,10 +134,11 @@ local function prepare_graph(g,process)
       t[s]={}
       for k,v in pairs(s) do
          t[s][k]=v
-         s[k]=nil
+--         s[k]=nil
       end
       s.name=t[s].name
       s.pending={}
+--      s.serial=t[s].serial
       s.stagesid=t[s].stagesid
       s.connectorsid=t[s].connectorsid
       s.clustersid=t[s].clustersid
