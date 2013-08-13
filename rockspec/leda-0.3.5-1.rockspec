@@ -1,19 +1,19 @@
-package="leda"
-version="0.3.5-1"
+package = "leda"
+version = "0.3.5-1"
 
-source= {
+source = {
 	url= "https://github.com/salmito/leda/archive/v0.3.5.zip",
 	dir= "leda-0.3.5"
 }
 
 description = {
-  summary = "Leda",
-  detailed = [[
-    Leda is a Lua library for building parallel, non-linear pipelines in Lua based on
-    the concepts of SEDA (Staged Event-Driven Architecture).
-  ]],
-  license = "MIT",
-  homepage = "http://leda.co/"
+   summary = "Leda",
+   detailed = [[
+     Leda is a Lua library for building parallel, non-linear pipelines in Lua based on
+     the concepts of SEDA (Staged Event-Driven Architecture).
+   ]],
+   license = "MIT <http://www.opensource.org/licenses/mit-license.php>",
+   homepage = "http://leda.co/"
 }
 
 dependencies = {
