@@ -52,10 +52,15 @@ bool_t thread_ready_queue_isempty() {
 }
 
 /* Initialize thread subsystem */
-void thread_init(size_t ready_queue_capacity) {
+void leda_thread_init(size_t ready_queue_capacity) {
    ready_queue=queue_new();
    queue_set_capacity(ready_queue,ready_queue_capacity);
    pool_size=atomic_new(0);
+}
+
+void leda_thread_end() {
+   if(READ(pool_size)==0)
+	   queue_free(ready_queue);
 }
 
 #ifdef DEBUG
@@ -113,8 +118,6 @@ char const * get_return_status_name(int status) {
    }
    return "UNKNOWN";
 }
-
-   
 
 /* Call an instance loaded with 'args' values at the top of its stack */
 void thread_resume_instance(instance i) {
@@ -551,9 +554,8 @@ int thread_rawkill (lua_State *L) {
    return 0;
 }
 
-#ifdef PLATFORM_LINUX
 static int leda_thread_set_affinity(lua_State * L) {
-
+#ifdef PLATFORM_LINUX
 	thread t = luaL_checkudata (L, 1, THREAD_METATABLE);
 	int core_id=lua_tointeger(L,2)-1;
 
@@ -563,13 +565,10 @@ static int leda_thread_set_affinity(lua_State * L) {
 
    lua_pushinteger(L,pthread_setaffinity_np(t->thread, sizeof(cpu_set_t), &cpuset));
    return 1;
-}
-
 #else
-static int leda_thread_set_affinity(lua_State * L) {
  	return lua_error(L,"Not implemented");
-}
 #endif
+}
 
 
 /* Kill a thread from Lua*/

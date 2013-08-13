@@ -411,7 +411,11 @@ local function get_init(n,port,user,pass)
                graph=g
                pool_size=n
                for i=1,n do
-                  table.insert(th,kernel.thread_new())
+               	local thread=kernel.thread_new()
+	               if leda.affinity then
+  	                   thread:set_affinity(i)
+               	end
+                  table.insert(th,thread)
                   dbg("Thread %d created",i)
                end
                http_server(port or default_port)

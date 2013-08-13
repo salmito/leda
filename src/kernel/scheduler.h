@@ -59,7 +59,8 @@ char const * get_return_status_name(int status);
    void dump_stack(lua_State* L);
 #endif
 
-void thread_init(size_t ready_queue_capacity);
+void leda_thread_init(size_t ready_queue_capacity);
+void leda_thread_end();
 
 thread thread_get (lua_State *L, int i);
 int thread_new (lua_State *L);

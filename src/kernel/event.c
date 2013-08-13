@@ -329,11 +329,11 @@ event extract_event_from_lua_state(lua_State *L, int from, int args) {
 #define EVENT_TYPE 28
 #define INIT_TYPE 27
 
-queue * sockets;
-atomic * cur_process;
+static queue * sockets;
+static atomic * cur_process;
 //lua_State * dummy;
 //Event system base
-struct event_base *base;
+static struct event_base *base;
 
 void do_read_ack(evutil_socket_t fd, short events, void *arg) {
    _DEBUG("Event: Read ACK\n");
@@ -845,7 +845,14 @@ void event_aio_op_ready(evutil_socket_t afd, short libev_event, void *arg) {
   
 static THREAD_RETURN_T THREAD_CALLCONV event_main(void *t_val) {
    int process_fd=*(int*)t_val;
-   free(t_val);
+
+   int i;
+   sockets=calloc(main_graph->n_d,sizeof(queue));
+   for(i=0;i<main_graph->n_d;i++) sockets[i]=queue_new();
+   cur_process=calloc(main_graph->n_cl,sizeof(atomic));
+   for(i=0;i<main_graph->n_cl;i++) cur_process[i]=atomic_new(0);
+
+  // free(t_val);
 
    struct event *listener_event;
  	
@@ -872,8 +879,12 @@ static THREAD_RETURN_T THREAD_CALLCONV event_main(void *t_val) {
    event_base_dispatch(base);
 //	event_base_loop(base,0);
    
+   for(i=0;i<main_graph->n_d;i++) queue_free(sockets[i]);
+   for(i=0;i<main_graph->n_cl;i++) atomic_free(cur_process[i]);
+
 	return NULL;
 }
+
 
 void event_wait_io(instance i) {
    int fd=-1;
@@ -1020,11 +1031,12 @@ void event_sleep(instance i) {
 void event_init_t(int process_fd) {
    int *p=malloc(sizeof(int));
    *p=process_fd;
-   int i;
-   sockets=calloc(main_graph->n_d,sizeof(queue));
-   for(i=0;i<main_graph->n_d;i++) sockets[i]=queue_new();
-   cur_process=calloc(main_graph->n_cl,sizeof(atomic));
-   for(i=0;i<main_graph->n_cl;i++) cur_process[i]=atomic_new(0);
 
    THREAD_CREATE( &event_thread, event_main, p, 0 );
 }
+
+void leda_event_end() {
+	event_base_loopexit(base,NULL);
+	
+}
+

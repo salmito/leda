@@ -200,21 +200,18 @@ int aio_eventfd(unsigned int count) {
 	return eventfd(count, 0);
 }
 
-int afd;
-aio_context_t ctx = 0;
+static int afd;
+static aio_context_t ctx = 0;
 
 #define MAX_AIO_EVENTS 1024*4
 #define AIO_EVENTS 512
 
-int aio_init(aio_context_t ** ctx_p) {
+int leda_aio_init(aio_context_t ** ctx_p) {
 //	fprintf(stderr,"Creating a fdevent\n");
 	if ((afd = aio_eventfd(0)) == -1) {
-//		perror("eventfd");
 		return 2;
 	}
-//	fprintf(stderr,"Done\n");
 	if (io_setup(MAX_AIO_EVENTS, &ctx)) {
-//		perror("io_setup");
 		return 3;
 	}
 	fcntl(afd, F_SETFL, fcntl(afd, F_GETFL, 0) | O_NONBLOCK);
@@ -222,60 +219,30 @@ int aio_init(aio_context_t ** ctx_p) {
 	return afd;
 }
 
+void leda_aio_end() {
+	close(afd);
+	ctx=0;
+}
+
 int aio_submit_read(int fd, char * buf, int size, void * data) {
 	int i, r;// j;
-//	u_int64_t eval;
 	struct iocb **piocb;
 	struct iocb *iocb;
-	//struct timespec tmo;
-//	static struct io_event events[AIO_EVENTS];
 
 	iocb = malloc(sizeof(struct iocb));
 	piocb = malloc(sizeof(struct iocb *));
 	if (!iocb || !piocb) {
-//		perror("iocb alloc");
 		return -1;
 	}
 	i=0;
 	off_t offset = lseek( fd, 0, SEEK_CUR );
-//	for (i = 0; i < n; i++) {
 		piocb[i] = &iocb[i];
 		asyio_prep_pread(&iocb[i], fd, buf, size,
 				 offset, afd, data);
-//		iocb[i].aio_data = (u_int64_t) i + 1;
-//	}
-//	fprintf(stderr, "submitting read request...\n");
 	if ((r = io_submit(ctx, 1, piocb)) <= 0) {
-//		perror("io_submit");
 		return -1;
 	}
-//	fprintf(stderr, "submitted %d requests\n", r);
 	return r;
-/*	for (i = 0; i < n;) {
-		fprintf(stderr, "waiting ... "), fflush(stdout);
-		waitasync(afd, -1);
-		eval = 0;
-		if (read(afd, &eval, sizeof(eval)) != sizeof(eval))
-			perror("read");
-		fprintf(stderr, "done! %llu\n", (unsigned long long) eval);
-		while (eval > 0) {
-			tmo.tv_sec = 0;
-			tmo.tv_nsec = 0;
-			r = io_getevents(ctx, 1, eval > AIO_EVENTS ? AIO_EVENTS: (long) eval,
-					 events, &tmo);
-			if (r > 0) {
-				for (j = 0; j < r; j++) {
-				}
-				i += r;
-				eval -= r;
-				fprintf(stdout, "aio_read got %ld/%ld results so far\n",
-					i, n);
-			}
-		}
-	}
-	free(iocb);
-	free(piocb);
-*/
 }
 
 int aio_submit_write(int fd, const char * buf,int size,void * data) {
@@ -283,7 +250,6 @@ int aio_submit_write(int fd, const char * buf,int size,void * data) {
 
 	struct iocb **piocb;
 	struct iocb *iocb;
-//	static char buf[IORTX_SIZE];
 
 	iocb = malloc(sizeof(struct iocb));
 	piocb = malloc(sizeof(struct iocb *));
@@ -293,46 +259,13 @@ int aio_submit_write(int fd, const char * buf,int size,void * data) {
 	}
 	i=0;
 	off_t offset = lseek( fd, 0, SEEK_CUR ) ;
-//	for (i = 0; i < 1; i++) {
 		piocb[i] = &iocb[i];
 		asyio_prep_pwrite(&iocb[i], fd, buf, size,
 				  offset, afd,data);
-		//iocb[i].aio_data = (u_int64_t) i + 1;
-//	}
-//	fprintf(stdout, "submitting write request...\n");
 	if ((r = io_submit(ctx, 1, piocb)) <= 0) {
-//		perror("io_submit");
 		return -1;
 	}
-//	fprintf(stdout, "submitted %d write requests\n", r);
 	return r;
-/*	for (i = 0; i < n;) {
-		fprintf(stdout, "waiting ... "), fflush(stdout);
-		waitasync(afd, -1);
-		eval = 0;
-		if (read(afd, &eval, sizeof(eval)) != sizeof(eval))
-			perror("read");
-		fprintf(stdout, "done! %llu\n", (unsigned long long) eval);
-		while (eval > 0) {
-			tmo.tv_sec = 0;
-			tmo.tv_nsec = 0;
-			r = io_getevents(ctx, 1, eval > NUM_EVENTS ? NUM_EVENTS: (long) eval,
-					 events, &tmo);
-			if (r > 0) {
-				for (j = 0; j < r; j++) {
-
-				}
-				i += r;
-				eval -= r;
-				fprintf(stdout, "test_write got %ld/%ld results so far\n",
-					i, n);
-			}
-		}
-	}
-	free(iocb);
-	free(piocb);
-*/
-
 }
 
 

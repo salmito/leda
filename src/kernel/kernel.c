@@ -235,6 +235,7 @@ static int leda_run(lua_State * L) {
    graph g=to_graph(L,2);
    
    main_graph=g;
+   leda_thread_init(-1);
    //parameter must be a table for controller
    luaL_checktype(L,3, LUA_TTABLE);
    int default_maxpar=lua_tointeger(L,4);
@@ -355,7 +356,7 @@ static int leda_run(lua_State * L) {
    
    struct event *listener_event = event_new(kernel_event_base, -1, EV_READ|EV_PERSIST, kernel_null_event, NULL);
    event_add(listener_event, NULL);
-    
+   
    event_base_dispatch(kernel_event_base);
    #else
       while(1) sleep(1000);
@@ -372,6 +373,14 @@ static int leda_run(lua_State * L) {
       _DEBUG("Controller does not defined an finish method\n");
    }
    
+   #ifndef STATS_OFF
+	   stats_free();
+   #endif
+   
+   instance_end();
+   leda_thread_end();
+   leda_event_end();
+    
    close(process_fd);
    return  L_main_args;
 }
@@ -673,10 +682,6 @@ int luaopen_leda_kernel (lua_State *L) {
    	return 1;
    }
    initialized=TRUE;
-   #ifdef DEBUG
-//   MUTEX_INIT(&debug_lock);
-   #endif
-   thread_init(-1);
 	
 	/* Load main library functions */
    _DEBUG("Kernel: Loading leda main API\n");
