@@ -63,7 +63,8 @@
 <p>To install dependencies on a Debian like linux (Ubuntu, mint, etc) do:</p>
 
 <pre><code>   sudo apt-get install libtbb-dev libevent-dev
-   sudo apt-get install lua5.1-dev lua5.1 lua-socket
+   #assorted dependencies
+   sudo apt-get install gcc g++ luarocks
 </code></pre>
 
 <p>Optional: Leda uses luagraph to plot stage graphs, to install it, do:</p>
@@ -73,7 +74,12 @@
    sudo luarocks install luagraph
 </code></pre>
 
-<p>To build and install Leda for Lua 5.1:</p>
+<p>Install via luarocks:</p>
+<pre><code>   sudo luarocks install leda
+</code></pre>
+
+
+<p>Or to build and install Leda for Lua 5.1:</p>
 
 <pre><code>   $ make
    $ sudo make install
@@ -86,12 +92,10 @@
 </code></pre>
 
 <p>To uninstall Leda on Lua 5.1:</p>
-
 <pre><code>   $ sudo make uninstall
 </code></pre>
 
 <p>To uninstall Leda on Lua 5.2:</p>
-
 <pre><code>   $ sudo make uninstall5.2
 </code></pre>
 
