@@ -9,7 +9,7 @@ stage.handler=function()
        if cli_sock then
 	       cli_sock:setoption ("tcp-nodelay", true)
    	    local cli, cport = cli_sock:getpeername()
-   	    leda.send("client",cli_sock,cli,cport)
+   	    leda.push(cli_sock,cli,cport)
        end
    end
    server_sock:close()
@@ -21,7 +21,7 @@ stage.init=function ()
 end
 
 function stage:bind(output)
-	assert(output.client,"Port 'client' must be connected for stage '"..tostring(self).."'")
+	assert(output[1],"Default port must be connected for stage '"..tostring(self).."'")
 	assert(self.port,"Field 'port' must be defined for stage '"..tostring(self).."'")
 	self.port=assert(tonumber(self.port),"Field 'port' must be a number")
 	self.name=self.name.." (port="..self.port..")"

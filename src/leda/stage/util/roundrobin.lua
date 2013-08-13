@@ -15,8 +15,8 @@ end
 function stage.init()
     local f=function()
       while true do
-         for k in pairs(leda.output) do
-            leda.send(k,coroutine.yield())
+         for k,p in pairs(leda.output) do
+            p:send(coroutine.yield())
          end
       end
    end
