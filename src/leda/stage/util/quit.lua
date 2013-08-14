@@ -4,6 +4,7 @@ return _.stage{
    name='Process term',
    handler=function (...)
        leda.quit(...)
-   end
+   end,
+   serial=true
 }
 
