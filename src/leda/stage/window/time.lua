@@ -10,7 +10,7 @@ return _.stage{
 				table.insert(buf,event)
 				event=leda.debug.get_event()
 			end
-   	   leda.send(1,buf)
+   	   leda.push(buf)
 		end
 	end,
 	serial=true,

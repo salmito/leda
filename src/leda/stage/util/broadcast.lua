@@ -8,7 +8,7 @@ local _=require 'leda'
 local stage={}
 
 function stage.handler(...)
-   for _,connector in pairs(leda.output) do
+   for null,connector in pairs(leda.output) do
          connector:send(...)
    end 
 end
