@@ -35,10 +35,7 @@ THE SOFTWARE.
 #include <errno.h>
 
 #include <sys/types.h>
-#include <ifaddrs.h>
-#include <netinet/in.h> 
 #include <string.h> 
-#include <arpa/inet.h>
 
 
 #include "scheduler.h"
@@ -61,6 +58,10 @@ THE SOFTWARE.
 
 #ifdef _WIN32
 #define sleep(a) Sleep(a * 1000)
+#else
+#include <ifaddrs.h>
+#include <netinet/in.h> 
+#include <arpa/inet.h>
 #endif
 
 struct event_base *kernel_event_base;
@@ -225,7 +226,9 @@ static int add_timer(lua_State * L) {
 *          'nil' in case of error, with an error message
 */
 static int leda_run(lua_State * L) {
+   #ifndef _WIN32
    evthread_use_pthreads();
+   #endif
    kernel_event_base = event_base_new();
    if (!kernel_event_base) {
    	luaL_error(L,"Error opening a new event_base for the kernel"); //error
@@ -469,6 +472,7 @@ static int leda_get_stats(lua_State * L) {
 }
 
 static int leda_default_hostname(lua_State * L) {
+#ifndef _WIN32
 	lua_newtable(L);
 	lua_newtable(L);
 	lua_newtable(L);
@@ -501,6 +505,15 @@ static int leda_default_hostname(lua_State * L) {
     lua_setfield(L,-3,"ipv6");
     lua_setfield(L,-2,"ipv4");
     return 1;
+#else
+	lua_newtable(L);
+	lua_newtable(L);
+	lua_pushliteral(L,"lo");
+	lua_pushliteral(L,"127.0.0.1");
+	lua_settable(L,-3);
+	lua_setfield(L,-2,"ipv4");
+	return 1;
+#endif
 }
 
 /* Get the size of the thread pool */

@@ -567,7 +567,7 @@ static int leda_thread_set_affinity(lua_State * L) {
 
 #else
 static int leda_thread_set_affinity(lua_State * L) {
- 	return lua_error(L,"Not implemented");
+ 	return luaL_error(L,"Not implemented");
 }
 #endif
 
@@ -627,8 +627,10 @@ int thread_kill (lua_State *L) {
 
 /* Join with a thread from Lua*/
 static int thread_join (lua_State *L) {
+#ifndef _WIN32
 	thread t=thread_get(L,1);
    pthread_join(t->thread,NULL);
+#endif
    return 0;
 }
 
