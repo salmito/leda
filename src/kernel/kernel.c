@@ -374,8 +374,9 @@ static int leda_run(lua_State * L) {
       lua_pop(L,1);
       _DEBUG("Controller does not defined an finish method\n");
    }
-   
+   leda_event_end_t();
    close(process_fd);
+   event_base_free(kernel_event_base);
    return  L_main_args;
 }
 
@@ -573,8 +574,10 @@ struct smaps_sizes {
     int Swap;
     int total;
 };
+#endif
 
 static int leda_get_smaps(lua_State *L) {
+#if defined(PLATFORM_LINUX)
 	FILE *file = fopen("/proc/self/smaps", "r");
 	if (!file) {
 	 	lua_pushnil(L);
@@ -623,22 +626,43 @@ static int leda_get_smaps(lua_State *L) {
    
    fclose(file);
    return 1;
+#elif defined(PLATFORM_WIN32)
+	MEMORYSTATUSEX memInfo;
+   memInfo.dwLength = sizeof(MEMORYSTATUSEX);
+   GlobalMemoryStatusEx(&memInfo);
+   SIZE_T physMemUsedByMe = pmc.WorkingSetSize;
+   lua_pushliteral(L,"Rss"); lua_pushinteger(L,physMemUsedByMe); lua_rawset(L,-3);   
+   return 1;
+#endif
+   return 0;
 }
 
 static int leda_get_system_memory(lua_State * L) {
+#if defined(PLATFORM_LINUX)
     long pages = sysconf(_SC_PHYS_PAGES);
     long page_size = sysconf(_SC_PAGE_SIZE);
 	 lua_pushinteger(L,pages * page_size);
     lua_pushinteger(L,pages);
     lua_pushinteger(L,page_size);
     return 3;
+#elif defined(PLATFORM_WIN32)
+  	MEMORYSTATUSEX memInfo;
+   memInfo.dwLength = sizeof(MEMORYSTATUSEX);
+   GlobalMemoryStatusEx(&memInfo);
+   DWORDLONG totalPhysMem = memInfo.ullTotalPhys;
+   lua_pushinteger(L,totalPhysMem);
+   return 1;
+#endif
+	return 0;
 }
 
 static int leda_trim_memory(lua_State * L) {
+#if defined(PLATFORM_LINUX)
 	malloc_trim(0);
+#endif
 	return 0;
 }
-#endif
+
 
 /* Load the Leda's kernel C API into a lua_State
  */
@@ -672,11 +696,9 @@ int luaopen_leda_kernel (lua_State *L) {
   	   {"thread_pool_size", leda_get_thread_pool_size},
   	   {"ready_queue_isempty", leda_ready_queue_isempty},
   	   {"hostname", leda_default_hostname},
-#if defined(PLATFORM_LINUX)
   	   {"smaps", leda_get_smaps},
   	   {"memory",leda_get_system_memory},
   	   {"trim",leda_trim_memory},
-#endif
 		{NULL, NULL},
 	};
 	
