@@ -1,5 +1,5 @@
 package="leda"
-version="scm-0"
+version="master-0"
 
 source= {
 	url= "https://github.com/salmito/leda/archive/master.zip",
