@@ -22,10 +22,19 @@ local th={}
 local function get_init(n,affinity)
    return   function()
                pool_size=n
+               kernel.maxpar(n)
                for i=1,n do
                	local thread=kernel.thread_new()
                	if affinity then
-  	                   thread:set_affinity(i)
+                     if type(affinity)=='table' then
+                        for n,v in ipairs(affinity) do
+                           if v then
+                               thread:set_affinity(v)
+                           end
+                        end
+                     else
+     	                  thread:set_affinity(i)
+                     end
                	end
                   table.insert(th,thread)
                   dbg("Thread %d created",i)
