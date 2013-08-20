@@ -226,9 +226,9 @@ static int add_timer(lua_State * L) {
 *          'nil' in case of error, with an error message
 */
 static int leda_run(lua_State * L) {
-   #ifdef PLATFORM_LINUX
+   //#ifdef PLATFORM_LINUX
    evthread_use_pthreads();
-   #endif
+   //#endif
    kernel_event_base = event_base_new();
    if (!kernel_event_base) {
    	luaL_error(L,"Error opening a new event_base for the kernel"); //error
@@ -574,6 +574,9 @@ struct smaps_sizes {
     int Swap;
     int total;
 };
+#elif defined(PLATFORM_WIN32)
+#include <windows.h>
+#include <psapi.h>
 #endif
 
 static int leda_get_smaps(lua_State *L) {
@@ -627,10 +630,11 @@ static int leda_get_smaps(lua_State *L) {
    fclose(file);
    return 1;
 #elif defined(PLATFORM_WIN32)
-	MEMORYSTATUSEX memInfo;
-   memInfo.dwLength = sizeof(MEMORYSTATUSEX);
-   GlobalMemoryStatusEx(&memInfo);
-   SIZE_T physMemUsedByMe = pmc.WorkingSetSize;
+  lua_newtable(L);
+   HANDLE pHandle = GetCurrentProcess();
+   PROCESS_MEMORY_COUNTERS pmc;
+   GetProcessMemoryInfo(pHandle, &pmc, sizeof(pmc));
+   SIZE_T physMemUsedByMe = pmc.WorkingSetSize/1024;
    lua_pushliteral(L,"Rss"); lua_pushinteger(L,physMemUsedByMe); lua_rawset(L,-3);   
    return 1;
 #endif
@@ -641,7 +645,7 @@ static int leda_get_system_memory(lua_State * L) {
 #if defined(PLATFORM_LINUX)
     long pages = sysconf(_SC_PHYS_PAGES);
     long page_size = sysconf(_SC_PAGE_SIZE);
-	 lua_pushinteger(L,pages * page_size);
+	lua_pushnumber(L,pages * page_size);
     lua_pushinteger(L,pages);
     lua_pushinteger(L,page_size);
     return 3;
@@ -649,8 +653,8 @@ static int leda_get_system_memory(lua_State * L) {
   	MEMORYSTATUSEX memInfo;
    memInfo.dwLength = sizeof(MEMORYSTATUSEX);
    GlobalMemoryStatusEx(&memInfo);
-   DWORDLONG totalPhysMem = memInfo.ullTotalPhys;
-   lua_pushinteger(L,totalPhysMem);
+   long long totalPhysMem = memInfo.ullTotalPhys;
+   lua_pushnumber(L,totalPhysMem);
    return 1;
 #endif
 	return 0;

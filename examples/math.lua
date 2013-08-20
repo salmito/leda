@@ -13,7 +13,7 @@ function produce(seed,interval)
       assert(leda.send(1,data,i))
 --      print("Produced",data,seed)
       if interval>0 then
-         leda.sleep(interval)
+         assert(leda.sleep(interval))
       end
    end
 end

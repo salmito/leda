@@ -945,9 +945,9 @@ void event_sleep(instance i) {
    
   	struct timeval to={time,(((double)time-((int)time))*1000000.0)};
   	
-	struct event *ev = event_new(base,-1,0,io_ready,i);
+	struct event *ev = event_new(base,-1,EV_TIMEOUT,io_ready,i);
    
-   _DEBUG("Timer event: %u %u",to.tv_sec,to.tv_usec);
+   //printf("Timer event: %u %u\n",to.tv_sec,to.tv_usec);
    
 	if(event_add(ev, &to)) {
    	 lua_settop(i->L,0);
