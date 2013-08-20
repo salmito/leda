@@ -27,7 +27,7 @@ return _.stage 'Lua-repl' {
      repl:loadplugin 'autoreturn'
      repl:loadplugin 'rcfile'
 
-	  print('Lua REPL Stage - repl version: ' .. tostring(repl.VERSION))
+	  print('Lua REPL Stage - repl version: ' .. tostring(repl.VERSION) .. ' leda version: '..leda._VERSION)
 
      leda.quit(repl:run())
 	end,
