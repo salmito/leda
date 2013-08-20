@@ -226,7 +226,7 @@ static int add_timer(lua_State * L) {
 *          'nil' in case of error, with an error message
 */
 static int leda_run(lua_State * L) {
-   #ifndef _WIN32
+   #ifdef PLATFORM_LINUX
    evthread_use_pthreads();
    #endif
    kernel_event_base = event_base_new();

@@ -276,7 +276,6 @@ graph build_graph_representation(lua_State *L, int index, graph g) {
       s->name=sname;
       s->name_len=len;
       lua_pop(L,1); //pop the name field
-      
       lua_pushcfunction(L,mar_encode);
 		lua_pushvalue(L,-3);
 		lua_pushnil(L);
@@ -290,23 +289,6 @@ graph build_graph_representation(lua_State *L, int index, graph g) {
       s->env=senv;
       s->env_len=llen;
       lua_pop(L,1); //pop the env field
-/*      lua_getfield (L, -2, "handler"); //push the handler field of stage
-      str=lua_tolstring(L, -1, &len); //verify if it's a string
-      char * handler=malloc(len+1);
-      memcpy(handler,str,len);
-      handler[len]='\0';
-      s->handler=handler;
-      s->handler_len=len;
-      lua_pop(L,1); //pop the handler field
-      
-      lua_getfield (L, -2, "init"); //push the init field of stage
-      str=lua_tolstring(L, -1, &len); //verify if its a string
-      char * init=malloc(len+1);
-      memcpy(init,str,len);
-      init[len]='\0';
-      s->init=init;
-      s->init_len=len;
-      lua_pop(L,1); //pop the init field*/
       
       lua_getfield (L, index, "get_cluster");
       lua_pushvalue(L,index);
