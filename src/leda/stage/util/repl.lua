@@ -7,7 +7,7 @@ return _.stage 'Lua-repl' {
 		if has_linenoise then
 		  repl:loadplugin 'linenoise'
 		else
-	  -- XXX check that we're not receiving input from a non-tty
+		  -- XXX check that we're not receiving input from a non-tty
 			local has_rlwrap = os.execute('which rlwrap >/dev/null 2>/dev/null') == 0
 	
 			if has_rlwrap and not os.getenv 'LUA_REPL_RLWRAP' then
@@ -28,15 +28,17 @@ return _.stage 'Lua-repl' {
      repl:loadplugin 'rcfile'
 
 	  print('Lua REPL Stage - repl version: ' .. tostring(repl.VERSION))
-     repl:run()
-     leda.quit()
+
+     leda.quit(repl:run())
 	end,
 	init=function()
 		leda.loadlibs()
 	end,
 	bind=function(self,out,g)
 		for s,v in pairs(g:stages()) do
-			g:add(self:connect(s.name,s))
+			if s~=self then
+				g:add(self:connect(s.name,s))
+			end
 		end
 	end,
 	autostart=true,
