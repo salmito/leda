@@ -3,7 +3,8 @@ local _=require'leda'
 local events={}
 
 return _.stage{
-	handler=function(ev)
+	handler=function(...)
+		local ev={...}
 		table.insert(events,ev)
 		if #events==self.size then
 			leda.push(events)

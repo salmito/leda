@@ -5,10 +5,10 @@ return _.stage{
 	  	while true do
 			local buf={}
 			leda.sleep(self.period)
-			local event=leda.debug.get_event()
-			while event do
+			local event={leda.debug.get_event()}
+			while #event>0 do
 				table.insert(buf,event)
-				event=leda.debug.get_event()
+				event={leda.debug.get_event()}
 			end
    	   leda.push(buf)
 		end
