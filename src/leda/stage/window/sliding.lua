@@ -4,7 +4,8 @@ local events={}
 
 return _.stage{
 	handler=function(...)
-		table.insert(events,{...})
+		local ev={...}
+		table.insert(events,ev)
 		if #events==self.size then
 			leda.push(events)
 			table.remove(events,1)
