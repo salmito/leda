@@ -132,7 +132,7 @@ void thread_resume_instance(instance i) {
    int status=0;
    if(lua_pcall(i->L,i->args,LUA_MULTRET,0)) {
       const char * err=lua_tostring(i->L,-1);
-      fprintf(stderr,"Error resuming instance: %s\n",err);
+      fprintf(stderr,"Error resuming instance (%s): %s\n",main_graph->s[i->stage]->name,err);
       status=PCALL_ERROR;
    } else {   
       if(lua_isnumber(i->L, 1)) status=lua_tointeger(i->L,1);
