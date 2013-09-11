@@ -1,21 +1,17 @@
-local _=require 'leda'
+local _=require'leda'
 
 local stage={}
 
-function stage.handler(vec,...)
-   for k,v in ipairs(vec) do
-      vec[k]=self.f(v)
-   end
-   leda.send(vec,...)
+function stage.handler(v,...)
+	for i=1,#v do
+		v[i]=self.f(v[i])
+	end
+	leda.push(v,...)
 end
 
-function stage.init()
-   leda.loadlibs()
-end
-
-function stage.bind(self,out,graph) 
-   assert(out[1],"Output port must be defined")
-   assert(type(self.f)=='function',"Field f must be a function")
+function stage:bind(out)
+	assert(out[1],"Default output must be connected")
+	assert(type(self.f)=='function',"Map function (f field) must be a function")
 end
 
 stage.name="Map"

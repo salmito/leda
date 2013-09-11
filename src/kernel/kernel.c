@@ -35,10 +35,7 @@ THE SOFTWARE.
 #include <errno.h>
 
 #include <sys/types.h>
-#include <ifaddrs.h>
-#include <netinet/in.h> 
 #include <string.h> 
-#include <arpa/inet.h>
 
 
 #include "scheduler.h"
@@ -52,7 +49,7 @@ THE SOFTWARE.
 
 #include <event2/event.h>
 
-#define __VERSION "0.3.4-unstable"
+#include "version.h"
 
 #define CONNECTOR_TIMEOUT 2.0
 
@@ -61,6 +58,10 @@ THE SOFTWARE.
 
 #ifdef _WIN32
 #define sleep(a) Sleep(a * 1000)
+#else
+#include <ifaddrs.h>
+#include <netinet/in.h> 
+#include <arpa/inet.h>
 #endif
 
 struct event_base *kernel_event_base;
@@ -225,7 +226,9 @@ static int add_timer(lua_State * L) {
 *          'nil' in case of error, with an error message
 */
 static int leda_run(lua_State * L) {
+   //#ifdef PLATFORM_LINUX
    evthread_use_pthreads();
+   //#endif
    kernel_event_base = event_base_new();
    if (!kernel_event_base) {
    	luaL_error(L,"Error opening a new event_base for the kernel"); //error
@@ -379,9 +382,11 @@ static int leda_run(lua_State * L) {
    
    instance_end();
    leda_thread_end();
-   leda_event_end();
+//   leda_event_end();
     
+   leda_event_end_t();
    close(process_fd);
+   event_base_free(kernel_event_base);
    return  L_main_args;
 }
 
@@ -478,6 +483,7 @@ static int leda_get_stats(lua_State * L) {
 }
 
 static int leda_default_hostname(lua_State * L) {
+#ifndef _WIN32
 	lua_newtable(L);
 	lua_newtable(L);
 	lua_newtable(L);
@@ -510,6 +516,15 @@ static int leda_default_hostname(lua_State * L) {
     lua_setfield(L,-3,"ipv6");
     lua_setfield(L,-2,"ipv4");
     return 1;
+#else
+	lua_newtable(L);
+	lua_newtable(L);
+	lua_pushliteral(L,"lo");
+	lua_pushliteral(L,"127.0.0.1");
+	lua_settable(L,-3);
+	lua_setfield(L,-2,"ipv4");
+	return 1;
+#endif
 }
 
 /* Get the size of the thread pool */
@@ -569,8 +584,13 @@ struct smaps_sizes {
     int Swap;
     int total;
 };
+#elif defined(PLATFORM_WIN32)
+#include <windows.h>
+#include <psapi.h>
+#endif
 
 static int leda_get_smaps(lua_State *L) {
+#if defined(PLATFORM_LINUX)
 	FILE *file = fopen("/proc/self/smaps", "r");
 	if (!file) {
 	 	lua_pushnil(L);
@@ -619,22 +639,44 @@ static int leda_get_smaps(lua_State *L) {
    
    fclose(file);
    return 1;
+#elif defined(PLATFORM_WIN32)
+  lua_newtable(L);
+   HANDLE pHandle = GetCurrentProcess();
+   PROCESS_MEMORY_COUNTERS pmc;
+   GetProcessMemoryInfo(pHandle, &pmc, sizeof(pmc));
+   SIZE_T physMemUsedByMe = pmc.WorkingSetSize/1024;
+   lua_pushliteral(L,"Rss"); lua_pushinteger(L,physMemUsedByMe); lua_rawset(L,-3);   
+   return 1;
+#endif
+   return 0;
 }
 
 static int leda_get_system_memory(lua_State * L) {
+#if defined(PLATFORM_LINUX)
     long pages = sysconf(_SC_PHYS_PAGES);
     long page_size = sysconf(_SC_PAGE_SIZE);
-	 lua_pushinteger(L,pages * page_size);
+	lua_pushnumber(L,pages * page_size);
     lua_pushinteger(L,pages);
     lua_pushinteger(L,page_size);
     return 3;
+#elif defined(PLATFORM_WIN32)
+  	MEMORYSTATUSEX memInfo;
+   memInfo.dwLength = sizeof(MEMORYSTATUSEX);
+   GlobalMemoryStatusEx(&memInfo);
+   long long totalPhysMem = memInfo.ullTotalPhys;
+   lua_pushnumber(L,totalPhysMem);
+   return 1;
+#endif
+	return 0;
 }
 
 static int leda_trim_memory(lua_State * L) {
+#if defined(PLATFORM_LINUX)
 	malloc_trim(0);
+#endif
 	return 0;
 }
-#endif
+
 
 /* Load the Leda's kernel C API into a lua_State
  */
@@ -668,11 +710,9 @@ int luaopen_leda_kernel (lua_State *L) {
   	   {"thread_pool_size", leda_get_thread_pool_size},
   	   {"ready_queue_isempty", leda_ready_queue_isempty},
   	   {"hostname", leda_default_hostname},
-#if defined(PLATFORM_LINUX)
   	   {"smaps", leda_get_smaps},
   	   {"memory",leda_get_system_memory},
   	   {"trim",leda_trim_memory},
-#endif
 		{NULL, NULL},
 	};
 	

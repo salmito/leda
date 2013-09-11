@@ -134,10 +134,11 @@ local function prepare_graph(g,process)
       t[s]={}
       for k,v in pairs(s) do
          t[s][k]=v
-         s[k]=nil
+--         s[k]=nil
       end
       s.name=t[s].name
       s.pending={}
+--      s.serial=t[s].serial
       s.stagesid=t[s].stagesid
       s.connectorsid=t[s].connectorsid
       s.clustersid=t[s].clustersid
@@ -203,11 +204,22 @@ function t.run(g,localport,maxpar,controller)
       end
    end
 
+	local pending={}
 	for s in pairs(g:stages()) do
 		s.bind=nil
+		pending[s]=s.pending
+		s.pending=nil
+		s.handler_enc=nil
+		s.init_enc=nil
    end
 
    local ro_graph = kernel.build_graph(g,localhost,l_localport)
+
+	for s,p in pairs(pending) do
+		s.pending=p
+		s.handler_enc=true
+		s.init_enc=true
+	end
  
    for d in pairs(d_list) do
       if not is_local(d) then

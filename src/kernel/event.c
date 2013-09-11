@@ -682,25 +682,11 @@ void io_ready(evutil_socket_t fd, short event, void *arg) {
    push_ready_queue(i);
 }
 
-void timer_ready(evutil_socket_t fd, short event, void *arg) {
-	close(fd);
-	io_ready(fd,event,arg);
-} 
-
-
 #ifndef SYNC_IO
 
 #define tofile(L,i)	((FILE **)luaL_checkudata(L, i, LUA_FILEHANDLE))
 
 void event_do_file_aio(instance i) {
-/*	if ((fd = open(fn, O_RDONLY, 0644)) == -1) {
-		perror(fn);
-		return 4;
-	}
-	
-	aio_submit_read(fd, buf, 10000, NULL);
-	return 0;*/
-	
 	FILE ** f=tofile(i->L,1); //FIXME Error handling
    int fd=fileno(*f);
     
@@ -855,9 +841,7 @@ static THREAD_RETURN_T THREAD_CALLCONV event_main(void *t_val) {
   // free(t_val);
 
    struct event *listener_event;
- 	
-// 	evthread_use_pthreads();
- 	
+
    base = event_base_new();
    if (!base) {
    	return NULL; //error
@@ -869,15 +853,12 @@ static THREAD_RETURN_T THREAD_CALLCONV event_main(void *t_val) {
 	int afd=aio_init(&ctx);
 	struct event * aio_ready = event_new(base, afd, EV_READ|EV_PERSIST, event_aio_op_ready, ctx);
    event_add(aio_ready, NULL);
-//   event_do_file_aio("Makefile");
    }
 #endif
 
    listener_event = event_new(base, process_fd, EV_READ|EV_PERSIST, do_accept, base);
    event_add(listener_event, NULL);
-
    event_base_dispatch(base);
-//	event_base_loop(base,0);
    
    for(i=0;i<main_graph->n_d;i++) queue_free(sockets[i]);
    for(i=0;i<main_graph->n_cl;i++) atomic_free(cur_process[i]);
@@ -944,11 +925,10 @@ void event_wait_io(instance i) {
 
 
 void event_sleep(instance i) {
-   #ifndef ANDROID
-   double time=now_secs();
+   double time=0.0l;//now_secs();
    
    if (lua_type(i->L,1)==LUA_TNUMBER) {
-      time+=lua_tonumber(i->L,1);
+      time=lua_tonumber(i->L,1);
    } else {
        lua_settop(i->L,0);
        //Get the  main coroutine of the instance's handler
@@ -962,7 +942,7 @@ void event_sleep(instance i) {
        return;
    }
 
-   if(time<=0.0) {
+   if(time<0.0L) {
        lua_settop(i->L,0);
        //Get the  main coroutine of the instance's handler
        GET_HANDLER(i->L);
@@ -974,42 +954,14 @@ void event_sleep(instance i) {
        push_ready_queue(i);
        return;
    }
-   time_t secs=time;
-   long nsecs=(time-secs)*1000000000L;
-
-	int fd=timerfd_create(CLOCK_REALTIME, 0);
-   if(fd < 0) {
-       lua_settop(i->L,0);
-       //Get the  main coroutine of the instance's handler
-       GET_HANDLER(i->L);
-       //Put it on the bottom of the instance's stack
-       lua_pushnil(i->L);
-       lua_pushfstring(i->L,"Error creating timer: %s",strerror(errno));
-       //Set the previous number of arguments
-       i->args=2;
-       push_ready_queue(i);
-       return;
-   }
    
-   struct itimerspec t={{0,0L},{0,0L}};
-   t.it_value.tv_sec=secs;
-   t.it_value.tv_nsec=nsecs;
+  	struct timeval to={time,(((double)time-((int)time))*1000000.0)};
+  	
+	struct event *ev = event_new(base,-1,EV_TIMEOUT,io_ready,i);
    
-   if(timerfd_settime(fd, TFD_TIMER_ABSTIME, &t, NULL) < 0) {
-       close(fd);
-       lua_settop(i->L,0);
-       //Get the  main coroutine of the instance's handler
-       GET_HANDLER(i->L);
-       //Put it on the bottom of the instance's stack
-       lua_pushnil(i->L);
-       lua_pushfstring(i->L,"Error setting timer: %s",strerror(errno));
-       //Set the previous number of arguments
-       i->args=2;
-       push_ready_queue(i);
-       return;
-   }
-
-	if(event_base_once(base, fd, EV_READ, timer_ready, i, NULL)) {
+   //printf("Timer event: %u %u\n",to.tv_sec,to.tv_usec);
+   
+	if(event_add(ev, &to)) {
    	 lua_settop(i->L,0);
        //Get the  main coroutine of the instance's handler
        GET_HANDLER(i->L);
@@ -1021,12 +973,24 @@ void event_sleep(instance i) {
        push_ready_queue(i);
        return;
    }
-	#else
-		lua_pushliteral(i->L,"not implemented");
-		lua_error(i->L);
-	#endif
 }
 
+void leda_event_end_t() {
+	int i;
+	THREAD_KILL(&event_thread);
+	event_base_free(base);
+	base=NULL;
+	for(i=0;i<main_graph->n_d;i++) {
+		int * sock;
+		while(TRY_POP(sockets[i],sock)) close(*sock);
+		queue_free(sockets[i]);
+	}
+	
+   for(i=0;i<main_graph->n_cl;i++) 
+   	atomic_free(cur_process[i]);
+  	free(sockets);
+  	free(cur_process);
+}
 
 void event_init_t(int process_fd) {
    int *p=malloc(sizeof(int));
@@ -1035,8 +999,7 @@ void event_init_t(int process_fd) {
    THREAD_CREATE( &event_thread, event_main, p, 0 );
 }
 
-void leda_event_end() {
-	event_base_loopexit(base,NULL);
-	
-}
+//void leda_event_end() {
+//	event_base_loopexit(base,NULL);
+//}
 

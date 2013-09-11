@@ -9,6 +9,8 @@
 #ifdef _WIN32_WCE
   #define PLATFORM_POCKETPC
 #elif (defined _WIN32)
+//  #undef _WIN32_WINNT
+//  #define _WIN32_WINNT 0x0500
   #define PLATFORM_WIN32
 	#warning USING WINDOWS API
 //  #define PLATFORM_LINUX
@@ -39,7 +41,7 @@ typedef unsigned int uint_t;
 /* Do this BEFORE including time.h so that it is declaring _mktime32()
  * as it would have declared mktime().
  */
-# define mktime _mktime32
+#define mktime _mktime32
 #endif
 #include <time.h>
 
@@ -63,7 +65,7 @@ enum e_status { PENDING, RUNNING, WAITING, DONE, ERROR_ST, CANCELLED };
 #if THREADAPI == THREADAPI_WINDOWS
   #define WIN32_LEAN_AND_MEAN
   // 'SignalObjectAndWait' needs this (targets Windows 2000 and above)
-  #define _WIN32_WINNT 0x0400
+  #define _WIN32_WINNT 0x0500
   #include <windows.h>
   #include <process.h>
 

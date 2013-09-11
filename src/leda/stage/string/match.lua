@@ -1,17 +1,19 @@
 local _=require "leda"
 local stage = _.stage{
 	handler = function(str)
-		local matches = {string.match(str,self.pattern)}
+		local f=string.gmatch(str,self.pattern)
+		local matches = {f()}
 		if #matches > 0 then
 			assert(leda.push(unpack(matches)))
+   		matches = {f()}
 		end
 	end,
 	init = function()
-			require "string"
+		require "string"
 	end,
 	bind = function(self,output)
 		assert(self.pattern,"Pattern field must be defined")
-		assert(output[1],"Default port must be connected")
+		assert(output[1],"Default (1) port must be connected")
 	end,
 	name='match'
 }

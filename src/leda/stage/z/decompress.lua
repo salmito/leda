@@ -9,7 +9,7 @@ local stage={}
 function stage.handler(compressed_str,eof,bytes_in,bytes_out)
    local stream = zlib.inflate()
    local decompressed_str,eof_2,bytes_in_2,bytes_out_2=stream(str);
-   leda.send('data',unpack(leda.decode(decompressed_str)))
+   leda.push(unpack(leda.decode(decompressed_str)))
 end
 
 function stage.init()
@@ -17,7 +17,7 @@ function stage.init()
 end
 
 function stage.bind(self,out,graph)
-	assert(out.data,"Data port must be connected for stage: "..tostring(self))
+	assert(out[1],"Default port must be connected for stage: "..tostring(self))
 end
 
 stage.name='Lossless Decompressor'

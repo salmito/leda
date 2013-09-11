@@ -9,6 +9,7 @@ STAGES=window\
 		 net\
 		 z\
 		 io\
+		 string\
 
 LUA_FILES=$(SRC_DIR)/*.lua
 LIB_FILE=leda.so

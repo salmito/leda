@@ -3,11 +3,12 @@ require "leda.utils"
 
 s0=leda.stage{
    handler=function(file)
+      local io=require'io'
       print("Opening file",file)
       local f = io.open(file,"a")
       leda.send("file",f)
    end,
-	init=function() require "leda.utils.io" end
+	init=function() require "io" end
 }
 
 s1=leda.stage{
@@ -26,7 +27,7 @@ s1=leda.stage{
 	init=function() require "leda.utils.io" end
 }
 
-s2=leda.stage(leda.utils.print)
+s2=require'leda.stage.util.print'
 
 g=leda.graph{leda.connect(s1,'line',s2),leda.connect(s0,'file',s1)}
 

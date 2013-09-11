@@ -1,13 +1,17 @@
 require "leda"
 require "leda.utils"
 
+local io=nil
+
 s0=leda.stage{
    handler=function(file)
+      async=true
+      local io=require'io'
       print("Opening file",file)
       local f = io.open(file,"r")
       leda.send("file",f)
    end,
-	init=function() async=true require "io" end
+	init=function() async=true end
 }
 
 s1=leda.stage{

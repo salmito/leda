@@ -1,6 +1,6 @@
 local io=require "iolua"
 
-local block=block or false
+local async=async or false
 
 local file_mt,err=leda.getmetatable("FILE*")
 if file_mt then

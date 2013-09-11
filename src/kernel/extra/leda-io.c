@@ -43,8 +43,6 @@ THE SOFTWARE.
 
 int leda_wrap_io(lua_State *L) {  
    FILE ** f=tofile(L,1);
-//   int fd=fileno(*f);
-//   int newfd=dup(fd);
    lua_pushlightuserdata(L,*f);
  	*f=NULL;
    return 1;
@@ -89,60 +87,16 @@ int socket_flush(lua_State *L) {
 
 #include <sys/syscall.h>
 #include <sys/eventfd.h>
-//#include <sys/signal.h>
 #include <sys/time.h>
 #include <sys/uio.h>
 
-//#include <string.h>
 #include <signal.h>
-//#include <poll.h>
 #include <fcntl.h>
 #include <time.h>
-//#include <errno.h>
 
 
-/*#ifndef __NR_eventfd
-#if defined(__x86_64__)
-#define __NR_eventfd 284
-#elif defined(__i386__)
-#define __NR_eventfd 323
-#else
-#error Cannot detect your architecture!
-#endif
-#endif*/
 
 #define IOCB_FLAG_RESFD		(1 << 0)
-
-
-/*static void asyio_prep_preadv(struct iocb *iocb, int fd, struct iovec *iov,
-			      int nr_segs, int64_t offset, int afd, void * data)
-{
-	memset(iocb, 0, sizeof(*iocb));
-	iocb->aio_data = (u_int64_t)data;
-	iocb->aio_fildes = fd;
-	iocb->aio_lio_opcode = IOCB_CMD_PREADV;
-	iocb->aio_reqprio = 0;
-	iocb->aio_buf = (u_int64_t) iov;
-	iocb->aio_nbytes = nr_segs;
-	iocb->aio_offset = offset;
-	iocb->aio_flags = IOCB_FLAG_RESFD;
-	iocb->aio_resfd = afd;
-}
-
-static void asyio_prep_pwritev(struct iocb *iocb, int fd, struct iovec *iov,
-			       int nr_segs, int64_t offset, int afd,void * data)
-{
-	memset(iocb, 0, sizeof(*iocb));
-	iocb->aio_data = (u_int64_t)data;
-	iocb->aio_fildes = fd;
-	iocb->aio_lio_opcode = IOCB_CMD_PWRITEV;
-	iocb->aio_reqprio = 0;
-	iocb->aio_buf = (u_int64_t) iov;
-	iocb->aio_nbytes = nr_segs;
-	iocb->aio_offset = offset;
-	iocb->aio_flags = IOCB_FLAG_RESFD;
-	iocb->aio_resfd = afd;
-}*/
 
 static void asyio_prep_pread(struct iocb *iocb, int fd, void *buf,
 			     int nr_segs, int64_t offset, int afd,void * data)
@@ -207,7 +161,6 @@ static aio_context_t ctx = 0;
 #define AIO_EVENTS 512
 
 int leda_aio_init(aio_context_t ** ctx_p) {
-//	fprintf(stderr,"Creating a fdevent\n");
 	if ((afd = aio_eventfd(0)) == -1) {
 		return 2;
 	}
@@ -234,6 +187,7 @@ int aio_submit_read(int fd, char * buf, int size, void * data) {
 	if (!iocb || !piocb) {
 		return -1;
 	}
+	
 	i=0;
 	off_t offset = lseek( fd, 0, SEEK_CUR );
 		piocb[i] = &iocb[i];

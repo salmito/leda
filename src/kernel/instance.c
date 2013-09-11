@@ -38,6 +38,8 @@ THE SOFTWARE.
 #include "extra/leda-io.h"
 #include "extra/lmarshal.h"
 
+#include "version.h"
+
 int leda_sleep(lua_State * L);
 
 /*defining globals*/
@@ -518,6 +520,9 @@ instance instance_aquire(stage_id s) {
    /* Push the endcode for this instance, for now is only an integer*/
    lua_pushinteger(ret->L,NICE);   
    lua_setfield(ret->L,-2,"__yield_code");
+
+	lua_pushliteral(ret->L,__VERSION);
+   lua_setfield(ret->L,-2,"_VERSION");
 
    /* load api with assorted functions useful for concurrency*/
    register_debug_api(ret->L);

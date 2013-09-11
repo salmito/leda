@@ -129,7 +129,7 @@ local function new_stage_t(...)--t,init,name,bind,serial)
    elseif type(s[1])=="function" or type(s[1])=='string' then
    	s.handler=s[1]
    	if select('#',...) > 1 then
-	   	s.autostart={select(2,...)}   	
+	   	s.autostart={select(2,...)}
    	end
    	table.remove(s,1)
    end
