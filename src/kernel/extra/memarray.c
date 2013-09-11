@@ -209,7 +209,8 @@ static int Lmemcpy(lua_State * L)
    const void * src = check_lightuserdata(L, 2);
    size_t size = (size_t) luaL_checknumber(L, 3);
    int offset=luaL_optint(L, 4, 0);
-   memcpy((dst+offset), src, size);
+   int offset2=luaL_optint(L, 5, 0);
+   memcpy((dst+offset2), (src+offset), size);
    return 1;
 }
 
