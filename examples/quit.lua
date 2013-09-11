@@ -14,3 +14,6 @@ g=_.g'graph'(s1)--,s2)
 --g:part(s1,s2):map('localhost:9999','localhost:8888')
 
 print(g:run())
+print(g:run())
+print(g:run())
+print(g:run())

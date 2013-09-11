@@ -39,7 +39,6 @@ THE SOFTWARE.
 
 MUTEX_T debug_lock;
 atomic pool_size;
-extern queue ready_queue;
 
 /* Thread subsystem internal functions */
 void emmit_cohort(instance caller);
@@ -47,20 +46,16 @@ void emmit_self(instance i);
 void emmit_remote(instance i);
 
 /* Returns the current size of the ready queue */
-bool_t thread_ready_queue_isempty() {
-   return queue_isempty(ready_queue);
-}
 
 /* Initialize thread subsystem */
-void leda_thread_init(size_t ready_queue_capacity) {
-   ready_queue=queue_new();
-   queue_set_capacity(ready_queue,ready_queue_capacity);
+void leda_thread_init() {
    pool_size=atomic_new(0);
 }
 
 void leda_thread_end() {
-   if(READ(pool_size)==0)
-	   queue_free(ready_queue);
+//   if(READ(pool_size)!=0)
+	//TODO kill all remaining threads
+   	
 }
 
 #ifdef DEBUG
@@ -505,7 +500,7 @@ int cohort(lua_State * L) {
    return lua_yield(L,args);
 }
 
-#define wait_ready_queue(i) POP(ready_queue,i)
+#define wait_ready_queue(i) POP(leda_get_ready_queue(),i)
 
 /*thread main loop*/
 static THREAD_RETURN_T THREAD_CALLCONV thread_main(void *t_val) {

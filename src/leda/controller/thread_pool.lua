@@ -51,6 +51,7 @@ function t.finish()
       thread:join()
       dbg("Thread %d killed",i)
    end
+   th={}
    dbg "Controller finished"
 end
 

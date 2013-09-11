@@ -3,9 +3,11 @@
 
 #include "extra/threading.h"
 #include "graph.h"
+#include "queue.h"
 
 struct event_data;
 struct event;
+
 
 /* lua state structure */
 typedef struct instance_data {
@@ -42,6 +44,13 @@ void event_wait_io(instance i);
 void event_do_file_aio(instance i);
 void event_sleep(instance i);
 void instance_end(); //warning: thread unsafe
+
+int leda_set_capacity(lua_State * L);
+int leda_ready_queue_size(lua_State * L);
+int leda_ready_queue_capacity(lua_State * L);
+int leda_ready_queue_isempty(lua_State * L);
+bool_t thread_ready_queue_isempty();
+queue leda_get_ready_queue();
 
 #endif //_INSTANCE_H_
 

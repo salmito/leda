@@ -47,11 +47,11 @@ int leda_sleep(lua_State * L);
 * Recycle queue vector, initialized in the instace_init() function
 * It holds one instance queue for each different stage on the graph.
 */
-queue * recycle_queues;
-queue * event_queues;
-atomic * recycle_queue_limits;
-atomic * number_of_instances;
-queue ready_queue;
+static queue * recycle_queues;
+static queue * event_queues;
+static atomic * recycle_queue_limits;
+static atomic * number_of_instances;
+static queue ready_queue;
 
 /* Lua code for the instance states (baked in).
  * Contanins a byte array for automatic
@@ -110,6 +110,45 @@ static int luaopen_leda_io(lua_State * L) {
       lua_call(L,1,1);
       return 1;
 }
+
+int leda_set_capacity(lua_State * L) {
+   queue q=NULL;
+   int i=lua_tointeger(L,1);
+   if(i<0) {
+      q=ready_queue;
+   } else if(i>=main_graph->n_s) {
+         lua_pushnil(L);
+         lua_pushliteral(L,"Invalid stage id");
+         return 2;
+   } else {
+      q=event_queues[i];
+   }
+   if(!q) {
+      lua_pushnil(L);
+      lua_pushliteral(L,"Queue error");
+      return 2;
+   }
+   int cap=lua_tointeger(L,2);
+   queue_set_capacity(q,cap);
+   lua_pushboolean(L,1);
+   return 1;
+}
+
+int leda_ready_queue_size(lua_State * L) {
+   lua_pushinteger(L,queue_size(ready_queue));
+   return 1;
+}
+
+int leda_ready_queue_capacity(lua_State * L) {
+   lua_pushinteger(L,queue_capacity(ready_queue));
+   return 1;
+}
+
+int leda_ready_queue_isempty(lua_State * L) {
+   lua_pushboolean(L,queue_isempty(ready_queue));
+   return 1;
+}
+
 
 static int ledaopen_os(lua_State * L) {
 	lua_pushcfunction(L,luaopen_os);
@@ -192,6 +231,10 @@ int instance_loadlibs(lua_State * L) {
 	return 0;
 }
 
+queue leda_get_ready_queue() {
+	return ready_queue;
+}
+
 /* Destroy an instance, i.e. destroy its lua_state. */
 void instance_destroy(instance i) {
    //Lock protected subtract
@@ -213,6 +256,9 @@ void instance_destroy(instance i) {
  */
 void instance_init(size_t recycle_limit_t,size_t pending_limit_t) {
    int i;
+
+	ready_queue=queue_new();
+   queue_set_capacity(ready_queue,-1);
 
    //allocating queue vector (pointers)
    recycle_queues=calloc(main_graph->n_s,sizeof(queue));
@@ -263,6 +309,10 @@ void push_ready_queue(instance i) {
        *       slot on the ready queue.      */
        PUSH(ready_queue,i);
    }
+}
+
+bool_t thread_ready_queue_isempty() {
+   return queue_isempty(ready_queue);
 }
 
 int instance_wait_for_event(lua_State *L) {
@@ -691,7 +741,8 @@ void instance_end() {
          atomic_free(number_of_instances[i]);
          atomic_free(recycle_queue_limits[i]);
     }
-   free(number_of_instances);
+    queue_free(ready_queue);
+    free(number_of_instances);
    free(recycle_queue_limits);
    free(recycle_queues);
    free(event_queues);

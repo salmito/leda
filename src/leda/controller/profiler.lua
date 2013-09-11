@@ -131,6 +131,7 @@ end
 -----------------------------------------------------------------------------
 function t.finish()
    output:close()
+   
 end
 
 if leda and leda.controller then
