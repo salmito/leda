@@ -557,6 +557,7 @@ int graph_dump(lua_State * L) {
 int graph_createmetatable (lua_State *L) {
 	/* Create graph metatable */
 	if (!luaL_newmetatable (L, GRAPH_METATABLE)) {
+		lua_pop(L,1);
 		return 0;
 	}
    lua_pushliteral(L,"dump");
@@ -573,7 +574,7 @@ int graph_createmetatable (lua_State *L) {
 	lua_settable (L, -3);
 
 	lua_pushliteral (L, "__metatable");
-	lua_pushliteral (L, "You're not allowed to get the metatable of a Thread");
+	lua_pushliteral (L, "You're not allowed to get the metatable of a Graph");
 	lua_settable (L, -3);
 	
 	lua_pop(L,1);

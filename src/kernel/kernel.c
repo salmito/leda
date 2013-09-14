@@ -675,15 +675,11 @@ int luaopen_leda_kernel (lua_State *L) {
 	};
 	
    /* Initialize some debug related variables and the thread subsystem */
-   if(initialized) {
-   	lua_getglobal(L,"leda");
-   	return 1;
+   if(!initialized) {
+		evthread_use_pthreads();
    }
-   initialized=TRUE;
-	//#ifdef PLATFORM_LINUX
-	evthread_use_pthreads();
-   //#endif
 
+   initialized=TRUE;
 	
 	/* Load main library functions */
    _DEBUG("Kernel: Loading leda main API\n");

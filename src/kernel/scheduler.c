@@ -645,6 +645,7 @@ int thread_gc (lua_State *L) {
 int thread_createmetatable (lua_State *L) {
 	/* Create thread metatable */
 	if (!luaL_newmetatable (L, THREAD_METATABLE)) {
+		lua_pop(L,1);
 		return 0;
 	}
 	/* load methods onto the newly created metatable */
