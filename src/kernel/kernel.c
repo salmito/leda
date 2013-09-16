@@ -354,6 +354,7 @@ static int leda_run(lua_State * L) {
    
    event_base_dispatch(kernel_event_base);
    _DEBUG("Kernel: Exited dispatch\n");
+
    #else
       while(1) sleep(1000);
    #endif
@@ -369,7 +370,9 @@ static int leda_run(lua_State * L) {
       lua_pop(L,1);
       _DEBUG("Controller does not defined an finish method\n");
    }
-   
+      #if defined(PLATFORM_WIN32)
+	Sleep(100);
+   #endif
    _DEBUG("Kernel: Called finish\n");
    #ifndef STATS_OFF
 	   stats_free();
