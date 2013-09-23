@@ -9,8 +9,8 @@ wait_client=stage{
        print("SERVER: Waiting on port >> ",port)
        while true do
           local cli_sock=server_sock:accept()
-          print("SERVER: Sending client",cli)
-          leda.send('Client socket',cli_sock)
+          print("SERVER: Sending client",cli_sock)
+          assert(leda.send('Client socket',cli_sock))
        end
    end, 
    bind=function (self,out)

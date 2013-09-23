@@ -580,8 +580,10 @@ instance instance_aquire(stage_id s) {
    register_aio_api(ret->L);
 //   register_mutex_api(ret->L);
    register_marshal_api(ret->L);
-
+	lua_pushvalue(ret->L,-1);
+   lua_setfield(ret->L,LUA_REGISTRYINDEX,"leda");
    lua_setglobal(ret->L,"leda");
+   
    /* Call the lua_chunk loaded in the luaL_loadbuffer */
 //   dump_stack(ret->L);
    

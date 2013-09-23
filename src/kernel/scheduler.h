@@ -52,7 +52,7 @@ char const * get_return_status_name(int status);
 /* Defining debug functions */ 
 #ifndef DEBUG
    #define _DEBUG(...)
-   #define dump_stack(...)
+   void dump_stack(lua_State* L);
 #else
    extern MUTEX_T debug_lock;
    #define _DEBUG(...) fprintf(stdout,"%s: %d (%s):",__FILE__,__LINE__,__func__); fprintf(stdout,__VA_ARGS__); 

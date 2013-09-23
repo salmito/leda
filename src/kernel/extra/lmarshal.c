@@ -226,10 +226,16 @@ static void mar_encode_value(lua_State *L, mar_Buffer *buf, int val, size_t *idx
 
             lua_newtable(L);
             for (i=1; i <= ar.nups; i++) {
-                lua_getupvalue(L, -2, i);
-                lua_rawseti(L, -2, i);
+            	const char * str=lua_getupvalue(L, -2, i);
+					 #if LUA_VERSION_NUM > 501
+					 	if(!strncmp(str,"_ENV",4)) {
+		  					//printf("Stripping _ENV\n");
+					 		lua_pop(L,1);
+					 		lua_pushliteral(L,"_ENV");
+					 	}
+               #endif
+               lua_rawseti(L, -2, i);
             }
-
             buf_init(L, &rec_buf);
             mar_encode_table(L, &rec_buf, idx, nowrap);
 
@@ -426,6 +432,23 @@ static void mar_decode_value
             nups = lua_objlen(L, -1);
             for (i=1; i <= nups; i++) {
                 lua_rawgeti(L, -1, i);
+                #if LUA_VERSION_NUM > 501
+                if(lua_type(L,-1)==LUA_TSTRING) {
+                	size_t len=0;
+                	const char * s=lua_tolstring(L,-1,&len);
+                	if(!strncmp(s,"_ENV",4)) {
+                		lua_getfield(L,LUA_REGISTRYINDEX,"leda");
+                		lua_getfield(L,-1,"getenv");
+                		if(lua_type(L,-1)==LUA_TFUNCTION) {
+                			lua_call(L,0,1);
+	                		lua_remove(L,-2);
+	                		lua_remove(L,-2);
+                		} else {
+                			lua_pop(L,3);
+                		}
+                	}
+                }
+                #endif
                 lua_setupvalue(L, -3, i);
             }
             lua_pop(L, 1);

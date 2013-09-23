@@ -11,9 +11,7 @@ if tcp_client_mt then
       return function()
 			require 'leda.utils.socket'
          local client_mt,err=leda.getmetatable("tcp{client}")
-         if err then
-            return nil,err
-         end
+         if err then return nil,err end
          local container_sock=assert(socket.tcp()) --luasock is required
          container_sock:close()
          container_sock:setfd(sockfd)
