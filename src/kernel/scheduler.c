@@ -561,7 +561,7 @@ static int leda_thread_set_affinity(lua_State * L) {
    lua_pushinteger(L,pthread_setaffinity_np(t->thread, sizeof(cpu_set_t), &cpuset));
    return 1;
 #else
- 	return lua_error(L,"Not implemented");
+ 	return luaL_error(L,"Not implemented");
 #endif
 }
 
