@@ -209,16 +209,12 @@ function t.run(g,localport,maxpar,controller)
 		s.bind=nil
 		pending[s]=s.pending
 		s.pending=nil
-		s.handler_enc=nil
-		s.init_enc=nil
    end
 
    local ro_graph = kernel.build_graph(g,localhost,l_localport)
 
 	for s,p in pairs(pending) do
 		s.pending=p
-		s.handler_enc=true
-		s.init_enc=true
 	end
  
    for d in pairs(d_list) do
