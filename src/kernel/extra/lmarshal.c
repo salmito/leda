@@ -41,6 +41,7 @@
 
 #if LUA_VERSION_NUM > 501
    #define lua_objlen lua_rawlen
+   #define LEDA_ENV_MARKER "__leda-env-5.2-mark"
 #endif
 
 typedef struct mar_Buffer {
@@ -225,14 +226,16 @@ static void mar_encode_value(lua_State *L, mar_Buffer *buf, int val, size_t *idx
             lua_pop(L, 1);
 
             lua_newtable(L);
-            for (i=1; i <= ar.nups; i++) {
-            	const char * str=lua_getupvalue(L, -2, i);
+            for (i=1; i <= ar.nups; i++) {            	
 					 #if LUA_VERSION_NUM > 501
+						const char * str=lua_getupvalue(L, -2, i);
 					 	if(!strncmp(str,"_ENV",4)) {
 		  					//printf("Stripping _ENV\n");
 					 		lua_pop(L,1);
-					 		lua_pushliteral(L,"_ENV");
+					 		lua_pushliteral(L,LEDA_ENV_MARKER);
 					 	}
+					#else
+						lua_getupvalue(L, -2, i);
                #endif
                lua_rawseti(L, -2, i);
             }
@@ -436,16 +439,9 @@ static void mar_decode_value
                 if(lua_type(L,-1)==LUA_TSTRING) {
                 	size_t len=0;
                 	const char * s=lua_tolstring(L,-1,&len);
-                	if(!strncmp(s,"_ENV",4)) {
-                		lua_getfield(L,LUA_REGISTRYINDEX,"leda");
-                		lua_getfield(L,-1,"getenv");
-                		if(lua_type(L,-1)==LUA_TFUNCTION) {
-                			lua_call(L,0,1);
-	                		lua_remove(L,-2);
-	                		lua_remove(L,-2);
-                		} else {
-                			lua_pop(L,3);
-                		}
+                	if(!strncmp(s,LEDA_ENV_MARKER,sizeof(LEDA_ENV_MARKER))) {
+                		lua_rawgeti(L, LUA_REGISTRYINDEX, LUA_RIDX_GLOBALS);
+                		lua_remove(L,-2);
                 	}
                 }
                 #endif

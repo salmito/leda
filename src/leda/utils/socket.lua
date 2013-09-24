@@ -1,4 +1,4 @@
-require "socket"
+local socket=require "socket"
 
 local block=block or false
 
@@ -164,3 +164,4 @@ if udp_unconnected_mt then
    end
 end
 
+return socket

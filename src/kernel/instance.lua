@@ -50,28 +50,24 @@ local global_env=_G
 
 function leda.getenv() return global_env end
 
-leda.stage.__handler=stage_env.handler stage_env.handler=nil
+local __handler=stage_env.handler stage_env.handler=nil
 
-leda.stage.__init=stage_env.init stage_env.init=nil
+local __init=stage_env.init
 
-local __handler=leda.decode(leda.stage.__handler) leda.stage.__handler=nil
 
 if not type(__handler)=='function' then 
 	error("Error loading handler function for stage: "..tostring(leda.stage.name).." type:"..type(__handler))
 end
-leda.stage.handler=__handler
 
-if leda.stage.__init and leda.stage.__init~="" then
-	local init,err=leda.decode(leda.stage.__init)
-	if init and type(init)=="function" then
-	   init()
-	end
+if __init and type(__init)=="function" then
+   __init()
+   stage_env.init=nil
 end
-__handler=leda.stage.handler
+
 local coroutine=coroutine
 local function main_coroutine()
    while true do
-		stage.handler(coroutine.yield(__end_code_l))
+		__handler(coroutine.yield(__end_code_l))
    end 
 end
 

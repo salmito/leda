@@ -385,7 +385,9 @@ static int leda_run(lua_State * L) {
    leda_event_end_t();
 
    close(process_fd);
-   event_base_free(kernel_event_base);
+   if(kernel_event_base)
+	   event_base_free(kernel_event_base);
+   kernel_event_base=NULL;
    _DEBUG("Kernel: Exiting RUN\n");
    return  L_main_args;
 }

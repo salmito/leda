@@ -31,9 +31,18 @@ function consume(data,i)
    end
 end
 
-local prod=stage{name="Producer",handler=produce,init="require 'math'",autostart={seed or os.time(),tonumber(arg[1]) or 0.1}}
-local cons=stage{name="Consumer",handler=consume,init="require 'string'"}
-local sqrt=stage{name="Sqrt",handler=square_root,init="require 'math'"}
+local function require_math() 
+require'math'
+end
+
+local function require_string() 
+require'string'
+end
+
+
+local prod=stage{name="Producer",handler=produce,init=require_math,autostart={seed or os.time(),tonumber(arg[1]) or 0.1}}
+local cons=stage{name="Consumer",handler=consume,init=require_string}
+local sqrt=stage{name="Sqrt",handler=square_root,init=require_math}
 
 
 local g=graph{"Producer-consumer",

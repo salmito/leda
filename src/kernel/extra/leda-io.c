@@ -150,11 +150,11 @@ long io_getevents(aio_context_t ctx, long min_nr, long nr,
 	return syscall(__NR_io_getevents, ctx, min_nr, nr, events, tmo);
 }
 
-int aio_eventfd(unsigned int count) {
+static int aio_eventfd(unsigned int count) {
 	return eventfd(count, 0);
 }
 
-static int afd;
+static int afd=-1;
 static aio_context_t ctx = 0;
 
 #define MAX_AIO_EVENTS 1024*4
@@ -162,10 +162,10 @@ static aio_context_t ctx = 0;
 
 int leda_aio_init(aio_context_t ** ctx_p) {
 	if ((afd = aio_eventfd(0)) == -1) {
-		return 2;
+		return -1;
 	}
 	if (io_setup(MAX_AIO_EVENTS, &ctx)) {
-		return 3;
+		return -1;
 	}
 	fcntl(afd, F_SETFL, fcntl(afd, F_GETFL, 0) | O_NONBLOCK);
 	*ctx_p=&ctx;
@@ -174,6 +174,7 @@ int leda_aio_init(aio_context_t ** ctx_p) {
 
 void leda_aio_end() {
 	close(afd);
+	afd=-1;
 	ctx=0;
 }
 

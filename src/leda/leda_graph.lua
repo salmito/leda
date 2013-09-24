@@ -588,8 +588,7 @@ end
 
 leda_stage.metatable().__index.run=function(s1,...)
 	assert(is_stage(s1),"Invalid argument #1, stage expected")
-   local s=leda_stage.stages
-   leda_stage.stages={}
+   local s={s1}
 	return new_graph(s):run(...)
 end
 

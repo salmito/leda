@@ -4,9 +4,9 @@ local stage,graph=leda.stage,leda.graph
 
 wait_client=stage{
    handler=function(port)
-       require "leda.utils.socket" 
-       local server_sock=socket.bind("*",port)
-       print("SERVER: Waiting on port >> ",port)
+       local socket=require "leda.utils.socket" 
+       local server_sock=assert(socket.bind("*",port))
+       print("SERVER: Waiting on port >> ",port,server_sock)
        while true do
           local cli_sock=server_sock:accept()
           print("SERVER: Sending client",cli_sock)
@@ -16,9 +16,8 @@ wait_client=stage{
    bind=function (self,out)
       assert(out['Client socket'],"'Client socket' port bust be connected")
    end,
-   autostart=port or 4000,
    name="wait client"
-}
+}:push(port or "4000")
 
 read_request=stage{
    handler=function(cli_sock)

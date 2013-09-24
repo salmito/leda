@@ -22,8 +22,6 @@ local dump = string.dump
 --module("leda.leda_stage")
 local t={}
 
-t.stages = {}
-
 ----------------------------------------------------------------------------
 -- Stage metatable
 -----------------------------------------------------------------------------
@@ -126,11 +124,8 @@ local function new_stage_t(...)--t,init,name,bind,serial)
    local s={...}
    if type(s[1])=="table" then
       s=s[1]
-   elseif type(s[1])=="function" or type(s[1])=='string' then
+   elseif type(s[1])=="function" then
    	s.handler=s[1]
-   	if select('#',...) > 1 then
-	   	s.autostart={select(2,...)}
-   	end
    	table.remove(s,1)
    end
    if is_stage(s) then
@@ -142,85 +137,14 @@ local function new_stage_t(...)--t,init,name,bind,serial)
    end
    s.serial=s.serial or s.stateful
    s.pending={}
-   assert(type(s.handler)=="function" or type(s.handler)=="string","Invalid handler type (function or string expected)")
-   assert(type(s.init)=="function" or type(s.init)=="string" or s.init==nil,"Invalid init type (function or string expected)")
+   assert(type(s.handler)=="function","Invalid handler type (function expected, got "..type(s.handler)..")")
+   assert(type(s.init)=="function" or s.init==nil,"Invalid init type (function expected, got "..type(s.init)..")")
 
    s=setmetatable(s,stage)
---   if _ENV then
-      local f_handler=s.handler
-      if type(f_handler)=="function" then
-      	local env,envi,i=nil,nil,1
-         while true do
-        		local upname, v = debug.getupvalue(f_handler, i)
-        		if upname == '_ENV' then
-        			env,envi=v,i
-            	debug.setupvalue (f_handler, i,{})
-            elseif upname == 'leda' then
-					error("cannot use 'leda' as upvalue of function")
-	         end
-        		if not upname then break end
-        		i = i + 1
-	      end   
-         s.handler=kernel.encode(f_handler)
-         s.handler_enc=true
-         if env then
-	         debug.setupvalue (f_handler, envi, env)
-	      end
-      end
-      
-      local f_init=s.init
-      if type(f_init)=="function" then
-      	local env,envi,i=nil,nil,1
-         while true do
-        		local upname, v = debug.getupvalue(f_init, i)
-        		if upname == '_ENV' then
-        			env,envi=v,i
-        			debug.setupvalue (f_init, i,{})
-            elseif upname == 'leda' then
-					error("cannot use 'leda' as upvalue of function")
-	         end
-        		if not upname then break end
-        		i = i + 1
-	      end   
-         s.init=kernel.encode(f_init)
-         s.init_enc=true
-         if env then
-	         debug.setupvalue (f_init, envi,env)
-	      end
-      end
---   end
-
---[[   if type(s.handler)=="function" then 
-      s.handler=kernel.encode(s.handler)
-      s.handler_enc=true
-   end
-
-   if type(s.init)=="function" then 
-      s.init=kernel.encode(s.init)
-      s.init_enc=true
-   end--]]
-
-	assert(type(s.handler)=='string',"Handler type error")
-	if s.init then
-		assert(type(s.init)=='string',"Init type error")
-	end
-   
-   if not s.init_enc then
-      s.init=kernel.encode(s.init)
-      s.init_enc=true   
-   end
-
-   if not s.handler_enc then
-      s.handler=kernel.encode(s.handler)
-      s.handler_enc=true 
-   end
-
    
    s.name=s.name or tostring(s)
-   s.pending={}
-   table.insert(t.stages,s)
---   for k,v in pairs(s) do print(k,v) end
    
+   s.pending={}
    return s
 end
 

@@ -69,7 +69,8 @@ struct iocb {
 	u_int32_t	aio_resfd;
 }; /* 64 bytes */
 
-int aio_init(aio_context_t ** ctx_p);
+int leda_aio_init(aio_context_t ** ctx_p);
+void leda_aio_end();
 int aio_submit_read(int fd, char * buf, int size, void * data);
 int aio_submit_write(int fd, const char * buf, int size, void * data);
 long io_getevents(aio_context_t ctx, long min_nr, long nr,

@@ -28,9 +28,7 @@ THE SOFTWARE.
 #include <lualib.h>
 
 #include <lualib.h>
-#ifndef ANDROID
-#include <sys/timerfd.h>
-#endif
+
 #include "event.h"
 #include "stats.h"
 #include "instance.h"
@@ -850,7 +848,7 @@ static THREAD_RETURN_T THREAD_CALLCONV event_main(void *t_val) {
 #ifndef SYNC_IO
    {
    aio_context_t *ctx;
-	int afd=aio_init(&ctx);
+	int afd=leda_aio_init(&ctx);
 	struct event * aio_ready = event_new(base, afd, EV_READ|EV_PERSIST, event_aio_op_ready, ctx);
    event_add(aio_ready, NULL);
    }
@@ -862,6 +860,8 @@ static THREAD_RETURN_T THREAD_CALLCONV event_main(void *t_val) {
    
    for(i=0;i<main_graph->n_d;i++) queue_free(sockets[i]);
    for(i=0;i<main_graph->n_cl;i++) atomic_free(cur_process[i]);
+
+	leda_aio_end();
 
 	return NULL;
 }
@@ -978,7 +978,8 @@ void event_sleep(instance i) {
 void leda_event_end_t() {
 	int i;
 	THREAD_KILL(&event_thread);
-	event_base_free(base);
+	if(base) 
+   	event_base_free(base);
 	base=NULL;
 	for(i=0;i<main_graph->n_d;i++) {
 		int * sock;
