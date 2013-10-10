@@ -137,6 +137,7 @@ local function add_item(gr,i,v)
       	end
       	add_table(gr,v)
       else --ignore other values
+      	--error("Invalid parameter type ("..type(v)..")"..tostring(v))
          dbg("WARNING: Ignoring parameter of graph '%s' (type %s)\n",gr.name,type(v))
       end
 end
@@ -151,9 +152,12 @@ end
 local function new_graph(...)
    local p={...}
 
-   if type(p[1])=="string" then
---      p.name=p.name or p[1]
-      table.remove(p,1)
+   if type(p[1])=="table" and type(p[1][1])=="string" then
+      p.name=p.name or p[1][1]
+      table.remove(p[1],1)
+   elseif type(p[1])=="table" and type(p[1].name)=="string" then
+   	p.name=p[1].name
+   	p[1].name=nil
    end
 
    local gr = setmetatable(p,graph_metatable)
