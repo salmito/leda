@@ -90,7 +90,7 @@ function t.plot_graph(leda_graph,out)
    if not out then
       g:show()
    elseif type(out)=="string" then
-      ext=out:reverse():gmatch('[^\.]*')():reverse()
+      ext=out:reverse():gmatch('[^\\.]*')():reverse()
       if ext then
          g:layout()
          g:render(ext, out)
