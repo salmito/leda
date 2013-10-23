@@ -4,7 +4,7 @@ SRC_DIR=leda/
 
 MODULE=leda
 
-STAGES=window\
+STAGES=		 window\
 		 util\
 		 net\
 		 z\
@@ -57,7 +57,7 @@ install5.1: all
 	install $(SRC_DIR)/controller/*.lua $(LUA_INSTALL_PATH)/leda/controller/
 	install $(SRC_DIR)/utils/*.lua $(LUA_INSTALL_PATH)/leda/utils/
 	install $(LUA_FILES) $(LUA_INSTALL_PATH)/leda
-#	mkdir -p $(LIB_INSTALL_PATH)/leda
+	mkdir -p $(LIB_INSTALL_PATH)/
 	install $(LIB_FILE) $(LIB_INSTALL_PATH)/
 	mkdir -p $(LUA_INSTALL_PATH)/leda/stage
 	for module in $(STAGES); do \
