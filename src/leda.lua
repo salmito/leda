@@ -151,4 +151,4 @@ t.start=process.start
 ------------------------------------------------------------------------
 t.cluster=leda_cluster.new_cluster
 
-return t
+return setmetatable(t,{__persist=function(t) return function() return require'leda' end end })
