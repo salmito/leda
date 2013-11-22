@@ -65,7 +65,11 @@ install5.1: all
 		install $(SRC_DIR)/stage/$$module/*.lua $(LUA_INSTALL_PATH)/leda/stage/$$module ; \
 	done
 
-uninstall:
+uninstall: uninstall5.1
+
+uninstall-both: uninstall5.1 uninstall5.2
+
+uninstall5.1:
 	rm -f $(LUA_INSTALL_PATH)/leda.lua
 	rm -rf $(LUA_INSTALL_PATH)/leda
 	rm -f $(LIB_INSTALL_PATH)/leda.so

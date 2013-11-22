@@ -43,10 +43,9 @@ char const * get_return_status_name(int status);
 #if LUA_VERSION_NUM > 501
    #define lua_objlen lua_rawlen
    #define REGISTER_LEDA(L,libname,funcs) \
-           lua_newtable(L); \
            luaL_setfuncs (L,funcs,0); 
 #else
-   #define REGISTER_LEDA(L,libname,funcs) luaL_register(L,libname,funcs)
+   #define REGISTER_LEDA(L,libname,funcs) luaL_register(L,NULL,funcs)
 #endif
 
 /* Defining debug functions */ 

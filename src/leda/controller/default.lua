@@ -4,6 +4,7 @@
 -----------------------------------------------------------------------------
 
 local controller=require("leda.controller.thread_pool")
+local leda=require'leda'
 
 --module("leda.controller.default")
 local t=controller

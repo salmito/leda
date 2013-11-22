@@ -7,9 +7,9 @@ module "leda"
 
 -- Author: Tiago Salmito, Noemi Rodriguez, Ana Lucia de Moura
 
-local t=type(leda)=='table' and leda or {}
---Define main global variable leda with methods
-leda=t
+local t={}
+
+package.loaded['leda']=t
 
 --Table to hold connectors
 t.controller={}
@@ -44,11 +44,9 @@ t.leda_graph=leda_graph
 t.connect=leda_stage.connect
 t.process=process
 
-function leda.require(stage)
+function t.require(stage)
 	return assert(leda_stage.is_stage(require(stage)))
 end
-
-local print,pairs=print,pairs
 
 ------------------------------------------------------------------------
 -- Get the current system time
@@ -151,4 +149,13 @@ t.start=process.start
 ------------------------------------------------------------------------
 t.cluster=leda_cluster.new_cluster
 
-return setmetatable(t,{__persist=function(t) return function() return require'leda' end end })
+return setmetatable(t,{
+   __persist=function(t) 
+      return function() return require'leda' end
+   end,
+   __call=function() 
+      leda=t
+      stage=t.stage
+      graph=t.graph
+      cluster=t.cluster
+   end})

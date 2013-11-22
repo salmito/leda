@@ -6,7 +6,7 @@
 local base = _G
 local tostring,type,assert,pairs,setmetatable,getmetatable,print,error,ipairs,tonumber =
       tostring,type,assert,pairs,setmetatable,getmetatable,print,error,ipairs,tonumber
-local string,table,kernel,io=string,table,leda.kernel,io
+local string,table,kernel,io=string,table,require'leda.kernel',io
 local debug=require("leda.debug")
 local dbg = debug.get_debug("Cluster: ")
 local leda_connector = require("leda.leda_connector")

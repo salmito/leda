@@ -688,6 +688,7 @@ int luaopen_leda_kernel (lua_State *L) {
 	
 	/* Load main library functions */
    _DEBUG("Kernel: Loading leda main API\n");
+   lua_newtable(L);
 	REGISTER_LEDA(L, LEDA_NAME, leda_funcs);
 	set_leda_info (L);
  	/* Create the thread metatable */

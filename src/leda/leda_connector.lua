@@ -6,7 +6,7 @@
 -----------------------------------------------------------------------------
 -- Declare module and import dependencies
 -----------------------------------------------------------------------------
-local string,table,kernel = string,table,leda.kernel
+local string,table,kernel = string,table,require'leda.kernel'
 local getmetatable,setmetatable,type,tostring,assert,io,error=
       getmetatable,setmetatable,type,tostring,assert,io,error
 local debug=require("leda.debug")

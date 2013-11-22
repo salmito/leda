@@ -4,6 +4,7 @@
 -----------------------------------------------------------------------------
 
 local thread_pool=require("leda.controller.thread_pool")
+local leda=require'leda'
 local singlethread=thread_pool.get(1)
 
 if leda and leda.controller then

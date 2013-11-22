@@ -9,7 +9,7 @@
 local base = _G
 --local pairs,assert,tostring,setmetatable,getmetatable,error,io,print,loadstring=
 --      pairs,assert,tostring,setmetatable,getmetatable,error,io,print,loadstring
-local string,table,kernel= string,table,leda.kernel
+local string,table,kernel= string,table,require'leda.kernel'
 local leda_connector = require("leda.leda_connector")
 local is_connector=leda_connector.is_connector
 local new_connector=leda_connector.new_connector

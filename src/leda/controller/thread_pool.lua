@@ -6,7 +6,7 @@
 local base = _G
 local debug=require("leda.debug")
 local dbg = debug.get_debug("Controller: Fixed-thread-pool: ")
-local kernel=leda.kernel
+local kernel=require'leda.kernel'
 local table=table
 local default_thread_pool_size=kernel.cpu()
 

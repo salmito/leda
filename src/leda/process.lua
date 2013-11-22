@@ -3,7 +3,7 @@
 -- Author: Tiago Salmito, Noemi Rodriguez, Ana Lucia de Moura
 -----------------------------------------------------------------------------
 
-local string,table,leda,kernel,io = string,table,leda,leda.kernel,io
+local string,table,kernel,io,leda = string,table,require'leda.kernel',io,require'leda'
 
 local getmetatable,setmetatable,type,tostring,assert,print,pairs,ipairs,tonumber,error,unpack=
       getmetatable,setmetatable,type,tostring,assert,print,pairs,ipairs,tonumber,error,unpack
@@ -84,7 +84,7 @@ local function init(g,ro_g,host,port,controller,maxpar)
       end
    end
    
-   return leda.kernel.run(g,ro_g,controller or leda.controller.default or default_controller,maxpar,process_socket:getfd())
+   return kernel.run(g,ro_g,controller or leda.controller.default or default_controller,maxpar,process_socket:getfd())
 end
 t.init=init
 
