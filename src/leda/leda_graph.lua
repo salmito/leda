@@ -451,7 +451,7 @@ end
 
 function index.plot(g,out)
    local res=require 'leda.utils.plot'
-   return res.plot_graph(g,out)
+   return g, res.plot_graph(g,out)
 end
 
 -----------------------------------------------------------------------------
