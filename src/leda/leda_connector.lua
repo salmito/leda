@@ -14,7 +14,7 @@ local debug=require("leda.debug")
 local dbg = debug.get_debug("Connector: ")
 local dump = string.dump
 
-local leda=leda
+local leda=require'leda'
 
 --module("leda.leda_connector")
 

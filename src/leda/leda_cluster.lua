@@ -15,7 +15,7 @@ local leda_stage = require("leda.leda_stage")
 local is_stage=leda_stage.is_stage
 local stage_meta=leda_stage.metatable
 
-local leda=leda
+local leda=require'leda'
 
 --module("leda.leda_cluster")
 local t={}

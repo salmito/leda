@@ -158,4 +158,5 @@ return setmetatable(t,{
       stage=t.stage
       graph=t.graph
       cluster=t.cluster
+      return t,t.stage,t.graph,t.cluster
    end})

@@ -23,7 +23,7 @@ local leda_stage = require("leda.leda_stage")
 local is_stage=leda_stage.is_stage
 local leda_cluster = require("leda.leda_cluster")
 local is_cluster=leda_cluster.is_cluster
-local leda=leda
+local leda=require'leda'
 local kernel=require 'leda.kernel'
 --module("leda.leda_graph")
 
