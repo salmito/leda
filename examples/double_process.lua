@@ -1,6 +1,6 @@
-local exec=[[lua -l leda -e "leda.start{port=8888,controller=require'leda.controller.thread_pool'.get(4)}"&]]
+local exec=[[lua -e "require 'leda'() leda.start{port=8888,controller=require'leda.controller.thread_pool'.get(4)}"&]]
 os.execute(exec)
-require 'leda'
+require 'leda'()
 leda.kernel.sleep(1)
 
 local n=n  or 100
@@ -27,7 +27,7 @@ local s2=leda.stage{name="S2",
 	end
 }
 
-s1:send(1)
+s1:send()
 
 local g=leda.graph{s1:connect(1,s2)}
 
