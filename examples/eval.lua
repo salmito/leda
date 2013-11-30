@@ -1,4 +1,4 @@
-local utils=require "leda.utils"
+local leda=require "leda"
 
 s1=leda.stage{ name="s1",
    handler=function (i)

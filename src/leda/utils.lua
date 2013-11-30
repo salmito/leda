@@ -1,4 +1,4 @@
-require "leda"
+require "leda"()
 
 -----------------------------------------------------------------------------
 -- Defining globals for easy access to the leda main API functions

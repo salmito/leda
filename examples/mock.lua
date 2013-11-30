@@ -1,4 +1,4 @@
-require "leda"
+local leda=require "leda"
 local args={...}
 local n=args[1] or 10
 local type=arg[2] or "decoupled"

@@ -1,8 +1,12 @@
+local leda=require "leda"
 local utils=require "leda.utils"
-require "leda.utils.plot"
 
-local a=leda.stage(utils.print)
+local a=leda.stage(function(i,...) if type(i)=='number' then print(i,...) leda.push(i+1,...) end end)
 
-local g=utils.linear_pipeline(a,a,a,a,a,a,a,a,a,a)
-g:send("flux")
+local finish=leda.stage"Finish"(function() leda.quit() end)
+
+local g=utils.linear_pipeline(a,a,a,a,a,a,a,a,a,a,finish)
+
+g.start:push(1,'Flux')
+
 g:run()

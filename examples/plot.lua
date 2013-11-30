@@ -1,5 +1,4 @@
-require "leda"
-require "leda.utils.plot"
+local leda=require "leda"
 
 s1=leda.stage{name="s1",handler=function() end}
 s2=leda.stage{name="s2",handler=function() end}

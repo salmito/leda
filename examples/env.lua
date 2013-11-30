@@ -1,4 +1,4 @@
-local utils=require "leda.utils"
+local leda=require "leda"
 
 local n=10
 

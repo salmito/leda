@@ -1,4 +1,4 @@
-require "leda"
+local leda=require "leda"
 
 local test=leda.stage"Self"{
    handler=function()
@@ -7,4 +7,4 @@ local test=leda.stage"Self"{
    end,
    str="Hello world from self",
    autostart=true
-}:run{controller=require 'leda.controller.singlethread'}
+}:run{controller=require 'leda.controller.single_thread'}

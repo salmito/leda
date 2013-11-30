@@ -1,4 +1,4 @@
-require "leda"
+local leda=require "leda"
 
 local arg={...}
 
@@ -31,9 +31,9 @@ function consume(data,i)
    end
 end
 
-local prod=stage{name="Producer",handler=produce,init="require 'math'",autostart={seed or os.time(),tonumber(arg[1]) or 0.1}}
-local cons=stage{name="Consumer",handler=consume,init="require 'string'"}
-local sqrt=stage{name="Sqrt",handler=square_root,init="require 'math'"}
+local prod=stage{name="Producer",handler=produce,init=function() require 'math' end,autostart={seed or os.time(),tonumber(arg[1]) or 0.1}}
+local cons=stage{name="Consumer",handler=consume,init=function() require 'string' end}
+local sqrt=stage{name="Sqrt",handler=square_root,init=function() require 'math' end}
 
 
 local g=graph{"Producer-consumer",

@@ -1,4 +1,4 @@
-require "leda"
+local leda=require "leda"
 
 local fib=leda.stage"Fibonacci"{
 	handler=function (fib,n,val,oldval)
@@ -32,8 +32,8 @@ local printer=leda.stage{
 }
 
 local graph=leda.graph{
-   fib:connect("value",leda.stage"Print"("print(...)")),
-   fib:connect("end",leda.stage"Quit"("leda.quit()"))
+   fib:connect("value",leda.stage"Print"(function (...) print(...) end)),
+   fib:connect("end",leda.stage"Quit"(function(...) leda.quit(...) end))
 }
 
-graph:run{controller=leda.controller.thread_pool.get(1)}
+graph:run{controller=require'leda.controller.single_thread'}

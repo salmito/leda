@@ -1,4 +1,4 @@
-require "leda"
+local leda=require "leda"
 
 local hello=leda.stage"Hello"{
    handler=function(port)
@@ -10,10 +10,8 @@ local hello=leda.stage"Hello"{
 
 local quit=leda.stage{
    handler=function(...)
-      print('indeed')
-      leda.quit()
+      leda.quit('indeed')
    end
 }
 
-leda.graph{hello:connect('quit',quit)}
-      :run{controller=leda.controller.singlethread}
+print(leda.graph{hello'quit'..quit}:run())

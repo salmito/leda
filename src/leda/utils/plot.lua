@@ -6,6 +6,7 @@ graph=nil
 
 local t={}
 
+local leda=require'leda'
 local gr = require "graph"
 graph=antgr
 

@@ -24,7 +24,7 @@ local default_controller=require("leda.controller.default")
 
 --preload some controllers
 require('leda.controller.thread_pool')
-require('leda.controller.singlethread')
+require('leda.controller.single_thread')
 --require('leda.controller.profiler')
 
 --module("leda.process")

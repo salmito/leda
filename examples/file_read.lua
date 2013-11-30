@@ -1,5 +1,4 @@
-require "leda"
-require "leda.utils"
+local leda=require "leda"
 
 local io=nil
 
@@ -7,7 +6,7 @@ s0=leda.stage{
    handler=function(file)
       local io=require'io'
       print("Opening file",file)
-      local f = io.open(file,"r")
+      local f = assert(io.open(file,"r"))
       leda.send("file",f)
    end,
 }
@@ -45,6 +44,6 @@ g=leda.graph{
 	s1'EOF'..sQuit
 }
 
-s0:send(assert(arg[1]))
+s0:send(assert(arg[1],"Type a filename"))
 
 print(g:run())

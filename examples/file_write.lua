@@ -1,5 +1,4 @@
-require "leda"
-require "leda.utils"
+local leda=require "leda"
 
 s0=leda.stage{
    handler=function(file)

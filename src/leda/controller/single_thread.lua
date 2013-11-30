@@ -8,6 +8,6 @@ local leda=require'leda'
 local singlethread=thread_pool.get(1)
 
 if leda and leda.controller then
-   leda.controller.singlethread=singlethread
+   leda.controller.single_thread=singlethread
 end
 return singlethread

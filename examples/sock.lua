@@ -1,4 +1,4 @@
-require "leda"
+local leda=require "leda"
 
 local stage,graph=leda.stage,leda.graph
 
@@ -9,7 +9,7 @@ wait_client=stage{
        print("SERVER: Waiting on port >> ",port,server_sock)
        while true do
           local cli_sock=server_sock:accept()
-          print("SERVER: Sending client",cli_sock)
+          print("SERVER: Sending client",getmetatable(cli_sock).__wrap)
           assert(leda.send('Client socket',cli_sock))
        end
    end, 

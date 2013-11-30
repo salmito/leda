@@ -1,4 +1,4 @@
-require "leda"
+local leda=require "leda"
 
 local arg={...}
 
