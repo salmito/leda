@@ -469,6 +469,8 @@ int send_sync_event(lua_State *L) {
    lua_pop(L,1);
 
 	//round robin through possible destination processes
+	//printf("%d -> %p | %d -> %p\n",s_id,STAGE(s_id),STAGE(s_id)->cluster,CLUSTER(STAGE(s_id)->cluster));
+	//TODO Resolv BUG here, when s_id is 0 and clustered in cluster 1 gives SIGSEGV
    int next_d=STORE(cur_process[STAGE(s_id)->cluster],
    (READ(cur_process[STAGE(s_id)->cluster])+1)%CLUSTER(STAGE(s_id)->cluster)->n_processes);
    

@@ -54,7 +54,7 @@ function t.get_process(host,port)
    return d
 end
 
-function is_local(d)
+local function is_local(d)
    if d.host==localhost and (d.port==l_localport or d.port==nil) then
       return true
    end
