@@ -860,9 +860,9 @@ static THREAD_RETURN_T THREAD_CALLCONV event_main(void *t_val) {
    
    for(i=0;i<main_graph->n_d;i++) queue_free(sockets[i]);
    for(i=0;i<main_graph->n_cl;i++) atomic_free(cur_process[i]);
-
+#ifndef SYNC_IO
 	leda_aio_end();
-
+#endif
 	return NULL;
 }
 

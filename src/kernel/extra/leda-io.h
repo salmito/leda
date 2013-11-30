@@ -74,7 +74,7 @@ void leda_aio_end();
 int aio_submit_read(int fd, char * buf, int size, void * data);
 int aio_submit_write(int fd, const char * buf, int size, void * data);
 long io_getevents(aio_context_t ctx, long min_nr, long nr,
-			 struct io_event *events, struct timespec *tmo);
+struct io_event *events, struct timespec *tmo);
 #endif
 
 #endif// _LEDA_IO_H_
