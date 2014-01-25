@@ -568,8 +568,8 @@ int send_sync_event(lua_State *L) {
 }
 
 /* read an event from a socket ready for reading */
-int read_event(int fd) {
-   static size_t h_size=sizeof(stage_id)+sizeof(size_t)+1;
+static int read_event(int fd) {
+   size_t h_size=sizeof(stage_id)+sizeof(size_t)+1;
    char header[h_size];
    int received=read(fd,header,h_size);
    _DEBUG("Event: Received %d bytes\n",received);
@@ -831,13 +831,7 @@ void event_aio_op_ready(evutil_socket_t afd, short libev_event, void *arg) {
   
 static THREAD_RETURN_T THREAD_CALLCONV event_main(void *t_val) {
    int process_fd=*(int*)t_val;
-
    int i;
-   sockets=calloc(main_graph->n_d,sizeof(queue));
-   for(i=0;i<main_graph->n_d;i++) sockets[i]=queue_new();
-   cur_process=calloc(main_graph->n_cl,sizeof(atomic));
-   for(i=0;i<main_graph->n_cl;i++) cur_process[i]=atomic_new(0);
-
   // free(t_val);
 
    struct event *listener_event;
@@ -985,7 +979,7 @@ void leda_event_end_t() {
 	base=NULL;
 	for(i=0;i<main_graph->n_d;i++) {
 		int * sock;
-		while(TRY_POP(sockets[i],sock)) close(*sock);
+		while(TRY_POP(sockets[i],sock)) close((int)sock);
 		queue_free(sockets[i]);
 	}
 	
@@ -998,6 +992,13 @@ void leda_event_end_t() {
 void event_init_t(int process_fd) {
    int *p=malloc(sizeof(int));
    *p=process_fd;
+   
+   int i;
+   sockets=calloc(main_graph->n_d,sizeof(queue));
+   for(i=0;i<main_graph->n_d;i++) sockets[i]=queue_new();
+   cur_process=calloc(main_graph->n_cl,sizeof(atomic));
+   for(i=0;i<main_graph->n_cl;i++) cur_process[i]=atomic_new(0);
+
 
    THREAD_CREATE( &event_thread, event_main, p, 0 );
 }
