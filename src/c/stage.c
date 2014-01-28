@@ -112,5 +112,6 @@ int leda_destroystage(lua_State * L) {
 	free(s->env);
 	leda_lfqueue_free(s->instances);
 	leda_lfqueue_free(s->event_queue);
+	*s_ptr=0;
 	return 0;
 }
