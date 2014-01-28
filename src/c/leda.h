@@ -20,8 +20,8 @@
 void stackDump (lua_State *L, const char *text);
 void tableDump(lua_State *L, int idx, const char* text);
 #else
-#define stackDump() 
-#define tableDump() 
+#define stackDump(...) 
+#define tableDump(...) 
 #endif
 
 #ifndef LEDA_EXPORTAPI

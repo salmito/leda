@@ -1,4 +1,5 @@
 #include "leda.h"
+#include "marshal.h"
 
 #ifdef DEBUG
 //can be found here  http://www.lua.org/pil/24.2.3.html
@@ -62,10 +63,12 @@ static int leda_version(lua_State * L) {
 
 static const struct luaL_Reg LuaExportFunctions[] = {
 	{"_VERSION",leda_version},
+	{"encode",mar_encode},
+	{"decode",mar_decode},
 	{NULL,NULL}
 };
 
-LEDA_EXPORTAPI	int luaopen_leda_scheduler(lua_State *L){	
+LEDA_EXPORTAPI	int luaopen_leda_core(lua_State *L){	
 	// Export Lua API
 	lua_newtable(L);
 #if LUA_VERSION_NUM < 502
