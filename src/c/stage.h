@@ -13,7 +13,13 @@
 
 typedef struct leda_Stage * stage_t;
 
-#define LEDA_STAGE_META "leda-Stage *"
-int leda_newstage(lua_State * L);
+#include "leda.h"
+
+enum stage_flag_t {
+	DESTROYED=0x01
+};
+
+stage_t leda_getstage(lua_State *L, int i);
+void leda_pushstage(lua_State * L,stage_t t);
 
 #endif
