@@ -1,10 +1,10 @@
-local s=require'leda.scheduler'
-local stage=s.stage_new("Aew")
-s.stage_add(stage)
+local s=require'leda.stage'
+local stage=s.new("Aew")
+s.add(stage)
 
 print(stage)
 
-local stage2,err=s.stage_get(stage:id())
+local stage2,err=s.get(stage:id())
 print(stage2,err)
 
 print(stage:capacity(),stage2:max_instances())

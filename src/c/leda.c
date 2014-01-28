@@ -1,6 +1,4 @@
 #include "leda.h"
-#include "stage.h"
-#include "lf_hash.h"
 
 #ifdef DEBUG
 //can be found here  http://www.lua.org/pil/24.2.3.html
@@ -57,46 +55,21 @@ void tableDump(lua_State *L, int idx, const char* text)
 }
 #endif
 
-static qt_hash H=NULL;
-
-static int leda_getstage(lua_State * L) {
-	size_t len=0; 
-	const void ** key=(const void **)lua_tolstring(L,1,&len);
-	if(len!=sizeof(void *)) {
-		lua_pushnil(L);
-		lua_pushliteral(L,"Key length error");
-		return 2;
-	}
-	stage_t s=qt_hash_get(H,*key);
-	if(s) {
-		leda_buildstage(L,s);
-		return 1;
-	}
-	lua_pushnil(L);
-	lua_pushliteral(L,"Stage not found");
-	return 2;
-}
-
-
-static int leda_addstage(lua_State * L) {
-   stage_t s=leda_pushstage(L,1);
-	qt_hash_put(H,s,s);
-	return 0;
+static int leda_version(lua_State * L) {
+	lua_pushliteral(L,"1.0.0-beta-unstable");
+	return 1;
 }
 
 static const struct luaL_Reg LuaExportFunctions[] = {
-	{"stage_new",leda_newstage},
-	{"stage_get",leda_getstage},
-	{"stage_add",leda_addstage},
+	{"_VERSION",leda_version},
 	{NULL,NULL}
 };
 
 LEDA_EXPORTAPI	int luaopen_leda_scheduler(lua_State *L){	
 	// Export Lua API
-	if(!H) H=qt_hash_create(0);
 	lua_newtable(L);
 #if LUA_VERSION_NUM < 502
-	luaL_register(L, "leda", LuaExportFunctions);
+	luaL_register(L, NULL, LuaExportFunctions);
 #else
 	luaL_setfuncs (L, LuaExportFunctions, 0);
 #endif        

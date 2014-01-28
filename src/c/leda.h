@@ -39,9 +39,5 @@ void tableDump(lua_State *L, int idx, const char* text);
 #endif
 
 #define LEDA_STAGE_META "leda-Stage *"
-int leda_newstage(lua_State * L);
-int leda_destroystage(lua_State *L);
-
-
 
 #endif
