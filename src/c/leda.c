@@ -57,7 +57,7 @@ void tableDump(lua_State *L, int idx, const char* text)
 }
 #endif
 
-static qt_hash H;
+static qt_hash H=NULL;
 
 static int leda_getstage(lua_State * L) {
 	size_t len=0; 
@@ -93,7 +93,7 @@ static const struct luaL_Reg LuaExportFunctions[] = {
 
 LEDA_EXPORTAPI	int luaopen_leda_scheduler(lua_State *L){	
 	// Export Lua API
-	H=qt_hash_create(0);
+	if(!H) H=qt_hash_create(0);
 	lua_newtable(L);
 #if LUA_VERSION_NUM < 502
 	luaL_register(L, "leda", LuaExportFunctions);
