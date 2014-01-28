@@ -19,7 +19,7 @@ enum stage_flag_t {
 	DESTROYED=0x01
 };
 
-stage_t leda_getstage(lua_State *L, int i);
-void leda_pushstage(lua_State * L,stage_t t);
+stage_t leda_pushstage(lua_State *L, int i);
+void leda_buildstage(lua_State * L,stage_t t);
 
 #endif

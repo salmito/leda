@@ -59,12 +59,17 @@ void tableDump(lua_State *L, int idx, const char* text)
 
 static qt_hash H;
 
-static int leda_getlstage(lua_State * L) {
-	luaL_checktype (L, 1, LUA_TNUMBER);
-	long long int key=lua_tonumber(L,1);
-	stage_t s=qt_hash_get(H,(void *)key);
+static int leda_getstage(lua_State * L) {
+	size_t len=0; 
+	const void ** key=(const void **)lua_tolstring(L,1,&len);
+	if(len!=sizeof(void *)) {
+		lua_pushnil(L);
+		lua_pushliteral(L,"Key length error");
+		return 2;
+	}
+	stage_t s=qt_hash_get(H,*key);
 	if(s) {
-		leda_pushstage(L,s);
+		leda_buildstage(L,s);
 		return 1;
 	}
 	lua_pushnil(L);
@@ -74,16 +79,14 @@ static int leda_getlstage(lua_State * L) {
 
 
 static int leda_addstage(lua_State * L) {
-	luaL_checktype (L, 1, LUA_TNUMBER);
-	long long int key=lua_tonumber(L,1);
-   stage_t s=leda_getstage(L,2);
-	qt_hash_put(H,(void *)key,s);
+   stage_t s=leda_pushstage(L,1);
+	qt_hash_put(H,s,s);
 	return 0;
 }
 
 static const struct luaL_Reg LuaExportFunctions[] = {
 	{"stage_new",leda_newstage},
-	{"stage_get",leda_getlstage},
+	{"stage_get",leda_getstage},
 	{"stage_add",leda_addstage},
 	{NULL,NULL}
 };
