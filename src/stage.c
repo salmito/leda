@@ -178,7 +178,7 @@ static void get_metatable(lua_State * L) {
   		lua_pushcfunction(L,stage_instantiate);
   		lua_setfield(L,-2,"instantiate");
   		lua_pushcfunction(L,stage_destroyinstances);
-  		lua_setfield(L,-2,"destroy");
+  		lua_setfield(L,-2,"free");
   		lua_pushcfunction(L,stage_isstateful);
   		lua_setfield(L,-2,"stateful");
   	}

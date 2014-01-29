@@ -24,7 +24,7 @@ t:join(1)
 print("timed out")
 print(stage,"instances:",stage:instances())
 print(stage3,"instances:",stage3:instances())
-local n=stage3:destroy(9)
+local n=stage3:free(9)
 print(stage3,"destroyed:",n,stage3:instances())
 t:rawkill()
 
