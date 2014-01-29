@@ -32,5 +32,6 @@ struct leda_Stage {
 };
 
 stage_t leda_tostage(lua_State *L, int i);
+void leda_buildstage(lua_State * L,stage_t t);
 
 #endif

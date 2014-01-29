@@ -198,7 +198,7 @@ static int stage_isstage(lua_State * L) {
 	return 1;
 }
 
-static void leda_buildstage(lua_State * L,stage_t t) {
+void leda_buildstage(lua_State * L,stage_t t) {
 	stage_t *s=lua_newuserdata(L,sizeof(stage_t *));
 	*s=t;
 	get_metatable(L);
@@ -208,10 +208,10 @@ static void leda_buildstage(lua_State * L,stage_t t) {
 static int leda_newstage(lua_State * L) {
    luaL_checktype (L, 1, LUA_TFUNCTION);
 	int stateful=0;
-	if(lua_toboolean(L,2)) {
+	if(lua_toboolean(L,3)) {
 			stateful=1;
 	}
-   int idle=luaL_optint(L, 3, 0);
+   int idle=luaL_optint(L, 2, 0);
    int capacity=(stateful?1:luaL_optint(L, 4, DEFAULT_QUEUE_CAPACITY));
    lua_pushcfunction(L,mar_encode);
    lua_pushvalue(L,1);

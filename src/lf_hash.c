@@ -50,7 +50,7 @@ typedef uintptr_t marked_ptr_t;
 #define CAS(ADDR, OLDV, NEWV) __sync_val_compare_and_swap((ADDR), (OLDV), (NEWV))
 #define INCR(ADDR, INCVAL) __sync_fetch_and_add((ADDR), (INCVAL))
 
-size_t hard_max_buckets = 0;
+static size_t hard_max_buckets = 0;
 
 typedef struct hash_entry_s {
     so_key_t     key;
