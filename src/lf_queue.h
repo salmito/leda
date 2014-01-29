@@ -7,8 +7,8 @@ extern "C" {
 
 typedef struct LFqueue * LFqueue_t;
 
-#define queue_trypush(q,p) leda_lfqueue_try_push((q),(void **)&(p))
-#define queue_trypop(q,p) leda_lfqueue_try_pop((q),(void **)&(p))
+#define leda_lfqueue_trypush(q,p) leda_lfqueue_try_push((q),(void **)&(p))
+#define leda_lfqueue_trypop(q,p) leda_lfqueue_try_pop((q),(void **)&(p))
 
 LFqueue_t leda_lfqueue_new();
 int leda_lfqueue_try_push(LFqueue_t q,void ** source);

@@ -62,43 +62,46 @@ static void thread_resume_instance(instance_t i) {
 	lua_State * L=i->L;
 	switch(i->flags) {
 		case CREATED:
-			printf("Init instance %p\n",i);
 			leda_initinstance(i);
-			leda_putinstance(i);
 			break;
 		case IDLE:
-			leda_putinstance(i);
 			break;
-		case BOUND:
-			printf("Bounded %p\n",i);
+		case READY:
 			if(i->ev) {
-				lua_pushliteral(i->L,"stage-env");
-				lua_gettable(i->L,LUA_REGISTRYINDEX);
-				i->args=lua_gettop(L);
-				lua_getglobal(L,"unpack"); //Push unpack function
+				lua_pushliteral(L,STAGE_HANDLER_KEY);
+				lua_gettable(L,LUA_REGISTRYINDEX);
 		      lua_pushcfunction(L,mar_decode);
 		      lua_pushlstring(L,i->ev->data,i->ev->len);
 		      leda_destroyevent(i->ev);
   		      i->ev=NULL;
-				lua_call(L,1,1); //decode event
-				lua_call(L,1,LUA_MULTRET); //Unpack event
-				i->args=lua_gettop(L)-i->args;
+				if(lua_pcall(L,1,1,0)) {
+					const char * err=lua_tostring(L,-1);
+			      fprintf(stderr,"Error decoding event: %s\n",err);
+			      break;
+				}
+				int n=
+				#if LUA_VERSION_NUM < 502
+					luaL_getn(L,2);
+			   #else
+					luaL_len(L,2);
+				#endif
+				int j;
+				for(j=1;j<=n;j++) lua_rawgeti(L,2,j);
+				lua_remove(L,2);
+				i->args=n;
 			}
-			printf("call %p\n",i);
 			if(lua_pcall(i->L,i->args,LUA_MULTRET,0)) {
 		      const char * err=lua_tostring(L,-1);
 		      fprintf(stderr,"Error resuming instance: %s\n",err);
-		      leda_destroyinstance(i);
-		   } else {
-   			leda_putinstance(i);
-		   }
+		   } 
 			break;
 	}
+	lua_settop(L,0);
+	leda_putinstance(i);
 }
 
 /*thread main loop*/
 static THREAD_RETURN_T THREAD_CALLCONV thread_mainloop(void *t_val) {
-	printf("Running thread\n");
    instance_t i=NULL;
    while(1) {
       leda_lfqueue_pop(ready_queue,(void **)&i);
@@ -118,6 +121,11 @@ static int thread_new (lua_State *L) {
    return 1;
 }
 
+static int thread_kill (lua_State *L) {
+	leda_lfqueue_push(ready_queue,NULL);
+	return 0;
+}
+
 void leda_pushinstance(instance_t i) {
 		leda_lfqueue_push(ready_queue,(void **)&i);
 }
@@ -125,6 +133,7 @@ void leda_pushinstance(instance_t i) {
 LEDA_EXPORTAPI	int luaopen_leda_scheduler(lua_State *L) {
 	const struct luaL_Reg LuaExportFunctions[] = {
 	{"new_thread",thread_new},
+	{"kill_thread",thread_kill},
 	{NULL,NULL}
 	};
 	if(!ready_queue) ready_queue=leda_lfqueue_new();

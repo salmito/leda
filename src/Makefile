@@ -3,6 +3,7 @@ LUA_INCDIR=/usr/include/lua5.1
 INCFLAGS=-I$(LUA_INCDIR)
 CFLAGS=-fPIC $(INCFLAGS) -Wall $(EXTRA_FLAGS) -O2
 #LIBEVENT_FLAGS=-levent -levent_pthreads
+EXTRA_FLAGS=-DDEBUG
 LIBTBB_FLAGS=-ltbb
 PTHREAD_FLAGS=-pthread -lrt
 LDFLAGS=$(EXTRA_FLAGS) $(PTHREAD_FLAGS) $(LIBTBB_FLAGS)# $(LIBEVENT_FLAGS)
@@ -44,3 +45,6 @@ $(MODULE): $(OBJ)
 
 clean:
 	rm -f *.o
+
+ultraclean: clean
+	rm -f $(MODULE) `find -iname *~`

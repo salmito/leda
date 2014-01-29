@@ -17,7 +17,7 @@ void leda_initinstance(instance_t i) {
    lua_pcall(L,0,0,0);
 	#endif*/
 	luaL_openlibs(L);
-	lua_pushliteral(L,"stage-env");
+	lua_pushliteral(L,STAGE_HANDLER_KEY);
 	lua_pushcfunction(L,mar_decode);
 	lua_pushlstring(L,i->stage->env,i->stage->env_len);
 	lua_call(L,1,1);
@@ -40,7 +40,7 @@ void leda_putinstance(instance_t i) {
 	event_t ev=NULL;
 	if(leda_lfqueue_try_pop(i->stage->event_queue,(void **)&ev)) {
 		i->ev=ev;
-		i->flags=BOUND;
+		i->flags=READY;
 		leda_pushinstance(i);
 		return;
 	}
@@ -50,7 +50,6 @@ void leda_putinstance(instance_t i) {
 }
 
 void leda_destroyinstance(instance_t i) {
-	printf("Destroying instance\n");
    lua_close(i->L);
    if(i->ev) leda_destroyevent(i->ev);
    free(i);

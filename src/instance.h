@@ -10,7 +10,7 @@ typedef struct instance_s * instance_t;
 enum instance_flag_t {
 	CREATED=0x0,
 	IDLE,
-	BOUND,
+	READY,
 };
 
 struct instance_s {

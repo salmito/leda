@@ -57,14 +57,12 @@ void tableDump(lua_State *L, int idx, const char* text)
 #endif
 
 static int leda_version(lua_State * L) {
-	lua_pushliteral(L,"1.0.0-beta-unstable");
+	lua_pushliteral(L,LEDA_VERSION);
 	return 1;
 }
 
 static const struct luaL_Reg LuaExportFunctions[] = {
 	{"_VERSION",leda_version},
-	{"encode",mar_encode},
-	{"decode",mar_decode},
 	{NULL,NULL}
 };
 

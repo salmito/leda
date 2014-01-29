@@ -8,8 +8,10 @@
 ** ===============================================================
 */
 
-#ifndef leda_h
-#define leda_h
+#ifndef _LEDA_H
+#define _LEDA_H
+
+#define LEDA_VERSION "1.0.0-beta"
 
 #include <lua.h>
 #include <lauxlib.h>

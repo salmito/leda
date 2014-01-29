@@ -13,6 +13,8 @@
 
 typedef struct leda_Stage * stage_t;
 
+#define STAGE_HANDLER_KEY "stage-handler"
+
 #include "leda.h"
 #include "lf_queue.h"
 
