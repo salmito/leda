@@ -14,9 +14,19 @@
 typedef struct leda_Stage * stage_t;
 
 #include "leda.h"
+#include "lf_queue.h"
 
 enum stage_flag_t {
 	DESTROYED=0x01
+};
+
+struct leda_Stage {
+	LFqueue_t instances;
+	LFqueue_t event_queue;
+	char * env;
+	size_t env_len;
+	volatile unsigned int flags;
+   int stateful;
 };
 
 stage_t leda_tostage(lua_State *L, int i);

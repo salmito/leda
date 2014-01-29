@@ -4,7 +4,8 @@ INCFLAGS=-I$(LUA_INCDIR)
 CFLAGS=-fPIC $(INCFLAGS) -Wall $(EXTRA_FLAGS) -O2
 #LIBEVENT_FLAGS=-levent -levent_pthreads
 LIBTBB_FLAGS=-ltbb
-LDFLAGS=$(EXTRA_FLAGS) $(PTHREAD_FLAGS) $(LIBTBB_FLAGS) # $(LIBEVENT_FLAGS)
+PTHREAD_FLAGS=-pthread -lrt
+LDFLAGS=$(EXTRA_FLAGS) $(PTHREAD_FLAGS) $(LIBTBB_FLAGS)# $(LIBEVENT_FLAGS)
 
 LUA=lua
 
@@ -17,7 +18,9 @@ OBJ=  leda.o \
 		lf_hash.o \
 		marshal.o \
 		event.o \
-		instance.o
+		instance.o \
+		threading.o \
+		scheduler.o
       
 HEADERS=*.h
 
@@ -40,7 +43,7 @@ $(MODULE): $(OBJ)
 	$(G_PLUS_PLUS) -shared $^ -o $@ $(LDFLAGS)
 
 clean:
-	rm -f *.o
+	rm -f *.o $(MODULE)
 	
 ultraclean: clean
 	rm -f ../leda.so

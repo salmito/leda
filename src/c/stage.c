@@ -1,5 +1,4 @@
 #include "stage.h"
-#include "lf_queue.h"
 #include "lf_hash.h"
 #include "marshal.h"
 #include "event.h"
@@ -12,15 +11,6 @@
 
 
 static qt_hash H=NULL;
-
-struct leda_Stage {
-	LFqueue_t instances;
-	LFqueue_t event_queue;
-	char * env;
-	size_t env_len;
-	volatile unsigned int flags;
-   char stateful;
-};
 
 stage_t leda_tostage(lua_State *L, int i) {
 	stage_t * s = luaL_checkudata (L, i, LEDA_STAGE_META);
@@ -51,16 +41,6 @@ static int get_max_instances(lua_State * L) {
 static int stage_getenv(lua_State * L) {
 	stage_t s=leda_tostage(L,1);
 	lua_pushlstring(L,s->env,s->env_len);
-	return 1;
-}
-
-static int stage_isstage(lua_State * L) {
-	stage_t * s = luaL_checkudata (L, 1, LEDA_STAGE_META);
-	if(s) {
-	   lua_pushboolean(L,1);
-	} else {
-   	lua_pushboolean(L,0);
-	}
 	return 1;
 }
 
@@ -149,6 +129,16 @@ static void get_metatable(lua_State * L) {
   	}
 }
 
+static int stage_isstage(lua_State * L) {
+	lua_getmetatable(L,1);
+	get_metatable(L);
+	int has=0;
+	if(lua_equal(L,-1,-2)) has=1;
+	lua_pop(L,2);
+   lua_pushboolean(L,has);
+	return 1;
+}
+
 static void leda_buildstage(lua_State * L,stage_t t) {
 	stage_t *s=lua_newuserdata(L,sizeof(stage_t *));
 	*s=t;
@@ -216,16 +206,15 @@ static int leda_addstage(lua_State * L) {
 	return 0;
 }
 
-static const struct luaL_Reg LuaExportFunctions[] = {
-	{"new",leda_newstage},
-	{"get",leda_getstage},
-	{"add",leda_addstage},
-	{"destroy",leda_destroystage},
-	{"is_stage",stage_isstage},
-	{NULL,NULL}
-};
-
 LEDA_EXPORTAPI	int luaopen_leda_stage(lua_State *L) {
+	const struct luaL_Reg LuaExportFunctions[] = {
+		{"new",leda_newstage},
+		{"get",leda_getstage},
+		{"add",leda_addstage},
+		{"destroy",leda_destroystage},
+		{"is_stage",stage_isstage},
+		{NULL,NULL}
+	};
 	if(!H) H=qt_hash_create();
 	lua_newtable(L);
 #if LUA_VERSION_NUM < 502

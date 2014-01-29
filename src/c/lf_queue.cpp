@@ -21,6 +21,12 @@ LFqueue_t leda_lfqueue_new() {
    return q;
 }
 
+void leda_lfqueue_push(LFqueue_t q,void ** source) {
+   __ptr p;
+   p=*source;
+   q->queue->push(p);
+}
+
 int leda_lfqueue_try_push(LFqueue_t q,void ** source) {
 	__ptr p;
    p=*source;
@@ -34,6 +40,12 @@ int leda_lfqueue_try_pop(LFqueue_t q, void ** destination) {
       return 1;
    }
    return 0;
+}
+
+void leda_lfqueue_pop(LFqueue_t q, void ** destination) {
+   __ptr dest;
+   q->queue->pop(dest);
+   *destination = dest;
 }
 
 void leda_lfqueue_setcapacity(LFqueue_t q,int capacity) {

@@ -39,5 +39,6 @@ void tableDump(lua_State *L, int idx, const char* text);
 #endif
 
 #define LEDA_STAGE_META "leda-Stage *"
+#define LEDA_THREAD_METATABLE "leda-Thread *"
 
 #endif

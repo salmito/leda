@@ -12,10 +12,12 @@ typedef struct LFqueue * LFqueue_t;
 
 LFqueue_t leda_lfqueue_new();
 int leda_lfqueue_try_push(LFqueue_t q,void ** source);
+void leda_lfqueue_push(LFqueue_t q,void ** source);
+int leda_lfqueue_try_pop(LFqueue_t q, void ** destination);
+void leda_lfqueue_pop(LFqueue_t q, void ** destination);
 void leda_lfqueue_setcapacity(LFqueue_t q, int capacity);
 int leda_lfqueue_getcapacity(LFqueue_t q);
 int leda_lfqueue_isempty(LFqueue_t q);
-int leda_lfqueue_try_pop(LFqueue_t q, void ** destination);
 int leda_lfqueue_size(LFqueue_t q);
 
 //possibly thread unsafe
