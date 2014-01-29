@@ -9,7 +9,8 @@ typedef struct instance_s * instance_t;
 
 enum instance_flag_t {
 	CREATED=0x0,
-	INITIATED=0x01
+	IDLE,
+	BOUND,
 };
 
 struct instance_s {
@@ -17,11 +18,12 @@ struct instance_s {
    stage_t stage;
    event_t ev;
    enum instance_flag_t flags;
+   int args;
 };
 
 instance_t leda_newinstance(stage_t s);
 void leda_initinstance(instance_t i);
 void leda_destroyinstance(instance_t i);
-
+void leda_putinstance(instance_t i);
 
 #endif
