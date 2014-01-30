@@ -61,18 +61,39 @@ static int leda_version(lua_State * L) {
 	return 1;
 }
 
-static const struct luaL_Reg LuaExportFunctions[] = {
+LEDA_EXPORTAPI	int luaopen_leda_event(lua_State *L);
+LEDA_EXPORTAPI	int luaopen_leda_scheduler(lua_State *L);
+LEDA_EXPORTAPI	int luaopen_leda_stage(lua_State *L);
+
+LEDA_EXPORTAPI	int luaopen_leda_new(lua_State *L) {
+	const struct luaL_Reg LuaExportFunctions[] = {
 	{"_VERSION",leda_version},
 	{NULL,NULL}
-};
-
-LEDA_EXPORTAPI	int luaopen_leda_core(lua_State *L){	
-	// Export Lua API
+	};
 	lua_newtable(L);
+	lua_pushcfunction(L,luaopen_leda_event);
+	lua_call(L,0,1);
+	lua_getfield(L,-1,"encode");
+	lua_setfield(L,-3,"encode");
+	lua_getfield(L,-1,"decode");
+	lua_setfield(L,-3,"decode");
+	lua_pop(L,1);
+	lua_pushcfunction(L,luaopen_leda_scheduler);
+	lua_call(L,0,1);
+	lua_setfield(L,-2,"scheduler");
+	lua_pushcfunction(L,luaopen_leda_stage);
+	lua_call(L,0,1);
+	lua_getfield(L,-1,"new");
+	lua_setfield(L,-3,"stage");
+	lua_pop(L,1);
+	lua_newtable(L);
+	luaL_loadstring(L,"return function() return require'leda.new' end");
+	lua_setfield (L, -2,"__persist");
+	lua_setmetatable(L,-2);
 #if LUA_VERSION_NUM < 502
 	luaL_register(L, NULL, LuaExportFunctions);
 #else
-	luaL_setfuncs (L, LuaExportFunctions, 0);
+	luaL_setfuncs(L, LuaExportFunctions, 0);
 #endif        
 	return 1;
 };

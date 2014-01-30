@@ -11,15 +11,15 @@
 static LFqueue_t ready_queue=NULL;
 
 static int thread_tostring (lua_State *L) {
-  THREAD_T * t = luaL_checkudata (L, 1, LEDA_THREAD_METATABLE);
-  lua_pushfstring (L, "Thread (%p)", t);
+  THREAD_T ** t = luaL_checkudata (L, 1, LEDA_THREAD_METATABLE);
+  lua_pushfstring (L, "Thread (%p)", *t);
   return 1;
 }
 
 static THREAD_T * thread_get(lua_State *L, int i) {
-	THREAD_T * t = luaL_checkudata (L, i, LEDA_THREAD_METATABLE);
-	luaL_argcheck (L, t != NULL, i, "not a Thread");
-	return t;
+	THREAD_T ** t = luaL_checkudata (L, i, LEDA_THREAD_METATABLE);
+	luaL_argcheck (L, *t != NULL, i, "not a Thread");
+	return *t;
 }
 
 static int thread_join (lua_State *L) {
@@ -42,6 +42,12 @@ static int thread_rawkill (lua_State *L) {
    return 0;
 }
 
+static int thread_ptr (lua_State *L) {
+	THREAD_T * t=thread_get(L,1);
+	lua_pushlightuserdata(L,t);
+	return 1;
+}
+
 static void get_metatable(lua_State * L) {
 	luaL_getmetatable(L,LEDA_THREAD_METATABLE);
    if(lua_isnil(L,-1)) {
@@ -53,8 +59,12 @@ static void get_metatable(lua_State * L) {
 		lua_setfield (L, -2,"__tostring");
 		lua_pushcfunction(L,thread_join);
 		lua_setfield (L, -2,"join");
+		lua_pushcfunction(L,thread_ptr);
+		lua_setfield (L, -2,"ptr");
 		lua_pushcfunction(L,thread_rawkill);
 		lua_setfield (L, -2,"rawkill");
+		luaL_loadstring(L,"local th=(...) return function() return require'leda.scheduler'.build(th) end");
+		lua_setfield (L, -2,"__wrap");
   	}
 }
 
@@ -106,18 +116,30 @@ static THREAD_RETURN_T THREAD_CALLCONV thread_mainloop(void *t_val) {
    while(1) {
       leda_lfqueue_pop(ready_queue,(void **)&i);
       if(i==NULL) {
+      	printf("IS NULL\n");
          break;
       }
       thread_resume_instance(i);
    }
+//   free(val);
    return NULL;
 }
 
 static int thread_new (lua_State *L) {
-	THREAD_T * thread=lua_newuserdata(L,sizeof(THREAD_T));
+	THREAD_T ** thread=lua_newuserdata(L,sizeof(THREAD_T*));
    get_metatable(L);
    lua_setmetatable(L,-2);   
-   THREAD_CREATE(thread, thread_mainloop, NULL, 0 );
+   THREAD_CREATE(*thread, thread_mainloop, *thread, 0 );
+   return 1;
+}
+
+static int thread_from_ptr (lua_State *L) {
+	THREAD_T * ptr=lua_touserdata(L,1);
+	THREAD_T ** thread=lua_newuserdata(L,sizeof(THREAD_T*));
+	*thread=ptr;
+   get_metatable(L);
+   lua_setmetatable(L,-2);   
+   THREAD_CREATE(*thread, thread_mainloop, *thread, 0 );
    return 1;
 }
 
@@ -134,6 +156,7 @@ LEDA_EXPORTAPI	int luaopen_leda_scheduler(lua_State *L) {
 	const struct luaL_Reg LuaExportFunctions[] = {
 	{"new_thread",thread_new},
 	{"kill_thread",thread_kill},
+	{"build",thread_from_ptr},
 	{NULL,NULL}
 	};
 	if(!ready_queue) ready_queue=leda_lfqueue_new();
