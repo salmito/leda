@@ -8,6 +8,7 @@
 #include <string.h>
 #include <event2/event.h>
 #include <event2/thread.h>
+#include <unistd.h>
 
 static THREAD_T * event_thread;
 static struct event_base *loop;
@@ -45,6 +46,7 @@ static int event_wait_io(lua_State * L) {
    else luaL_error(L,"Invalid io operation type (0=read and 1=write)");
   	lua_pushliteral(L,LEDA_INSTANCE_KEY);
 	lua_gettable(L, LUA_REGISTRYINDEX);
+	if(lua_type(L,-1)!=LUA_TLIGHTUSERDATA) luaL_error(L,"Cannot wait outside of a stage");
 	instance_t i=lua_touserdata(L,-1);
 	lua_pop(L,1);
 	i->flags=WAITING_IO;
@@ -59,10 +61,15 @@ static int event_sleep(lua_State *L) {
    if(time<0.0L) luaL_error(L,"Invalid time (negative)");
   	lua_pushliteral(L,LEDA_INSTANCE_KEY);
 	lua_gettable(L, LUA_REGISTRYINDEX);
+	if(lua_type(L,-1)!=LUA_TLIGHTUSERDATA) {
+		usleep((useconds_t)(time*1000000.0L));
+		lua_pop(L,1);
+		return 0;
+	}
 	instance_t i=lua_touserdata(L,-1);
 	lua_pop(L,1);
 	i->flags=WAITING_IO;
-  	struct timeval to={time,(((double)time-((int)time))*1000000.0)};
+  	struct timeval to={time,(((double)time-((int)time))*1000000.0L)};
    int y=lua_yield(L,0);
    event_base_once(loop,-1,EV_TIMEOUT,io_ready,i,&to);
    return y;
