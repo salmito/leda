@@ -7,6 +7,7 @@
 
 #include <string.h>
 #include <event2/event.h>
+#include <event2/thread.h>
 
 static THREAD_T * event_thread;
 static struct event_base *loop;
@@ -42,16 +43,30 @@ static int event_wait_io(lua_State * L) {
    else if(mode==1)
          m = EV_WRITE; //write
    else luaL_error(L,"Invalid io operation type (0=read and 1=write)");
-
   	lua_pushliteral(L,LEDA_INSTANCE_KEY);
 	lua_gettable(L, LUA_REGISTRYINDEX);
 	instance_t i=lua_touserdata(L,-1);
 	lua_pop(L,1);
 	i->flags=WAITING_IO;
-
    int y=lua_yield(L,0);
    event_base_once(loop, fd, m, io_ready, i, NULL);
    return y;
+}
+
+static int event_sleep(lua_State *L) {
+   double time=0.0l;  
+   time=lua_tonumber(L,1);
+   if(time<0.0L) luaL_error(L,"Invalid time (negative)");
+  	lua_pushliteral(L,LEDA_INSTANCE_KEY);
+	lua_gettable(L, LUA_REGISTRYINDEX);
+	instance_t i=lua_touserdata(L,-1);
+	lua_pop(L,1);
+	i->flags=WAITING_IO;
+  	struct timeval to={time,(((double)time-((int)time))*1000000.0)};
+   int y=lua_yield(L,0);
+   event_base_once(loop,-1,EV_TIMEOUT,io_ready,i,&to);
+   return y;
+
 }
 
 static THREAD_RETURN_T THREAD_CALLCONV event_main(void *t_val) {
@@ -70,10 +85,12 @@ LEDA_EXPORTAPI	int luaopen_leda_event(lua_State *L) {
 	{"encode",mar_encode},
 	{"decode",mar_decode},
 	{"waitfd",event_wait_io},
+	{"sleep",event_sleep},
 	{NULL,NULL}
 	};
 	if(!event_thread) {
 		event_thread=malloc(sizeof(THREAD_T));
+		evthread_use_pthreads();
 		THREAD_CREATE(event_thread, &event_main, NULL, 0);
 	}
 	
