@@ -29,6 +29,9 @@ void leda_initinstance(instance_t i) {
 	lua_settable(L, LUA_REGISTRYINDEX);
 	leda_buildstage(L,i->stage);
 	lua_setglobal(L,"self");
+	lua_pushliteral(L,LEDA_INSTANCE_KEY);
+	lua_pushlightuserdata(L,i);
+	lua_settable(L, LUA_REGISTRYINDEX);	
 	i->flags=IDLE;
 }
 

@@ -10,7 +10,11 @@ local leda=require'leda.new'
 local thread=leda.scheduler.new_thread()
 
 local function handler(str,thread)
-	event.waitfd(1,0)
+	while true do
+		event.waitfd(1,0)
+		local a=io.stdin:read('*l')
+		print("Typed",a)
+	end	
 	print(str,thread)
 end
 

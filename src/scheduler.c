@@ -75,8 +75,14 @@ static void thread_resume_instance(instance_t i) {
 			leda_initinstance(i);
 			break;
 		case WAITING_IO:
-			stackDump(i->L,"loop");
-			
+			i->flags=READY;
+			lua_pushliteral(L,STAGE_HANDLER_KEY);
+			lua_gettable(L,LUA_REGISTRYINDEX);
+			if(lua_pcall(i->L,0,0,0)) {
+		      const char * err=lua_tostring(L,-1);
+		      fprintf(stderr,"Error resuming instance: %s\n",err);
+		   }
+		   break;
 		case IDLE:
 			break;
 		case READY:
@@ -103,14 +109,13 @@ static void thread_resume_instance(instance_t i) {
 				lua_remove(L,2);
 				i->args=n;
 			}
-			if(lua_pcall(i->L,i->args,LUA_MULTRET,0)) {
+			if(lua_pcall(i->L,i->args,0,0)) {
 		      const char * err=lua_tostring(L,-1);
 		      fprintf(stderr,"Error resuming instance: %s\n",err);
 		   } 
 			break;
 	}
-	lua_settop(L,0);
-	leda_putinstance(i);
+	if(i->flags!=WAITING_IO) leda_putinstance(i);
 }
 
 /*thread main loop*/

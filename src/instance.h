@@ -5,7 +5,10 @@
 #include "stage.h"
 #include "event.h"
 
+#include "lua.h"
+
 typedef struct instance_s * instance_t;
+#define LEDA_INSTANCE_KEY "leda-instance-key"
 
 enum instance_flag_t {
 	CREATED=0x0,
@@ -15,7 +18,7 @@ enum instance_flag_t {
 };
 
 struct instance_s {
-   lua_State *L;
+   lua_State * L;
    stage_t stage;
    event_t ev;
    enum instance_flag_t flags;

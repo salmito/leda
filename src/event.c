@@ -2,6 +2,7 @@
 #include "event.h"
 #include "instance.h"
 #include "threading.h"
+#include "scheduler.h"
 #include "marshal.h"
 
 #include <string.h>
@@ -26,11 +27,8 @@ void leda_destroyevent(event_t e) {
 static void dummy_event(evutil_socket_t fd, short events, void *arg) {}
 
 static void io_ready(evutil_socket_t fd, short event, void *arg) {
-	lua_State * L=(lua_State *)arg;
-	//i->flags=WAITING_IO;
-	lua_pushliteral(L,STAGE_HANDLER_KEY);
-   lua_gettable(L,LUA_REGISTRYINDEX);
-	//lua_resume(L,0);
+	instance_t i=(instance_t)arg;
+	leda_pushinstance(i);
 }
 
 static int event_wait_io(lua_State * L) {
@@ -44,9 +42,16 @@ static int event_wait_io(lua_State * L) {
    else if(mode==1)
          m = EV_WRITE; //write
    else luaL_error(L,"Invalid io operation type (0=read and 1=write)");
-   int i=lua_yield(L,0);
-   event_base_once(loop, fd, m, io_ready, L, NULL);
-   return i;
+
+  	lua_pushliteral(L,LEDA_INSTANCE_KEY);
+	lua_gettable(L, LUA_REGISTRYINDEX);
+	instance_t i=lua_touserdata(L,-1);
+	lua_pop(L,1);
+	i->flags=WAITING_IO;
+
+   int y=lua_yield(L,0);
+   event_base_once(loop, fd, m, io_ready, i, NULL);
+   return y;
 }
 
 static THREAD_RETURN_T THREAD_CALLCONV event_main(void *t_val) {
