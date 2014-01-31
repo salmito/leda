@@ -63,7 +63,7 @@ static void get_metatable(lua_State * L) {
 		lua_setfield (L, -2,"ptr");
 		lua_pushcfunction(L,thread_rawkill);
 		lua_setfield (L, -2,"rawkill");
-		luaL_loadstring(L,"local th=(...) return function() return require'leda.scheduler'.build(th) end");
+		luaL_loadstring(L,"local th=(...):ptr() return function() return require'leda.scheduler'.build(th) end");
 		lua_setfield (L, -2,"__wrap");
   	}
 }
@@ -74,6 +74,9 @@ static void thread_resume_instance(instance_t i) {
 		case CREATED:
 			leda_initinstance(i);
 			break;
+		case WAITING_IO:
+			stackDump(i->L,"loop");
+			
 		case IDLE:
 			break;
 		case READY:
@@ -115,14 +118,11 @@ static THREAD_RETURN_T THREAD_CALLCONV thread_mainloop(void *t_val) {
    instance_t i=NULL;
    while(1) {
       leda_lfqueue_pop(ready_queue,(void **)&i);
-      if(i==NULL) {
-      	printf("IS NULL\n");
-         break;
-      }
+      if(i==NULL) break;
       thread_resume_instance(i);
    }
-//   free(val);
-   return NULL;
+   free(t_val);
+   return t_val;
 }
 
 static int thread_new (lua_State *L) {
@@ -144,12 +144,13 @@ static int thread_from_ptr (lua_State *L) {
 }
 
 static int thread_kill (lua_State *L) {
-	leda_lfqueue_push(ready_queue,NULL);
+	void *a=NULL;
+	leda_lfqueue_push(ready_queue,&a);
 	return 0;
 }
 
-void leda_pushinstance(instance_t i) {
-		leda_lfqueue_push(ready_queue,(void **)&i);
+inline void leda_pushinstance(instance_t i) {
+	return leda_lfqueue_push(ready_queue,(void **)&i);
 }
 
 LEDA_EXPORTAPI	int luaopen_leda_scheduler(lua_State *L) {

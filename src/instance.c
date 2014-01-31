@@ -22,6 +22,9 @@ void leda_initinstance(instance_t i) {
 	lua_pushlstring(L,i->stage->env,i->stage->env_len);
 	lua_call(L,1,1);
 	lua_settable(L, LUA_REGISTRYINDEX);
+	lua_pushliteral(L,"create_coroutine");
+	luaL_loadstring(L,"local co=nil co=coroutine.create(function() return require'leda.event'.yield(co) end) return coroutine.resume(co)");
+	lua_settable(L, LUA_REGISTRYINDEX);
 	leda_buildstage(L,i->stage);
 	lua_setglobal(L,"self");
 	i->flags=IDLE;
