@@ -50,9 +50,8 @@ static int event_wait_io(lua_State * L) {
 	instance_t i=lua_touserdata(L,-1);
 	lua_pop(L,1);
 	i->flags=WAITING_IO;
-   int y=lua_yield(L,0);
    event_base_once(loop, fd, m, io_ready, i, NULL);
-   return y;
+   return lua_yield(L,0);
 }
 
 static int event_sleep(lua_State *L) {
@@ -70,17 +69,13 @@ static int event_sleep(lua_State *L) {
 	lua_pop(L,1);
 	i->flags=WAITING_IO;
   	struct timeval to={time,(((double)time-((int)time))*1000000.0L)};
-   int y=lua_yield(L,0);
    event_base_once(loop,-1,EV_TIMEOUT,io_ready,i,&to);
-   return y;
-
+   return lua_yield(L,0);
 }
 
 static THREAD_RETURN_T THREAD_CALLCONV event_main(void *t_val) {
 	loop = event_base_new();
-	if(!loop) {
-	   return NULL;
-	}
+	if(!loop) return NULL;
    struct event *listener_event = event_new(loop, -1, EV_READ|EV_PERSIST, dummy_event, NULL);
    event_add(listener_event, NULL);
    event_base_dispatch(loop);

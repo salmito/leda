@@ -132,8 +132,10 @@ static THREAD_RETURN_T THREAD_CALLCONV thread_mainloop(void *t_val) {
 
 static int thread_new (lua_State *L) {
 	THREAD_T ** thread=lua_newuserdata(L,sizeof(THREAD_T*));
+	THREAD_T *t=malloc(sizeof(THREAD_T));
+	*thread=t;
    get_metatable(L);
-   lua_setmetatable(L,-2);   
+   lua_setmetatable(L,-2);
    THREAD_CREATE(*thread, thread_mainloop, *thread, 0 );
    return 1;
 }

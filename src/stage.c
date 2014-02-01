@@ -10,8 +10,6 @@
 #define DEFAULT_IDLE_CAPACITY 10
 #define DEFAULT_QUEUE_CAPACITY -1
 
-static qt_hash H=NULL;
-
 stage_t leda_tostage(lua_State *L, int i) {
 	stage_t * s = luaL_checkudata (L, i, LEDA_STAGE_META);
 	luaL_argcheck (L, s != NULL, i, "Stage expected");
@@ -146,6 +144,13 @@ static int stage_isstateful(lua_State * L) {
 	return 1;
 }
 
+static int stage_ptr(lua_State * L) {
+	stage_t * s = luaL_checkudata (L, 1, LEDA_STAGE_META);
+	lua_pushlightuserdata(L,*s);
+	return 1;
+}
+
+
 static void get_metatable(lua_State * L) {
 	luaL_getmetatable(L,LEDA_STAGE_META);
    if(lua_isnil(L,-1)) {
@@ -155,7 +160,7 @@ static void get_metatable(lua_State * L) {
   		lua_setfield(L,-2,"__index");
 		lua_pushcfunction (L, stage_tostring);
 		lua_setfield (L, -2,"__tostring");
-		luaL_loadstring(L,"local id=(...):id() return function() return require'leda.stage'.get(id) end");
+		luaL_loadstring(L,"print('ae') local ptr=(...):ptr() return function() return require'leda.stage'.get(ptr) end");
 		lua_setfield (L, -2,"__wrap");
 //		lua_pushcfunction (L, leda_destroystage); //TODO implement refcount?
 //		lua_setfield (L, -2,"__gc");
@@ -181,6 +186,8 @@ static void get_metatable(lua_State * L) {
   		lua_setfield(L,-2,"free");
   		lua_pushcfunction(L,stage_isstateful);
   		lua_setfield(L,-2,"stateful");
+  		lua_pushcfunction(L,stage_ptr);
+  		lua_setfield(L,-2,"ptr");
   	}
 }
 
@@ -207,12 +214,12 @@ void leda_buildstage(lua_State * L,stage_t t) {
 
 static int leda_newstage(lua_State * L) {
    luaL_checktype (L, 1, LUA_TFUNCTION);
-	int stateful=0;
-	if(lua_toboolean(L,3)) {
-			stateful=1;
+	int stateful=1;
+	if(lua_type(L,2)==LUA_TNUMBER) {
+			stateful=0;
 	}
-   int idle=luaL_optint(L, 2, 0);
-   int capacity=(stateful?1:luaL_optint(L, 4, DEFAULT_QUEUE_CAPACITY));
+   int idle=luaL_optint(L, 2, 1);
+   int capacity=luaL_optint(L, 3, DEFAULT_QUEUE_CAPACITY);
    lua_pushcfunction(L,mar_encode);
    lua_pushvalue(L,1);
    lua_call(L,1,1);
@@ -238,7 +245,6 @@ static int leda_newstage(lua_State * L) {
 	   lua_pushnumber(L,idle);
 	   lua_call(L,2,0);
    }
-	qt_hash_put(H,(*stage),(*stage));
    return 1;
 }
 
@@ -247,7 +253,6 @@ static int leda_destroystage(lua_State * L) {
 	if(!s_ptr) return 0;
 	if(!(*s_ptr)) return 0;
 	stage_t s=*s_ptr;
-	qt_hash_remove(H,s);
 	free(s->env);
 	leda_lfqueue_free(s->instances);
 	leda_lfqueue_free(s->event_queue);
@@ -256,14 +261,7 @@ static int leda_destroystage(lua_State * L) {
 }
 
 static int leda_getstage(lua_State * L) {
-	size_t len=0; 
-	const void ** key=(const void **)lua_tolstring(L,1,&len);
-	if(len!=sizeof(void *)) {
-		lua_pushnil(L);
-		lua_pushliteral(L,"Key length error");
-		return 2;
-	}
-	stage_t s=qt_hash_get(H,*key);
+	stage_t s=lua_touserdata(L,1);
 	if(s) {
 		leda_buildstage(L,s);
 		return 1;
@@ -281,7 +279,6 @@ LEDA_EXPORTAPI	int luaopen_leda_stage(lua_State *L) {
 		{"is_stage",stage_isstage},
 		{NULL,NULL}
 	};
-	if(!H) H=qt_hash_create();
 	lua_newtable(L);
 	lua_newtable(L);
 	luaL_loadstring(L,"return function() return require'leda.stage' end");

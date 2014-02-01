@@ -71,18 +71,21 @@ LEDA_EXPORTAPI	int luaopen_leda_new(lua_State *L) {
 	{NULL,NULL}
 	};
 	lua_newtable(L);
-	lua_pushcfunction(L,luaopen_leda_event);
-	lua_call(L,0,1);
+	lua_getglobal(L,"require");
+	lua_pushliteral(L,"leda.event");
+	lua_call(L,1,1);
 	lua_getfield(L,-1,"encode");
 	lua_setfield(L,-3,"encode");
 	lua_getfield(L,-1,"decode");
 	lua_setfield(L,-3,"decode");
 	lua_pop(L,1);
-	lua_pushcfunction(L,luaopen_leda_scheduler);
-	lua_call(L,0,1);
+	lua_getglobal(L,"require");
+	lua_pushliteral(L,"leda.scheduler");
+	lua_call(L,1,1);
 	lua_setfield(L,-2,"scheduler");
-	lua_pushcfunction(L,luaopen_leda_stage);
-	lua_call(L,0,1);
+	lua_getglobal(L,"require");
+	lua_pushliteral(L,"leda.stage");
+	lua_call(L,1,1);
 	lua_getfield(L,-1,"new");
 	lua_setfield(L,-3,"stage");
 	lua_pop(L,1);
