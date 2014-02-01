@@ -8,15 +8,15 @@
 
 void leda_initinstance(instance_t i) {
 	lua_State *L=i->L;
-/*	lua_pushcfunction(L,luaopen_base);
+	lua_pushcfunction(L,luaopen_base);
    lua_pcall(L,0,0,0);
    lua_pushcfunction(L,luaopen_package);
    lua_pcall(L,0,0,0);
    #if LUA_VERSION_NUM > 501
    lua_pushcfunction(L,luaopen_coroutine);
    lua_pcall(L,0,0,0);
-	#endif*/
-	luaL_openlibs(L);
+	#endif
+//	luaL_openlibs(L);
 	lua_pushliteral(L,STAGE_HANDLER_KEY);
 	luaL_loadstring(L,"local h=(...) "
 	                  "local c=require'coroutine' "

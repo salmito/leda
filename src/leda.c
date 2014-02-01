@@ -1,5 +1,6 @@
 #include "leda.h"
 #include "marshal.h"
+#include "threading.h"
 
 #ifdef DEBUG
 //can be found here  http://www.lua.org/pil/24.2.3.html
@@ -61,6 +62,11 @@ static int leda_version(lua_State * L) {
 	return 1;
 }
 
+int leda_gettime(lua_State * L) {
+   lua_pushnumber(L,now_secs());
+   return 1;
+}
+
 LEDA_EXPORTAPI	int luaopen_leda_event(lua_State *L);
 LEDA_EXPORTAPI	int luaopen_leda_scheduler(lua_State *L);
 LEDA_EXPORTAPI	int luaopen_leda_stage(lua_State *L);
@@ -68,6 +74,7 @@ LEDA_EXPORTAPI	int luaopen_leda_stage(lua_State *L);
 LEDA_EXPORTAPI	int luaopen_leda_new(lua_State *L) {
 	const struct luaL_Reg LuaExportFunctions[] = {
 	{"_VERSION",leda_version},
+	{"now",leda_gettime},
 	{NULL,NULL}
 	};
 	lua_newtable(L);

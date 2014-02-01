@@ -28,7 +28,7 @@ struct leda_Stage {
 	char * env;
 	size_t env_len;
 	volatile unsigned int flags;
-   int stateful;
+   stage_t parent;
 };
 
 stage_t leda_tostage(lua_State *L, int i);
