@@ -1,5 +1,4 @@
 #include "stage.h"
-#include "lf_hash.h"
 #include "marshal.h"
 #include "event.h"
 #include "scheduler.h"

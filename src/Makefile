@@ -33,9 +33,6 @@ all: $(MODULE)
 %.o: %.c $(HEADERS) Makefile
 	$(CC) -c -o $@ $< $(CFLAGS)
 
-lf_hash.o: lf_hash.c
-	$(CC) -std=c99 -c -o $@ $< $(CFLAGS)	
-
 lf_queue.o: lf_queue.cpp
 	$(G_PLUS_PLUS) -c -o $@ $< $(CFLAGS)
 	
