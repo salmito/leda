@@ -11,11 +11,25 @@ void leda_initinstance(instance_t i) {
 	lua_pushcfunction(L,luaopen_base);
    lua_pcall(L,0,0,0);
    lua_pushcfunction(L,luaopen_package);
-   lua_pcall(L,0,0,0);
+   lua_pcall(L,0,1,0);
+   lua_getfield(L,-1,"preload");
+   lua_pushcfunction(L,luaopen_io);
+   lua_setfield(L,-2,"io");
+   lua_pushcfunction(L,luaopen_os);
+   lua_setfield(L,-2,"os");
+   lua_pushcfunction(L,luaopen_table);
+   lua_setfield(L,-2,"table");
+   lua_pushcfunction(L,luaopen_string);
+   lua_setfield(L,-2,"string");
+   lua_pushcfunction(L,luaopen_math);
+   lua_setfield(L,-2,"math");
+   lua_pushcfunction(L,luaopen_debug);
+   lua_setfield(L,-2,"debug");
    #if LUA_VERSION_NUM > 501
    lua_pushcfunction(L,luaopen_coroutine);
-   lua_pcall(L,0,0,0);
+   lua_setfield(L,-2,"coroutine");
 	#endif
+   lua_pop(L,2);
 //	luaL_openlibs(L);
 	lua_pushliteral(L,STAGE_HANDLER_KEY);
 	luaL_loadstring(L,"local h=(...) "

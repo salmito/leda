@@ -19,6 +19,7 @@ sleep:push("event1")
 
 
 local function handler(str,thread)
+	local io=require'io'
 	while true do
 		event.waitfd(1,0)
 		local a=io.stdin:read('*l')
