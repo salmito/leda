@@ -62,10 +62,42 @@ static int leda_version(lua_State * L) {
 	return 1;
 }
 
-int leda_gettime(lua_State * L) {
+static int leda_gettime(lua_State * L) {
    lua_pushnumber(L,now_secs());
    return 1;
 }
+
+static int leda_cpus(lua_State *L) {
+   #ifdef _WIN32
+      #ifndef _SC_NPROCESSORS_ONLN
+         SYSTEM_INFO info;
+         GetSystemInfo(&info);
+         #define sysconf(a) info.dwNumberOfProcessors
+         #define _SC_NPROCESSORS_ONLN
+      #endif
+   #endif
+   #ifdef _SC_NPROCESSORS_ONLN
+	   long nprocs = -1;
+	   long nprocs_max = -1;
+      nprocs = sysconf(_SC_NPROCESSORS_ONLN);
+      if (nprocs < 1) {
+         luaL_error(L,"Could not determine number of CPUs online:\n%s\n", 
+            strerror (errno));
+      }
+      nprocs_max = sysconf(_SC_NPROCESSORS_CONF);
+      if (nprocs_max < 1) {
+         luaL_error(L, "Could not determine number of CPUs configured:\n%s\n", 
+            strerror (errno));
+      }
+      lua_pushnumber(L,nprocs);
+      lua_pushnumber(L,nprocs_max);
+      return 2;
+   #else
+      luaL_error(L, "Could not determine number of CPUs");
+   #endif
+   return 0;
+}
+
 
 LEDA_EXPORTAPI	int luaopen_leda_event(lua_State *L);
 LEDA_EXPORTAPI	int luaopen_leda_scheduler(lua_State *L);
@@ -75,6 +107,7 @@ LEDA_EXPORTAPI	int luaopen_leda_new(lua_State *L) {
 	const struct luaL_Reg LuaExportFunctions[] = {
 	{"_VERSION",leda_version},
 	{"now",leda_gettime},
+	{"cpus",leda_cpus},
 	{NULL,NULL}
 	};
 	lua_newtable(L);
