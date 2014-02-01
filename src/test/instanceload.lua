@@ -3,9 +3,7 @@ local time=lstage.now()
 
 local th=lstage.scheduler.new_thread()
 
-for i=1,50000 do
-	lstage.stage(function() end)
-end
+lstage.stage(function() end,50000)
 
 lstage.scheduler.kill_thread()
 th:join()

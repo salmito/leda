@@ -3,6 +3,6 @@
 
 #include "instance.h"
 
-void leda_pushinstance(instance_t i);
+void lstage_pushinstance(instance_t i);
 
 #endif

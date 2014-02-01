@@ -11,18 +11,18 @@
 #ifndef stage_h
 #define stage_h
 
-typedef struct leda_Stage * stage_t;
+typedef struct lstage_Stage * stage_t;
 
 #define STAGE_HANDLER_KEY "stage-handler"
 
-#include "leda.h"
+#include "lstage.h"
 #include "lf_queue.h"
 
 enum stage_flag_t {
 	DESTROYED=0x01
 };
 
-struct leda_Stage {
+struct lstage_Stage {
 	LFqueue_t instances;
 	LFqueue_t event_queue;
 	char * env;
@@ -31,7 +31,7 @@ struct leda_Stage {
    stage_t parent;
 };
 
-stage_t leda_tostage(lua_State *L, int i);
-void leda_buildstage(lua_State * L,stage_t t);
+stage_t lstage_tostage(lua_State *L, int i);
+void lstage_buildstage(lua_State * L,stage_t t);
 
 #endif

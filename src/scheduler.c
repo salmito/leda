@@ -1,4 +1,4 @@
-#include "leda.h"
+#include "lstage.h"
 #include "scheduler.h"
 #include "instance.h"
 #include "threading.h"
@@ -11,13 +11,13 @@
 static LFqueue_t ready_queue=NULL;
 
 static int thread_tostring (lua_State *L) {
-  THREAD_T ** t = luaL_checkudata (L, 1, LEDA_THREAD_METATABLE);
+  THREAD_T ** t = luaL_checkudata (L, 1, LSTAGE_THREAD_METATABLE);
   lua_pushfstring (L, "Thread (%p)", *t);
   return 1;
 }
 
 static THREAD_T * thread_get(lua_State *L, int i) {
-	THREAD_T ** t = luaL_checkudata (L, i, LEDA_THREAD_METATABLE);
+	THREAD_T ** t = luaL_checkudata (L, i, LSTAGE_THREAD_METATABLE);
 	luaL_argcheck (L, *t != NULL, i, "not a Thread");
 	return *t;
 }
@@ -49,10 +49,10 @@ static int thread_ptr (lua_State *L) {
 }
 
 static void get_metatable(lua_State * L) {
-	luaL_getmetatable(L,LEDA_THREAD_METATABLE);
+	luaL_getmetatable(L,LSTAGE_THREAD_METATABLE);
    if(lua_isnil(L,-1)) {
    	lua_pop(L,1);
-  		luaL_newmetatable(L,LEDA_THREAD_METATABLE);
+  		luaL_newmetatable(L,LSTAGE_THREAD_METATABLE);
   		lua_pushvalue(L,-1);
   		lua_setfield(L,-2,"__index");
 		lua_pushcfunction (L, thread_tostring);
@@ -63,7 +63,7 @@ static void get_metatable(lua_State * L) {
 		lua_setfield (L, -2,"ptr");
 		lua_pushcfunction(L,thread_rawkill);
 		lua_setfield (L, -2,"rawkill");
-		luaL_loadstring(L,"local th=(...):ptr() return function() return require'leda.scheduler'.build(th) end");
+		luaL_loadstring(L,"local th=(...):ptr() return function() return require'lstage.scheduler'.build(th) end");
 		lua_setfield (L, -2,"__wrap");
   	}
 }
@@ -72,7 +72,7 @@ static void thread_resume_instance(instance_t i) {
 	lua_State * L=i->L;
 	switch(i->flags) {
 		case CREATED:
-			leda_initinstance(i);
+			lstage_initinstance(i);
 			break;
 		case WAITING_IO:
 			i->flags=READY;
@@ -91,7 +91,7 @@ static void thread_resume_instance(instance_t i) {
 				lua_gettable(L,LUA_REGISTRYINDEX);
 		      lua_pushcfunction(L,mar_decode);
 		      lua_pushlstring(L,i->ev->data,i->ev->len);
-		      leda_destroyevent(i->ev);
+		      lstage_destroyevent(i->ev);
   		      i->ev=NULL;
 				if(lua_pcall(L,1,1,0)) {
 					const char * err=lua_tostring(L,-1);
@@ -115,14 +115,14 @@ static void thread_resume_instance(instance_t i) {
 		   } 
 			break;
 	}
-	if(i->flags!=WAITING_IO) leda_putinstance(i);
+	if(i->flags!=WAITING_IO) lstage_putinstance(i);
 }
 
 /*thread main loop*/
 static THREAD_RETURN_T THREAD_CALLCONV thread_mainloop(void *t_val) {
    instance_t i=NULL;
    while(1) {
-      leda_lfqueue_pop(ready_queue,(void **)&i);
+      lstage_lfqueue_pop(ready_queue,(void **)&i);
       if(i==NULL) break;
       thread_resume_instance(i);
    }
@@ -152,25 +152,25 @@ static int thread_from_ptr (lua_State *L) {
 
 static int thread_kill (lua_State *L) {
 	void *a=NULL;
-	leda_lfqueue_push(ready_queue,&a);
+	lstage_lfqueue_push(ready_queue,&a);
 	return 0;
 }
 
-inline void leda_pushinstance(instance_t i) {
-	return leda_lfqueue_push(ready_queue,(void **)&i);
+inline void lstage_pushinstance(instance_t i) {
+	return lstage_lfqueue_push(ready_queue,(void **)&i);
 }
 
-LEDA_EXPORTAPI	int luaopen_leda_scheduler(lua_State *L) {
+LSTAGE_EXPORTAPI	int luaopen_lstage_scheduler(lua_State *L) {
 	const struct luaL_Reg LuaExportFunctions[] = {
 	{"new_thread",thread_new},
 	{"kill_thread",thread_kill},
 	{"build",thread_from_ptr},
 	{NULL,NULL}
 	};
-	if(!ready_queue) ready_queue=leda_lfqueue_new();
+	if(!ready_queue) ready_queue=lstage_lfqueue_new();
 	lua_newtable(L);
 	lua_newtable(L);
-	luaL_loadstring(L,"return function() return require'leda.scheduler' end");
+	luaL_loadstring(L,"return function() return require'lstage.scheduler' end");
 	lua_setfield (L, -2,"__persist");
 	lua_setmetatable(L,-2);
 #if LUA_VERSION_NUM < 502

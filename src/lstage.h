@@ -8,39 +8,33 @@
 ** ===============================================================
 */
 
-#ifndef _LEDA_H
-#define _LEDA_H
+#ifndef _LSTAGE_H
+#define _LSTAGE_H
 
-#define LEDA_VERSION "1.0.0-beta"
+#define LSTAGE_VERSION "1.0.0-beta"
 
 #include <lua.h>
 #include <lauxlib.h>
 
-#define LEDA_LIBRARYNAME leda_library
-
 #ifdef DEBUG
 void stackDump (lua_State *L, const char *text);
 void tableDump(lua_State *L, int idx, const char* text);
+#define _DEBUG() 
 #else
+#define _DEBUG() 
 #define stackDump(...) 
 #define tableDump(...) 
 #endif
 
-#ifndef LEDA_EXPORTAPI
+#ifndef LSTAGE_EXPORTAPI
         #ifdef _WIN32
-                #define LEDA_EXPORTAPI __declspec(dllexport)
+                #define LSTAGE_EXPORTAPI __declspec(dllexport)
         #else
-                #define LEDA_EXPORTAPI extern
+                #define LSTAGE_EXPORTAPI extern
         #endif
 #endif  
 
-#ifdef DEBUG
-	#define _DEBUG() 
-#else
-	#define _DEBUG() 
-#endif
-
-#define LEDA_STAGE_META "leda-Stage *"
-#define LEDA_THREAD_METATABLE "leda-Thread *"
+#define LSTAGE_STAGE_METATABLE "ltsage-Stage *"
+#define LSTAGE_THREAD_METATABLE "lstage-Thread *"
 
 #endif

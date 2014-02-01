@@ -1,4 +1,4 @@
-#include "leda.h"
+#include "lstage.h"
 #include "marshal.h"
 #include "threading.h"
 
@@ -57,17 +57,17 @@ void tableDump(lua_State *L, int idx, const char* text)
 }
 #endif
 
-static int leda_version(lua_State * L) {
-	lua_pushliteral(L,LEDA_VERSION);
+static int lstage_version(lua_State * L) {
+	lua_pushliteral(L,LSTAGE_VERSION);
 	return 1;
 }
 
-static int leda_gettime(lua_State * L) {
+static int lstage_gettime(lua_State * L) {
    lua_pushnumber(L,now_secs());
    return 1;
 }
 
-static int leda_cpus(lua_State *L) {
+static int lstage_cpus(lua_State *L) {
    #ifdef _WIN32
       #ifndef _SC_NPROCESSORS_ONLN
          SYSTEM_INFO info;
@@ -98,42 +98,45 @@ static int leda_cpus(lua_State *L) {
    return 0;
 }
 
-LEDA_EXPORTAPI	int luaopen_leda_event(lua_State *L);
-LEDA_EXPORTAPI	int luaopen_leda_scheduler(lua_State *L);
-LEDA_EXPORTAPI	int luaopen_leda_stage(lua_State *L);
+static void lstage_require(lua_State *L, const char *lib) {
+	lua_getglobal(L,"require");
+	lua_pushstring(L, lib);
+	lua_call(L,1,1);
+}
 
-LEDA_EXPORTAPI	int luaopen_leda_new(lua_State *L) {
+LSTAGE_EXPORTAPI int luaopen_lstage_event(lua_State *L);
+LSTAGE_EXPORTAPI int luaopen_lstage_scheduler(lua_State *L);
+LSTAGE_EXPORTAPI int luaopen_lstage_stage(lua_State *L);
+
+LSTAGE_EXPORTAPI int luaopen_lstage(lua_State *L) {
 	const struct luaL_Reg LuaExportFunctions[] = {
-	{"_VERSION",leda_version},
-	{"now",leda_gettime},
-	{"cpus",leda_cpus},
+	{"_VERSION",lstage_version},
+	{"now",lstage_gettime},
+	{"cpus",lstage_cpus},
 	{NULL,NULL}
 	};
 	lua_newtable(L);
-	lua_pushcfunction(L,luaopen_leda_event);
-	lua_call(L,0,1);
+	lstage_require(L,"lstage.event");
 	lua_getfield(L,-1,"encode");
 	lua_setfield(L,-3,"encode");
 	lua_getfield(L,-1,"decode");
 	lua_setfield(L,-3,"decode");
 	lua_pop(L,1);
-	lua_pushcfunction(L,luaopen_leda_scheduler);
-	lua_call(L,0,1);
+	lstage_require(L,"lstage.scheduler");
 	lua_setfield(L,-2,"scheduler");
-	lua_pushcfunction(L,luaopen_leda_stage);
-	lua_call(L,0,1);
+	lstage_require(L,"lstage.stage");
 	lua_getfield(L,-1,"new");
 	lua_setfield(L,-3,"stage");
 	lua_pop(L,1);
 	lua_newtable(L);
-	luaL_loadstring(L,"return function() return require'leda.new' end");
+	luaL_loadstring(L,"return function() return require'lstage' end");
 	lua_setfield (L, -2,"__persist");
 	lua_setmetatable(L,-2);
 #if LUA_VERSION_NUM < 502
 	luaL_register(L, NULL, LuaExportFunctions);
 #else
 	luaL_setfuncs(L, LuaExportFunctions, 0);
-#endif        
+#endif
 	return 1;
 };
 

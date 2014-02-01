@@ -1,13 +1,13 @@
-local leda=require'leda.new'
+local lstage=require'lstage'
 
-local th=leda.scheduler.new_thread()
+local th=lstage.scheduler.new_thread()
 
 local a=0
 
-local stage=leda.stage(function()
-	dummy=dummy or leda.stage(function()
+local stage=lstage.stage(function()
+	dummy=dummy or lstage.stage(function()
 		print('dummy',a)
-		leda.scheduler.kill_thread()
+		lstage.scheduler.kill_thread()
 	end)
 	a=a+1
 	if a==10 then
@@ -19,7 +19,7 @@ end)
 print("calling",stage,dummy)
 for i=1,10 do stage:push() end
 th:join()
-local all=require'leda.stage'.all()
+local all=require'lstage.stage'.all()
 print('defined stages',#all)
 for i,s in pairs(all) do
 	print("defined stage",i,s)

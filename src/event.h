@@ -10,7 +10,7 @@ struct event_s {
    size_t len;
 };
 
-event_t leda_newevent(const char * ev, size_t len);
-void leda_destroyevent(event_t e);
+event_t lstage_newevent(const char * ev, size_t len);
+void lstage_destroyevent(event_t e);
 
 #endif

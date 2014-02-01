@@ -1,2 +1,2 @@
-new
+Staged concurrency kit for Lua
 ===

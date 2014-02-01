@@ -13,7 +13,7 @@ LUA=lua
 CC=gcc
 G_PLUS_PLUS=g++
 
-OBJ=  leda.o \
+OBJ=  lstage.o \
 		stage.o \
 		lf_queue.o \
 		lf_hash.o \
@@ -27,7 +27,7 @@ HEADERS=*.h
 
 _SO=.so
 
-MODULE=leda$(_SO)
+MODULE=lstage$(_SO)
 
 all: $(MODULE)
 

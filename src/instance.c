@@ -6,7 +6,7 @@
 #include <lauxlib.h>
 #include <lualib.h>
 
-void leda_initinstance(instance_t i) {
+void lstage_initinstance(instance_t i) {
 	lua_State *L=i->L;
 	lua_pushcfunction(L,luaopen_base);
    lua_pcall(L,0,0,0);
@@ -41,40 +41,40 @@ void leda_initinstance(instance_t i) {
 	lua_call(L,1,1);
 	lua_call(L,1,1);
 	lua_settable(L, LUA_REGISTRYINDEX);
-	leda_buildstage(L,i->stage);
+	lstage_buildstage(L,i->stage);
 	lua_setglobal(L,"self");
-	lua_pushliteral(L,LEDA_INSTANCE_KEY);
+	lua_pushliteral(L,LSTAGE_INSTANCE_KEY);
 	lua_pushlightuserdata(L,i);
 	lua_settable(L, LUA_REGISTRYINDEX);	
 	i->flags=IDLE;
 }
 
-instance_t leda_newinstance(stage_t s) {
+instance_t lstage_newinstance(stage_t s) {
    lua_State * L = luaL_newstate();
 	instance_t i=malloc(sizeof(struct instance_s));
 	i->L=L;
 	i->stage=s;
 	i->flags=CREATED;
 	i->ev=NULL;
-	leda_pushinstance(i);
+	lstage_pushinstance(i);
 	return i;
 }
 
-void leda_putinstance(instance_t i) {
+void lstage_putinstance(instance_t i) {
 	event_t ev=NULL;
-	if(leda_lfqueue_try_pop(i->stage->event_queue,(void **)&ev)) {
+	if(lstage_lfqueue_try_pop(i->stage->event_queue,(void **)&ev)) {
 		i->ev=ev;
 		i->flags=READY;
-		leda_pushinstance(i);
+		lstage_pushinstance(i);
 		return;
 	}
-	if(!leda_lfqueue_try_push(i->stage->instances,(void **) &i)) {
-		leda_destroyinstance(i);
+	if(!lstage_lfqueue_try_push(i->stage->instances,(void **) &i)) {
+		lstage_destroyinstance(i);
 	}
 }
 
-void leda_destroyinstance(instance_t i) {
+void lstage_destroyinstance(instance_t i) {
    lua_close(i->L);
-   if(i->ev) leda_destroyevent(i->ev);
+   if(i->ev) lstage_destroyevent(i->ev);
    free(i);
 }
