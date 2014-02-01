@@ -16,7 +16,6 @@ G_PLUS_PLUS=g++
 OBJ=  leda.o \
 		stage.o \
 		lf_queue.o \
-		lf_hash.o \
 		marshal.o \
 		event.o \
 		instance.o \
