@@ -50,6 +50,8 @@ install-both:
 install: install5.1
 
 install5.1: all
+	
+	mkdir -p $(LUA_INSTALL_PATH)/
 	install $(SRC_DIR)/../leda.lua $(LUA_INSTALL_PATH)
 	mkdir -p $(LUA_INSTALL_PATH)/leda
 	mkdir -p $(LUA_INSTALL_PATH)/leda/utils
